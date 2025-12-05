@@ -186,10 +186,13 @@ def test_items_management():
     }
     
     response = make_request('POST', '/items', item_data, headers)
-    if response and response.status_code == 403:
-        results.success("Item creation blocked for unverified user")
+    if response:
+        if response.status_code == 403:
+            results.success("Item creation blocked for unverified user")
+        else:
+            results.failure("Item creation verification check", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Item creation verification check", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Item creation verification check", "No response")
     
     # 2. Get items list (should work)
     response = make_request('GET', '/items')
