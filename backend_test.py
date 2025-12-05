@@ -68,16 +68,17 @@ def make_request(method, endpoint, data=None, headers=None):
     url = f"{API_BASE}{endpoint}"
     try:
         if method == 'GET':
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=30)
         elif method == 'POST':
-            response = requests.post(url, json=data, headers=headers, timeout=10)
+            response = requests.post(url, json=data, headers=headers, timeout=30)
         elif method == 'PATCH':
-            response = requests.patch(url, json=data, headers=headers, timeout=10)
+            response = requests.patch(url, json=data, headers=headers, timeout=30)
         elif method == 'DELETE':
-            response = requests.delete(url, headers=headers, timeout=10)
+            response = requests.delete(url, headers=headers, timeout=30)
         
         return response
     except requests.exceptions.RequestException as e:
+        print(f"Request error for {method} {url}: {e}")
         return None
 
 def test_auth_flow():
