@@ -278,10 +278,13 @@ def test_reviews_system():
     }
     
     response = make_request('POST', '/reviews', review_data, headers)
-    if response and response.status_code == 400:
-        results.success("Review creation blocked for non-completed booking")
+    if response:
+        if response.status_code == 400:
+            results.success("Review creation blocked for non-completed booking")
+        else:
+            results.failure("Review validation", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Review validation", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Review validation", "No response")
     
     return True
 
