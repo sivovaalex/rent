@@ -238,10 +238,13 @@ def test_booking_flow():
     mock_item_id = "test-item-123"
     response = make_request('POST', f'/items/{mock_item_id}/book', booking_data, headers)
     
-    if response and response.status_code == 403:
-        results.success("Booking blocked for unverified user")
+    if response:
+        if response.status_code == 403:
+            results.success("Booking blocked for unverified user")
+        else:
+            results.failure("Booking verification check", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Booking verification check", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Booking verification check", "No response")
     
     # 2. Get user bookings
     response = make_request('GET', '/bookings', headers=headers)
