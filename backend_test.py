@@ -101,7 +101,7 @@ def test_auth_flow():
     
     # 1. Send SMS
     response = make_request('POST', '/auth/send-sms', {'phone': test_phone})
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         results.success("SMS send request")
     else:
         results.failure("SMS send request", f"Status: {response.status_code if response else 'No response'}")
@@ -132,7 +132,7 @@ def test_auth_flow():
         'name': test_name
     })
     
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         data = response.json()
         if 'user' in data:
             test_user_id = data['user']['_id']
@@ -153,7 +153,7 @@ def test_auth_flow():
         'documentType': 'passport'
     }, headers)
     
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         results.success("Document upload")
     else:
         results.failure("Document upload", f"Status: {response.status_code if response else 'No response'}")
@@ -199,7 +199,7 @@ def test_items_management():
     
     # 2. Get items list (should work)
     response = make_request('GET', '/items')
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         data = response.json()
         if 'items' in data:
             results.success("Items list retrieval")
@@ -210,7 +210,7 @@ def test_items_management():
     
     # 3. Test filtering
     response = make_request('GET', '/items?category=stream_equipment&search=camera')
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         results.success("Items filtering")
     else:
         results.failure("Items filtering", f"Status: {response.status_code if response else 'No response'}")
@@ -251,7 +251,7 @@ def test_booking_flow():
     
     # 2. Get user bookings
     response = make_request('GET', '/bookings', headers=headers)
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         data = response.json()
         if 'bookings' in data:
             results.success("Bookings list retrieval")
@@ -302,7 +302,7 @@ def test_admin_endpoints():
     
     # 1. Send SMS for admin
     response = make_request('POST', '/auth/send-sms', {'phone': admin_phone})
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         results.success("Admin SMS send")
     else:
         results.failure("Admin SMS send", f"Status: {response.status_code if response else 'No response'}")
@@ -394,14 +394,14 @@ def test_profile_management():
     }
     
     response = make_request('PATCH', '/profile', profile_data, headers)
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         results.success("Profile update")
     else:
         results.failure("Profile update", f"Status: {response.status_code if response else 'No response'}")
     
     # Get current user
     response = make_request('GET', '/auth/me', headers=headers)
-    if response and response.status_code == 200:
+    if response is not None and response.status_code == 200:
         data = response.json()
         if 'user' in data:
             results.success("Get current user")
