@@ -241,7 +241,7 @@ def test_booking_flow():
     mock_item_id = "test-item-123"
     response = make_request('POST', f'/items/{mock_item_id}/book', booking_data, headers)
     
-    if response:
+    if response is not None:
         if response.status_code == 403:
             results.success("Booking blocked for unverified user")
         else:
@@ -281,7 +281,7 @@ def test_reviews_system():
     }
     
     response = make_request('POST', '/reviews', review_data, headers)
-    if response:
+    if response is not None:
         if response.status_code == 400:
             results.success("Review creation blocked for non-completed booking")
         else:
@@ -330,7 +330,7 @@ def test_admin_endpoints():
         'name': 'Админ Тестов'
     })
     
-    if response:
+    if response is not None:
         if response.status_code == 200:
             data = response.json()
             admin_user_id = data['user']['_id']
@@ -347,7 +347,7 @@ def test_admin_endpoints():
     
     # 3. Get pending users (should fail - not admin/moderator)
     response = make_request('GET', '/admin/users?status=pending', headers=headers)
-    if response:
+    if response is not None:
         if response.status_code == 403:
             results.success("Admin access control for users")
         else:
@@ -357,7 +357,7 @@ def test_admin_endpoints():
     
     # 4. Get pending items (should fail - not admin/moderator)
     response = make_request('GET', '/admin/items?status=pending', headers=headers)
-    if response:
+    if response is not None:
         if response.status_code == 403:
             results.success("Admin access control for items")
         else:
@@ -367,7 +367,7 @@ def test_admin_endpoints():
     
     # 5. Get stats (should fail - not admin)
     response = make_request('GET', '/admin/stats', headers=headers)
-    if response:
+    if response is not None:
         if response.status_code == 403:
             results.success("Admin stats access control")
         else:
@@ -418,7 +418,7 @@ def test_error_handling():
     
     # 1. Invalid endpoint
     response = make_request('GET', '/invalid-endpoint')
-    if response:
+    if response is not None:
         if response.status_code == 404:
             results.success("404 for invalid endpoint")
         else:
@@ -428,7 +428,7 @@ def test_error_handling():
     
     # 2. Missing authentication
     response = make_request('GET', '/bookings')
-    if response:
+    if response is not None:
         if response.status_code == 401:
             results.success("401 for missing auth")
         else:
@@ -441,7 +441,7 @@ def test_error_handling():
         'phone': '+7900999999',  # Different phone to avoid conflicts
         'code': '000000'
     })
-    if response:
+    if response is not None:
         if response.status_code == 400:
             results.success("Invalid SMS code handling")
         else:
