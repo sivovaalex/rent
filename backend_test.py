@@ -397,7 +397,7 @@ def test_error_handling():
     
     # 3. Invalid SMS code
     response = make_request('POST', '/auth/verify-sms', {
-        'phone': test_phone,
+        'phone': '+7900999999',  # Different phone to avoid conflicts
         'code': '000000'
     })
     if response and response.status_code == 400:
