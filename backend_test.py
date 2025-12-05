@@ -415,27 +415,36 @@ def test_error_handling():
     
     # 1. Invalid endpoint
     response = make_request('GET', '/invalid-endpoint')
-    if response and response.status_code == 404:
-        results.success("404 for invalid endpoint")
+    if response:
+        if response.status_code == 404:
+            results.success("404 for invalid endpoint")
+        else:
+            results.failure("404 handling", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("404 handling", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("404 handling", "No response")
     
     # 2. Missing authentication
     response = make_request('GET', '/bookings')
-    if response and response.status_code == 401:
-        results.success("401 for missing auth")
+    if response:
+        if response.status_code == 401:
+            results.success("401 for missing auth")
+        else:
+            results.failure("Auth validation", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Auth validation", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Auth validation", "No response")
     
     # 3. Invalid SMS code
     response = make_request('POST', '/auth/verify-sms', {
         'phone': '+7900999999',  # Different phone to avoid conflicts
         'code': '000000'
     })
-    if response and response.status_code == 400:
-        results.success("Invalid SMS code handling")
+    if response:
+        if response.status_code == 400:
+            results.success("Invalid SMS code handling")
+        else:
+            results.failure("SMS code validation", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("SMS code validation", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("SMS code validation", "No response")
     
     return True
 
