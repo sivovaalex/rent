@@ -344,24 +344,33 @@ def test_admin_endpoints():
     
     # 3. Get pending users (should fail - not admin/moderator)
     response = make_request('GET', '/admin/users?status=pending', headers=headers)
-    if response and response.status_code == 403:
-        results.success("Admin access control for users")
+    if response:
+        if response.status_code == 403:
+            results.success("Admin access control for users")
+        else:
+            results.failure("Admin access control", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Admin access control", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Admin access control", "No response")
     
     # 4. Get pending items (should fail - not admin/moderator)
     response = make_request('GET', '/admin/items?status=pending', headers=headers)
-    if response and response.status_code == 403:
-        results.success("Admin access control for items")
+    if response:
+        if response.status_code == 403:
+            results.success("Admin access control for items")
+        else:
+            results.failure("Admin access control for items", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Admin access control", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Admin access control for items", "No response")
     
     # 5. Get stats (should fail - not admin)
     response = make_request('GET', '/admin/stats', headers=headers)
-    if response and response.status_code == 403:
-        results.success("Admin stats access control")
+    if response:
+        if response.status_code == 403:
+            results.success("Admin stats access control")
+        else:
+            results.failure("Admin stats access control", f"Unexpected status: {response.status_code}")
     else:
-        results.failure("Admin stats access control", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Admin stats access control", "No response")
     
     return True
 
