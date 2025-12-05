@@ -81,13 +81,16 @@ def make_request(method, endpoint, data=None, headers=None):
         elif method == 'DELETE':
             response = requests.delete(url, headers=headers, timeout=10)
         
-        print(f"DEBUG: {method} {url} -> {response.status_code}")
+        print(f"DEBUG: {method} {url} -> {response.status_code} (response object: {type(response)})")
         return response
     except requests.exceptions.Timeout:
         print(f"Timeout for {method} {url}")
         return None
     except requests.exceptions.RequestException as e:
         print(f"Request error for {method} {url}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error for {method} {url}: {e}")
         return None
 
 def test_auth_flow():
