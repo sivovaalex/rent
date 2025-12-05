@@ -67,16 +67,25 @@ def make_request(method, endpoint, data=None, headers=None):
     """Make HTTP request with error handling"""
     url = f"{API_BASE}{endpoint}"
     try:
-        if method == 'GET':
-            response = requests.get(url, headers=headers, timeout=30)
-        elif method == 'POST':
-            response = requests.post(url, json=data, headers=headers, timeout=30)
-        elif method == 'PATCH':
-            response = requests.patch(url, json=data, headers=headers, timeout=30)
-        elif method == 'DELETE':
-            response = requests.delete(url, headers=headers, timeout=30)
+        # Add default headers
+        if headers is None:
+            headers = {}
+        headers['Content-Type'] = 'application/json'
         
+        if method == 'GET':
+            response = requests.get(url, headers=headers, timeout=10)
+        elif method == 'POST':
+            response = requests.post(url, json=data, headers=headers, timeout=10)
+        elif method == 'PATCH':
+            response = requests.patch(url, json=data, headers=headers, timeout=10)
+        elif method == 'DELETE':
+            response = requests.delete(url, headers=headers, timeout=10)
+        
+        print(f"DEBUG: {method} {url} -> {response.status_code}")
         return response
+    except requests.exceptions.Timeout:
+        print(f"Timeout for {method} {url}")
+        return None
     except requests.exceptions.RequestException as e:
         print(f"Request error for {method} {url}: {e}")
         return None
