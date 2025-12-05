@@ -358,13 +358,13 @@ export async function POST(request) {
       const encryptedData = encryptDocument(documentData);
       
       // Сохраняем в файл
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'documents');
+      const uploadsDir = nodePath.join(process.cwd(), 'uploads', 'documents');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
       
       const filename = `${userId}_${Date.now()}.enc`;
-      const filepath = path.join(uploadsDir, filename);
+      const filepath = nodePath.join(uploadsDir, filename);
       fs.writeFileSync(filepath, encryptedData);
       
       // Обновляем пользователя
