@@ -96,7 +96,21 @@ def test_auth_flow():
     
     # 2. Get SMS code from logs (mock)
     print("📱 Mock SMS code should appear in supervisor logs")
-    sms_code = "123456"  # Using mock code for testing
+    # Get the actual SMS code from logs
+    import subprocess
+    try:
+        result = subprocess.run(['tail', '-10', '/var/log/supervisor/nextjs.out.log'], 
+                              capture_output=True, text=True)
+        log_lines = result.stdout.split('\n')
+        sms_code = None
+        for line in reversed(log_lines):
+            if f'SMS код для {test_phone}:' in line:
+                sms_code = line.split(':')[-1].strip()
+                break
+        if not sms_code:
+            sms_code = "123456"  # Fallback
+    except:
+        sms_code = "123456"  # Fallback
     
     # 3. Verify SMS
     response = make_request('POST', '/auth/verify-sms', {
