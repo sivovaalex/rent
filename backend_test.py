@@ -189,7 +189,6 @@ def test_items_management():
     }
     
     response = make_request('POST', '/items', item_data, headers)
-    print(f"DEBUG: Response object: {response}, type: {type(response)}, bool: {bool(response)}")
     if response is not None:
         if response.status_code == 403:
             results.success("Item creation blocked for unverified user")
