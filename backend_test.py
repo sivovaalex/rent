@@ -287,9 +287,24 @@ def test_admin_endpoints():
         return False
     
     # 2. Verify admin SMS
+    # Get the actual SMS code from logs for admin
+    try:
+        result = subprocess.run(['tail', '-10', '/var/log/supervisor/nextjs.out.log'], 
+                              capture_output=True, text=True)
+        log_lines = result.stdout.split('\n')
+        admin_sms_code = None
+        for line in reversed(log_lines):
+            if f'SMS код для {admin_phone}:' in line:
+                admin_sms_code = line.split(':')[-1].strip()
+                break
+        if not admin_sms_code:
+            admin_sms_code = "123456"  # Fallback
+    except:
+        admin_sms_code = "123456"  # Fallback
+    
     response = make_request('POST', '/auth/verify-sms', {
         'phone': admin_phone,
-        'code': '123456',
+        'code': admin_sms_code,
         'name': 'Админ Тестов'
     })
     
