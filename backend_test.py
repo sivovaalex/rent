@@ -327,12 +327,16 @@ def test_admin_endpoints():
         'name': 'Админ Тестов'
     })
     
-    if response and response.status_code == 200:
-        data = response.json()
-        admin_user_id = data['user']['_id']
-        results.success("Admin user creation")
+    if response:
+        if response.status_code == 200:
+            data = response.json()
+            admin_user_id = data['user']['_id']
+            results.success("Admin user creation")
+        else:
+            results.failure("Admin user creation", f"Unexpected status: {response.status_code}")
+            return False
     else:
-        results.failure("Admin user creation", f"Status: {response.status_code if response else 'No response'}")
+        results.failure("Admin user creation", "No response")
         return False
     
     # Test admin endpoints without proper role (should fail)
