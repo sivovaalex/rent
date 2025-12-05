@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
-import path from 'path';
+import nodePath from 'path';
 import crypto from 'crypto';
 
 const client = new MongoClient(process.env.MONGO_URL);
