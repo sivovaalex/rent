@@ -70,11 +70,34 @@ export default function App() {
   const [alert, setAlert] = useState(null);
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (user) {
-      setCurrentUser(JSON.parse(user));
-      setShowAuth(false);
-      loadItems();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      // Всегда синхронизируем с актуальным статусом
+      fetch('/api/auth/me', {
+        headers: { 'x-user-id': user._id }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) {
+            setCurrentUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            setShowAuth(false);
+            if (data.user.is_verified) {
+              loadItems();
+            }
+          } else {
+            // Не авторизован — сброс
+            localStorage.removeItem('user');
+            setShowAuth(true);
+          }
+        })
+        .catch(() => {
+          // Если API недоступен — используем кэш, но показываем возможный риск
+          setCurrentUser(user);
+          setShowAuth(false);
+          if (user.is_verified) loadItems();
+        });
     }
   }, []);
 
@@ -161,12 +184,25 @@ export default function App() {
         });
         const data = await res.json();
         if (res.ok) {
-          showAlert('Документ загружен! Ожидайте проверки модератора.');
+  showAlert('Документ загружен! Ожидайте проверки модератора.');
+  // Загружаем обновлённые данные пользователя
+  const userRes = await fetch('/api/auth/me', {
+    headers: { 'x-user-id': currentUser._id }
+  });
+  const userData = await userRes.json();
+  if (userRes.ok && userData.user) {
+    setCurrentUser(userData.user);
+    localStorage.setItem('user', JSON.stringify(userData.user));
+    if (userData.user.is_verified) {
           setShowAuth(false);
           loadItems();
-        } else {
-          showAlert(data.error, 'error');
         }
+      } else {
+        // Если модерация ещё не завершена — остаёмся в шаге verify
+        setShowAuth(true);
+        setAuthStep('verify');
+      }
+    }
       } catch (error) {
         showAlert('Ошибка загрузки документа', 'error');
       }
@@ -503,7 +539,12 @@ export default function App() {
               <div>
                 <p className="text-sm font-medium">{currentUser?.name}</p>
                 <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-xs">{currentUser?.role}</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {currentUser?.role === 'renter' && 'Арендатор'}
+                    {currentUser?.role === 'owner' && 'Арендодатель'}
+                    {currentUser?.role === 'moderator' && 'Модератор'}
+                    {currentUser?.role === 'admin' && 'Администратор'}
+                  </Badge>
                   {currentUser?.is_verified && (
                     <Badge variant="success" className="text-xs">
                       <CheckCircle className="w-3 h-3 mr-1" />
