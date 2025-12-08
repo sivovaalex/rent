@@ -365,7 +365,18 @@ export async function POST(request) {
       
       const filename = `${userId}_${Date.now()}.enc`;
       const filepath = nodePath.join(uploadsDir, filename);
-      fs.writeFileSync(filepath, encryptedData);
+      //fs.writeFileSync(filepath, encryptedData);
+      await db.collection('users').updateOne(
+        { _id: userId },
+        { 
+          $set: { 
+            encrypted_document: encryptedData, // ← сохраняем в БД
+            document_type: documentType,
+            verification_status: 'pending',
+            verification_submitted_at: new Date()
+          } 
+        }
+      );
       
       // Обновляем пользователя
       await db.collection('users').updateOne(
