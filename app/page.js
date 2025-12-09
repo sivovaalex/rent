@@ -500,7 +500,7 @@ export default function App() {
           </CardHeader>
           <CardContent>
             {authStep === 'phone' && (<>
-              <h3>Регистрация</h3>
+              <h3  className="text-center">Регистрация</h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="phone">Номер телефона</Label>
@@ -613,7 +613,7 @@ export default function App() {
             )}
 
             {authStep === 'login' && (<>
-              <h3>Вход</h3>
+              <h3  className="text-center">Вход</h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="loginEmail">Email</Label>
@@ -637,7 +637,7 @@ export default function App() {
                   Войти
                 </Button>
                 <Button variant="outline" onClick={() => setAuthStep('phone')} className="w-full">
-                  регистрация
+                  Регистрация
                 </Button>
               </div>
             </>)}
@@ -977,7 +977,10 @@ export default function App() {
                   </div>
                 </div>
                 {!currentUser?.is_verified && (
-                  <Button onClick={() => setShowAuth(true)}>
+                  <Button onClick={() => {
+                    setAuthStep('verify');
+                    setShowAuth(true);
+                  }}>
                     <Shield className="w-4 h-4 mr-2" />
                     Пройти верификацию
                   </Button>
