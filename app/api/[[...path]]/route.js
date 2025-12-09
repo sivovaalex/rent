@@ -144,6 +144,26 @@ export async function GET(request) {
       return NextResponse.json({ item });
     }
 
+    // Получить занятые даты для лота
+    if (path.startsWith('/items/') && path.endsWith('/blocked-booking-dates')) {
+      const itemId = path.split('/')[2];
+      const bookings = await db.collection('bookings').find({
+        item_id: itemId,
+        status: { $in: ['pending_payment', 'paid'] }
+      }).toArray();
+
+      const dates = [];
+      for (const b of bookings) {
+        const start = new Date(b.start_date);
+        const end = new Date(b.end_date);
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          dates.push(d.toISOString().split('T')[0]); // "YYYY-MM-DD"
+        }
+      }
+
+      return NextResponse.json({ dates: [...new Set(dates)] });
+    }
+
     // Получить бронирования пользователя
     if (path === '/bookings') {
       const userId = request.headers.get('x-user-id');

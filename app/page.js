@@ -40,6 +40,8 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+
+  const [blockedBookingDates, setBlockedBookingDates] = useState([]);
   
   // New item form
   const [newItem, setNewItem] = useState({
@@ -242,6 +244,18 @@ export default function App() {
     }
   };
 
+  const loadBlockedBookingDates = async (itemId) => {
+  try {
+    const res = await fetch(`/api/items/${itemId}/blocked-booking-dates`);
+    const data = await res.json();
+    if (res.ok) {
+      setBlockedBookingDates(data.dates || []);
+    }
+  } catch (error) {
+    console.error('Error loading blocked dates:', error);
+  }
+};
+
   const loadAdminData = async () => {
     try {
       const [usersRes, itemsRes, statsRes] = await Promise.all([
@@ -335,7 +349,7 @@ export default function App() {
       const res = await fetch(`/api/bookings/${bookingId}/confirm-return`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          //'Content-Type': 'application/json',
           'x-user-id': currentUser._id
         }
       });
@@ -711,6 +725,7 @@ export default function App() {
                         }
                         setSelectedItem(item);
                         setShowBookingModal(true);
+                        loadBlockedBookingDates(item._id);
                       }}
                       className="w-full"
                     >
@@ -1083,6 +1098,11 @@ export default function App() {
                 onChange={(e) => setBookingForm({ ...bookingForm, end_date: e.target.value })}
               />
             </div>
+            {blockedBookingDates.length > 0 && (
+              <div className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
+                <strong>Занятые дни:</strong> {blockedBookingDates.join(', ')}
+              </div>
+            )}
             <div>
               <Label>Тип аренды</Label>
               <Select
