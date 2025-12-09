@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import nodePath from 'path';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 const client = new MongoClient(process.env.MONGO_URL);
 let db;
@@ -346,11 +347,18 @@ export async function POST(request) {
       if (!user) {
         // Создаём нового пользователя
         const userId = crypto.randomUUID();
+        let passwordHash = null;
+        if (body.password) {
+          passwordHash = await bcrypt.hash(body.password, 10);
+        }
+
         user = {
           _id: userId,
           phone,
           name: name || 'Пользователь',
-          role: 'renter',
+          email: body.email || null,
+          password_hash: passwordHash,
+          role: body.role || 'renter', // ← роль из формы
           rating: 5.0,
           verification_status: 'not_verified',
           is_verified: false,
@@ -412,6 +420,27 @@ export async function POST(request) {
       );
       
       return NextResponse.json({ success: true, message: 'Документ загружен на проверку' });
+    }
+
+    if (path === '/auth/login') {
+      const { email, password } = body;
+      if (!email || !password) {
+        return NextResponse.json({ error: 'Email и пароль обязательны' }, { status: 400 });
+      }
+
+      const user = await db.collection('users').findOne({ email });
+      if (!user || !user.password_hash) {
+        return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
+      }
+
+      const isValid = await bcrypt.compare(password, user.password_hash);
+      if (!isValid) {
+        return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
+      }
+
+      const safeUser = { ...user };
+      delete safeUser.password_hash;
+      return NextResponse.json({ success: true, user: safeUser });
     }
 
     // Создание лота

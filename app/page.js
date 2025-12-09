@@ -28,6 +28,12 @@ export default function App() {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('renter'); // по умолчанию
+
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,7 +151,7 @@ export default function App() {
       const res = await fetch('/api/auth/verify-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code, name })
+        body: JSON.stringify({ phone, code, name, email, password, role })
       });
       const data = await res.json();
       if (res.ok) {
@@ -173,6 +179,7 @@ export default function App() {
     const year = d.getFullYear();
     return `${day}.${month}.${year}`;
   };
+
   const uploadDocument = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -421,6 +428,27 @@ export default function App() {
     }
   };
 
+  const loginByEmail = async () => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCurrentUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setShowAuth(false);
+        loadItems();
+      } else {
+        showAlert(data.error, 'error');
+      }
+    } catch (error) {
+      showAlert('Ошибка входа', 'error');
+    }
+  };
+
   const moderateItem = async (itemId, action) => {
     try {
       const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
@@ -471,7 +499,7 @@ export default function App() {
             <CardDescription>Единая шеринг-платформа</CardDescription>
           </CardHeader>
           <CardContent>
-            {authStep === 'phone' && (
+            {authStep === 'phone' && (<>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="phone">Номер телефона</Label>
@@ -488,7 +516,17 @@ export default function App() {
                   Получить код
                 </Button>
               </div>
-            )}
+              <div className="text-center text-sm text-gray-500">
+                или{' '}
+                <button
+                  type="button"
+                  onClick={() => setAuthStep('login')}
+                  className="text-indigo-600 hover:underline"
+                >
+                  войти по почте
+                </button>
+              </div>
+            </>)}
             
             {authStep === 'code' && (
               <div className="space-y-4">
@@ -500,6 +538,38 @@ export default function App() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="example@mail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password">Пароль</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Роль</Label>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="renter">Арендатор</SelectItem>
+                      <SelectItem value="owner">Арендодатель</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="code">Код из SMS</Label>
@@ -537,6 +607,35 @@ export default function App() {
                 </div>
                 <Button onClick={() => setShowAuth(false)} variant="outline" className="w-full">
                   Загрузить позже
+                </Button>
+              </div>
+            )}
+
+            {authStep === 'login' && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="loginEmail">Email</Label>
+                  <Input
+                    id="loginEmail"
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="loginPassword">Пароль</Label>
+                  <Input
+                    id="loginPassword"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                </div>
+                <Button onClick={loginByEmail} className="w-full">
+                  Войти
+                </Button>
+                <Button variant="outline" onClick={() => setAuthStep('phone')} className="w-full">
+                  Назад к SMS
                 </Button>
               </div>
             )}
@@ -845,19 +944,12 @@ export default function App() {
                 </div>
                 <div>
                   <Label>Роль</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Select value={currentUser?.role} onValueChange={updateRole}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="renter">Арендатор</SelectItem>
-                        <SelectItem value="owner">Арендодатель</SelectItem>
-                        <SelectItem value="moderator">Модератор</SelectItem>
-                        <SelectItem value="admin">Администратор</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <p className="text-lg font-medium mt-1">
+                    {currentUser?.role === 'renter' && 'Арендатор'}
+                    {currentUser?.role === 'owner' && 'Арендодатель'}
+                    {currentUser?.role === 'moderator' && 'Модератор'}
+                    {currentUser?.role === 'admin' && 'Администратор'}
+                  </p>
                 </div>
                 <div>
                   <Label>Рейтинг</Label>
