@@ -215,7 +215,6 @@ export default function App() {
         }
       } else {
         // Если модерация ещё не завершена — остаёмся в шаге verify
-        setShowAuth(true);
         setAuthStep('verify');
       }
     }
@@ -971,12 +970,14 @@ export default function App() {
                     ) : (
                       <Badge variant="outline">
                         <AlertCircle className="w-4 h-4 mr-1" />
-                        Требуется верификация
+                        {currentUser?.verification_status === 'pending'
+                          ? 'Требуется верификация (на проверке)'
+                          : 'Требуется верификация'}
                       </Badge>
                     )}
                   </div>
                 </div>
-                {!currentUser?.is_verified && (
+                {!currentUser?.is_verified && currentUser?.verification_status !== 'pending' && (
                   <Button onClick={() => {
                     setAuthStep('verify');
                     setShowAuth(true);
