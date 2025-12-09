@@ -24,7 +24,7 @@ export default function App() {
   
   // Auth state
   const [showAuth, setShowAuth] = useState(true);
-  const [authStep, setAuthStep] = useState('phone'); // 'phone', 'code', 'verify'
+  const [authStep, setAuthStep] = useState('login'); // 'phone', 'code', 'verify', 'login'
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -500,6 +500,7 @@ export default function App() {
           </CardHeader>
           <CardContent>
             {authStep === 'phone' && (<>
+              <h3>Регистрация</h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="phone">Номер телефона</Label>
@@ -611,7 +612,8 @@ export default function App() {
               </div>
             )}
 
-            {authStep === 'login' && (
+            {authStep === 'login' && (<>
+              <h3>Вход</h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="loginEmail">Email</Label>
@@ -635,10 +637,10 @@ export default function App() {
                   Войти
                 </Button>
                 <Button variant="outline" onClick={() => setAuthStep('phone')} className="w-full">
-                  Назад к SMS
+                  регистрация
                 </Button>
               </div>
-            )}
+            </>)}
           </CardContent>
         </Card>
       </div>
