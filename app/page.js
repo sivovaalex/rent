@@ -166,6 +166,13 @@ export default function App() {
     }
   };
 
+  const formatDate = (dateString) => {
+    const d = new Date(dateString);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
   const uploadDocument = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -349,9 +356,10 @@ export default function App() {
       const res = await fetch(`/api/bookings/${bookingId}/confirm-return`, {
         method: 'POST',
         headers: {
-          //'Content-Type': 'application/json',
+          'Content-Type': 'application/json',
           'x-user-id': currentUser._id
-        }
+        },
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (res.ok) {
@@ -1100,7 +1108,7 @@ export default function App() {
             </div>
             {blockedBookingDates.length > 0 && (
               <div className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
-                <strong>Занятые дни:</strong> {blockedBookingDates.join(', ')}
+                <strong>Занятые дни:</strong> {blockedBookingDates.map(formatDate).join(', ')}
               </div>
             )}
             <div>
