@@ -5,7 +5,7 @@ import nodePath from 'path';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
-const client = new MongoClient(process.env.MONGO_URL);
+const client = new MongoClient(process.env.MONGODB_URI);
 let db;
 
 async function connectDB() {
