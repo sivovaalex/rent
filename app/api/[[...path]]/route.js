@@ -282,7 +282,7 @@ export async function GET(request) {
       const completedBookings = await db.collection('bookings')
         .find({ status: 'completed' })
         .toArray();
-      const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.total_price * 0.15), 0);
+      const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.commission), 0);
       
       return NextResponse.json({
         totalUsers,

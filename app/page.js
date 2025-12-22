@@ -1018,7 +1018,7 @@ export default function App() {
                       <CardTitle className="text-sm">Комиссия</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold">{stats.totalRevenue?.toFixed(0)} ₽</p>
+                      <p className="text-3xl font-bold">{stats.totalRevenue?.toFixed(0)} ₽<span className="text-xs text-gray-500 ml-1 align-top">от завершенных бронирований</span></p>
                       <p className="text-sm text-gray-600 mt-1">Всего бронирований: {stats.totalBookings}</p>
                     </CardContent>
                   </Card>
