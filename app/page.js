@@ -728,7 +728,12 @@ export default function App() {
               <Package className="w-8 h-8 text-indigo-600" />
               <h1 className="text-2xl font-bold text-indigo-600">Аренда PRO</h1>
             </div>
-            <Button onClick={() => setShowAuth(true)} variant="outline">
+            <Button 
+              onClick={() => {
+                setAuthStep('login');
+                setShowAuth(true);
+              }} 
+              variant="outline">
               Войти
             </Button>
           </div>
