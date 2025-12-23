@@ -48,7 +48,6 @@ export async function GET(request) {
   const db = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
-
   try {
     // Получить текущего пользователя
     if (path === '/auth/me') {
@@ -62,37 +61,51 @@ export async function GET(request) {
       }
       return NextResponse.json({ user });
     }
-
+    
     // Получить список лотов с фильтрацией
     if (path === '/items') {
       const category = url.searchParams.get('category');
+      const subcategory = url.searchParams.get('subcategory');
       const search = url.searchParams.get('search');
       const minPrice = url.searchParams.get('minPrice');
       const maxPrice = url.searchParams.get('maxPrice');
-      const type = url.searchParams.get('type');
-      const brand = url.searchParams.get('brand');
-      const size = url.searchParams.get('size');
-      const condition = url.searchParams.get('condition');
       const sort = url.searchParams.get('sort') || 'newest';
       
-      let query = { status: 'approved' };
+      // Фильтрация по владельцу
+      const owner_id = url.searchParams.get('owner_id');
+      const show_all_statuses = url.searchParams.get('show_all_statuses') === 'true';
       
-      if (category) query.category = category;
+      let query = {};
+      
+      // Если фильтрация по владельцу
+      if (owner_id) {
+        query.owner_id = owner_id;
+        // Если показывать все статусы
+        if (show_all_statuses) {
+          query.status = { $in: ['approved', 'pending', 'rejected', 'draft'] };
+        } else {
+          query.status = 'approved'; // Только опубликованные по умолчанию
+        }
+      } else {
+        // Для всех лотов показываем только опубликованные
+        query.status = 'approved';
+      }
+      
+      if (category && category !== 'all') query.category = category;
+      if (subcategory && subcategory !== 'all') query.subcategory = subcategory;
+      
       if (search) {
         query.$or = [
           { title: { $regex: search, $options: 'i' } },
           { description: { $regex: search, $options: 'i' } }
         ];
       }
+      
       if (minPrice || maxPrice) {
         query.price_per_day = {};
         if (minPrice) query.price_per_day.$gte = parseFloat(minPrice);
         if (maxPrice) query.price_per_day.$lte = parseFloat(maxPrice);
       }
-      if (type) query['attributes.type'] = type;
-      if (brand) query['attributes.brand'] = brand;
-      if (size) query['attributes.size'] = size;
-      if (condition) query['attributes.condition'] = condition;
       
       let sortQuery = {};
       if (sort === 'newest') sortQuery = { createdAt: -1 };
@@ -117,16 +130,14 @@ export async function GET(request) {
       
       return NextResponse.json({ items });
     }
-
+    
     // Получить конкретный лот
-    if (path.startsWith('/items/') && !path.includes('book')) {
+    if (path.startsWith('/items/') && !path.includes('book') && !path.includes('publish') && !path.includes('unpublish')) {
       const itemId = path.split('/')[2];
       const item = await db.collection('items').findOne({ _id: itemId });
-      
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
-      
       // Добавляем информацию о владельце
       const owner = await db.collection('users').findOne({ _id: item.owner_id });
       if (owner) {
@@ -134,17 +145,15 @@ export async function GET(request) {
         item.owner_rating = owner.rating;
         item.owner_phone = owner.phone;
       }
-      
       // Добавляем отзывы
       const reviews = await db.collection('reviews')
         .find({ item_id: itemId })
         .sort({ createdAt: -1 })
         .toArray();
       item.reviews = reviews;
-      
       return NextResponse.json({ item });
     }
-
+    
     // Получить занятые даты для лота
     if (path.startsWith('/items/') && path.endsWith('/blocked-booking-dates')) {
       const itemId = path.split('/')[2];
@@ -152,7 +161,7 @@ export async function GET(request) {
         item_id: itemId,
         status: { $in: ['pending_payment', 'paid'] }
       }).toArray();
-
+      
       const dates = [];
       for (const b of bookings) {
         const start = new Date(b.start_date);
@@ -161,10 +170,10 @@ export async function GET(request) {
           dates.push(d.toISOString().split('T')[0]); // "YYYY-MM-DD"
         }
       }
-
+      
       return NextResponse.json({ dates: [...new Set(dates)] });
     }
-
+    
     // Получить бронирования пользователя
     if (path === '/bookings') {
       const userId = request.headers.get('x-user-id');
@@ -174,7 +183,6 @@ export async function GET(request) {
       
       const userType = url.searchParams.get('type'); // 'renter' или 'owner'
       let query = {};
-      
       if (userType === 'renter') {
         query.renter_id = userId;
       } else if (userType === 'owner') {
@@ -197,60 +205,58 @@ export async function GET(request) {
         .sort({ createdAt: -1 })
         .toArray();
       
-      // Добавляем информацию о лотах и пользователях
+      // Добавляем информацию о лотах, пользователях и отзывах
       for (let booking of bookings) {
         const item = await db.collection('items').findOne({ _id: booking.item_id });
         const renter = await db.collection('users').findOne({ _id: booking.renter_id });
         booking.item = item;
         booking.renter = renter;
+        
+        // Проверяем, есть ли отзыв для этого бронирования
+        const review = await db.collection('reviews').findOne({ booking_id: booking._id });
+        if (review) {
+          booking.review = review;
+        }
       }
       
       return NextResponse.json({ bookings });
     }
-
+    
     // Получить пользователей для модерации
     if (path === '/admin/users') {
       const userId = request.headers.get('x-user-id');
       const user = await db.collection('users').findOne({ _id: userId });
-      
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       const status = url.searchParams.get('status');
       let query = {};
       if (status === 'pending') {
         query.verification_status = 'pending';
       }
-      
       const users = await db.collection('users')
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
-      
       return NextResponse.json({ users });
     }
-
+    
     // Получить лоты для модерации
     if (path === '/admin/items') {
       const userId = request.headers.get('x-user-id');
       const user = await db.collection('users').findOne({ _id: userId });
-      
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       const status = url.searchParams.get('status');
       let query = {};
       if (status === 'pending') {
         query.status = 'pending';
       }
-      
       const items = await db.collection('items')
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
-      
       // Добавляем информацию о владельце
       for (let item of items) {
         const owner = await db.collection('users').findOne({ _id: item.owner_id });
@@ -259,19 +265,16 @@ export async function GET(request) {
           item.owner_phone = owner.phone;
         }
       }
-      
       return NextResponse.json({ items });
     }
-
+    
     // Получить статистику (для админов)
     if (path === '/admin/stats') {
       const userId = request.headers.get('x-user-id');
       const user = await db.collection('users').findOne({ _id: userId });
-      
       if (!user || user.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       const totalUsers = await db.collection('users').countDocuments();
       const totalItems = await db.collection('items').countDocuments();
       const totalBookings = await db.collection('bookings').countDocuments();
@@ -282,7 +285,7 @@ export async function GET(request) {
       const completedBookings = await db.collection('bookings')
         .find({ status: 'completed' })
         .toArray();
-      const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.commission), 0);
+      const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.commission || 0), 0);
       
       return NextResponse.json({
         totalUsers,
@@ -293,7 +296,7 @@ export async function GET(request) {
         totalRevenue
       });
     }
-
+    
     return NextResponse.json({ error: 'Маршрут не найден' }, { status: 404 });
   } catch (error) {
     console.error('GET Error:', error);
@@ -305,45 +308,42 @@ export async function POST(request) {
   const db = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
-  const body = await request.json();
-
+  let body = {};
+  // Пытаемся получить тело запроса только если оно есть
+  try {
+    body = await request.json();
+  } catch (e) {
+    // Если нет тела запроса, оставляем пустой объект
+  }
+  
   try {
     // Отправка SMS-кода
     if (path === '/auth/send-sms') {
       const { phone } = body;
-      
       if (!phone) {
         return NextResponse.json({ error: 'Телефон обязателен' }, { status: 400 });
       }
-      
       const code = generateSMSCode();
-      
       // Сохраняем код в БД
       await db.collection('sms_codes').updateOne(
         { phone },
         { $set: { phone, code, createdAt: new Date() } },
         { upsert: true }
       );
-      
       // Мок: выводим код в консоль
       console.log(`📱 SMS код для ${phone}: ${code}`);
-      
       return NextResponse.json({ success: true, message: 'Код отправлен' });
     }
-
+    
     // Верификация SMS-кода и регистрация/вход
     if (path === '/auth/verify-sms') {
       const { phone, code, name } = body;
-      
       const smsRecord = await db.collection('sms_codes').findOne({ phone });
-      
       if (!smsRecord || smsRecord.code !== code) {
         return NextResponse.json({ error: 'Неверный код' }, { status: 400 });
       }
-      
       // Проверяем, существует ли пользователь
       let user = await db.collection('users').findOne({ phone });
-      
       if (!user) {
         // Создаём нового пользователя
         const userId = crypto.randomUUID();
@@ -351,7 +351,6 @@ export async function POST(request) {
         if (body.password) {
           passwordHash = await bcrypt.hash(body.password, 10);
         }
-
         user = {
           _id: userId,
           phone,
@@ -366,31 +365,25 @@ export async function POST(request) {
         };
         await db.collection('users').insertOne(user);
       }
-      
       // Удаляем использованный код
       await db.collection('sms_codes').deleteOne({ phone });
-      
       return NextResponse.json({ success: true, user });
     }
-
+    
     // Загрузка документа для верификации
     if (path === '/auth/upload-document') {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const { documentData, documentType } = body; // documentData - base64
-      
       // Шифруем и сохраняем документ
       const encryptedData = encryptDocument(documentData);
-      
       // Сохраняем в файл
       const uploadsDir = nodePath.join(process.cwd(), 'uploads', 'documents');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
-      
       const filename = `${userId}_${Date.now()}.enc`;
       const filepath = nodePath.join(uploadsDir, filename);
       //fs.writeFileSync(filepath, encryptedData);
@@ -405,7 +398,6 @@ export async function POST(request) {
           } 
         }
       );
-      
       // Обновляем пользователя
       await db.collection('users').updateOne(
         { _id: userId },
@@ -418,43 +410,37 @@ export async function POST(request) {
           } 
         }
       );
-      
       return NextResponse.json({ success: true, message: 'Документ загружен на проверку' });
     }
-
+    
     if (path === '/auth/login') {
       const { email, password } = body;
       if (!email || !password) {
         return NextResponse.json({ error: 'Email и пароль обязательны' }, { status: 400 });
       }
-
       const user = await db.collection('users').findOne({ email });
       if (!user || !user.password_hash) {
         return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
       }
-
       const isValid = await bcrypt.compare(password, user.password_hash);
       if (!isValid) {
         return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
       }
-
       const safeUser = { ...user };
       delete safeUser.password_hash;
       return NextResponse.json({ success: true, user: safeUser });
     }
-
+    
     // Создание лота
     if (path === '/items') {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const user = await db.collection('users').findOne({ _id: userId });
       if (!user || !user.is_verified) {
         return NextResponse.json({ error: 'Требуется верификация' }, { status: 403 });
       }
-      
       const itemId = crypto.randomUUID();
       const item = {
         _id: itemId,
@@ -463,38 +449,102 @@ export async function POST(request) {
         status: 'pending',
         createdAt: new Date()
       };
-      
       await db.collection('items').insertOne(item);
-      
       return NextResponse.json({ success: true, item });
     }
-
+    
+    // Публикация лота
+    if (path.startsWith('/items/') && path.endsWith('/publish')) {
+      const userId = request.headers.get('x-user-id');
+      if (!userId) {
+        return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
+      }
+      
+      const currentUser = await db.collection('users').findOne({ _id: userId });
+      if (!currentUser) {
+        return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
+      }
+      
+      const itemId = path.split('/')[2];
+      const item = await db.collection('items').findOne({ _id: itemId });
+      if (!item) {
+        return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
+      }
+      
+      // Проверка прав: владелец лота, модератор или админ
+      if (item.owner_id !== userId && currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
+        return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
+      }
+      
+      // Если лот был отклонен, отправляем на модерацию
+      let newStatus = 'pending';
+      // Если пользователь - модератор или админ, можно сразу публиковать
+      if (currentUser.role === 'moderator' || currentUser.role === 'admin') {
+        newStatus = 'approved';
+      }
+      
+      await db.collection('items').updateOne(
+        { _id: itemId },
+        { $set: { status: newStatus, updatedAt: new Date() } }
+      );
+      
+      return NextResponse.json({ success: true });
+    }
+    
+    // Снятие лота с публикации
+    if (path.startsWith('/items/') && path.endsWith('/unpublish')) {
+      const userId = request.headers.get('x-user-id');
+      if (!userId) {
+        return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
+      }
+      
+      const currentUser = await db.collection('users').findOne({ _id: userId });
+      if (!currentUser) {
+        return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
+      }
+      
+      const itemId = path.split('/')[2];
+      const item = await db.collection('items').findOne({ _id: itemId });
+      if (!item) {
+        return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
+      }
+      
+      // Проверка прав: владелец лота, модератор или админ
+      if (item.owner_id !== userId && currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
+        return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
+      }
+      
+      // Статус для снятого с публикации лота
+      const newStatus = 'draft';
+      
+      await db.collection('items').updateOne(
+        { _id: itemId },
+        { $set: { status: newStatus, updatedAt: new Date() } }
+      );
+      
+      return NextResponse.json({ success: true });
+    }
+    
     // Создание бронирования
     if (path.startsWith('/items/') && path.endsWith('/book')) {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const user = await db.collection('users').findOne({ _id: userId });
       if (!user || !user.is_verified) {
         return NextResponse.json({ error: 'Требуется верификация' }, { status: 403 });
       }
-      
       const itemId = path.split('/')[2];
       const item = await db.collection('items').findOne({ _id: itemId });
-      
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
-      
       const { start_date, end_date, rental_type, is_insured } = body;
-      
       // Рассчитываем стоимость
       const start = new Date(start_date);
       const end = new Date(end_date);
       const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-      
       let rentalPrice = 0;
       if (rental_type === 'day') {
         rentalPrice = item.price_per_day * days;
@@ -502,13 +552,11 @@ export async function POST(request) {
         const months = Math.ceil(days / 30);
         rentalPrice = item.price_per_month * months;
       }
-      
       const deposit = item.deposit;
       const commission = rentalPrice * 0.15;
       const insurance = is_insured ? rentalPrice * 0.10 : 0;
       const total = rentalPrice + deposit + insurance;
       const prepayment = rentalPrice * 0.30; // 30% предоплата
-      
       const bookingId = crypto.randomUUID();
       const booking = {
         _id: bookingId,
@@ -529,67 +577,54 @@ export async function POST(request) {
         payment_id: `MOCK_${crypto.randomUUID()}`, // Мок-ID платежа
         createdAt: new Date()
       };
-      
       await db.collection('bookings').insertOne(booking);
-      
       // Мок: симулируем успешный платёж
       console.log(`💳 Мок-платёж создан для бронирования ${bookingId}`);
       console.log(`Сумма: ${total} ₽ (предоплата: ${prepayment} ₽, залог: ${deposit} ₽)`);
-      
       // Обновляем статус на "оплачено"
       await db.collection('bookings').updateOne(
         { _id: bookingId },
         { $set: { status: 'paid', paid_at: new Date() } }
       );
-      
       return NextResponse.json({ success: true, booking });
     }
-
+    
     // Добавление фото чек-листа
     if (path.startsWith('/bookings/') && path.endsWith('/checklist')) {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const bookingId = path.split('/')[2];
       const { photos, type } = body; // type: 'handover' или 'return'
-      
       const booking = await db.collection('bookings').findOne({ _id: bookingId });
       if (!booking) {
         return NextResponse.json({ error: 'Бронирование не найдено' }, { status: 404 });
       }
-      
       const updateField = type === 'handover' ? 'handover_photos' : 'return_photos';
-      
       await db.collection('bookings').updateOne(
         { _id: bookingId },
         { $set: { [updateField]: photos, [`${type}_confirmed_at`]: new Date() } }
       );
-      
       return NextResponse.json({ success: true });
     }
-
+    
     // Подтверждение возврата
     if (path.startsWith('/bookings/') && path.endsWith('/confirm-return')) {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const bookingId = path.split('/')[2];
       const booking = await db.collection('bookings').findOne({ _id: bookingId });
-      
       if (!booking) {
         return NextResponse.json({ error: 'Бронирование не найдено' }, { status: 404 });
       }
-      
       // Проверяем, что пользователь - владелец лота
       const item = await db.collection('items').findOne({ _id: booking.item_id });
       if (item.owner_id !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       // Обновляем статус
       await db.collection('bookings').updateOne(
         { _id: bookingId },
@@ -601,29 +636,24 @@ export async function POST(request) {
           } 
         }
       );
-      
       // Мок: возврат залога
       console.log(`💰 Залог ${booking.deposit} ₽ возвращён арендатору`);
       console.log(`💰 Арендодатель получил ${booking.rental_price - booking.commission} ₽`);
-      
       return NextResponse.json({ success: true });
     }
-
+    
     // Создание отзыва
     if (path === '/reviews') {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const { booking_id, item_id, rating, text, photos } = body;
-      
       // Проверяем, что бронирование завершено
       const booking = await db.collection('bookings').findOne({ _id: booking_id });
       if (!booking || booking.status !== 'completed') {
         return NextResponse.json({ error: 'Можно оставить отзыв только после завершения аренды' }, { status: 400 });
       }
-      
       const reviewId = crypto.randomUUID();
       const review = {
         _id: reviewId,
@@ -635,95 +665,76 @@ export async function POST(request) {
         photos: photos || [],
         createdAt: new Date()
       };
-      
       await db.collection('reviews').insertOne(review);
-      
       // Обновляем рейтинг владельца
       const item = await db.collection('items').findOne({ _id: item_id });
       const allReviews = await db.collection('reviews').find({ item_id }).toArray();
       const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-      
       await db.collection('users').updateOne(
         { _id: item.owner_id },
         { $set: { rating: avgRating } }
       );
-      
       return NextResponse.json({ success: true, review });
     }
-
+    
     // Модерация пользователя
     if (path.startsWith('/admin/users/') && path.endsWith('/verify')) {
       const userId = request.headers.get('x-user-id');
       const user = await db.collection('users').findOne({ _id: userId });
-      
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       const targetUserId = path.split('/')[3];
       const { action, reason } = body; // action: 'approve' или 'reject'
-      
       const updateData = {
         verification_status: action === 'approve' ? 'verified' : 'rejected',
         is_verified: action === 'approve',
         verified_at: new Date(),
         verified_by: userId
       };
-      
       if (reason) {
         updateData.rejection_reason = reason;
       }
-      
       await db.collection('users').updateOne(
         { _id: targetUserId },
         { $set: updateData }
       );
-      
       return NextResponse.json({ success: true });
     }
-
+    
     // Модерация лота
     if (path.startsWith('/admin/items/') && path.endsWith('/moderate')) {
       const userId = request.headers.get('x-user-id');
       const user = await db.collection('users').findOne({ _id: userId });
-      
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       const itemId = path.split('/')[3];
       const { action, reason } = body; // action: 'approve' или 'reject'
-      
       const updateData = {
         status: action === 'approve' ? 'approved' : 'rejected',
         moderated_at: new Date(),
         moderated_by: userId
       };
-      
       if (reason) {
         updateData.rejection_reason = reason;
       }
-      
       await db.collection('items').updateOne(
         { _id: itemId },
         { $set: updateData }
       );
-      
       return NextResponse.json({ success: true });
     }
-
+    
     // Блокировка пользователя
     if (path.startsWith('/admin/users/') && path.endsWith('/block')) {
       const userId = request.headers.get('x-user-id');
       const user = await db.collection('users').findOne({ _id: userId });
-      
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       const targetUserId = path.split('/')[3];
       const { reason } = body;
-      
       await db.collection('users').updateOne(
         { _id: targetUserId },
         { 
@@ -735,10 +746,62 @@ export async function POST(request) {
           } 
         }
       );
-      
       return NextResponse.json({ success: true });
     }
-
+    
+    // Создание пользователя (админ)
+    if (path === '/admin/create-user') {
+      const userId = request.headers.get('x-user-id');
+      const currentUser = await db.collection('users').findOne({ _id: userId });
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+        return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
+      }
+      
+      const { name, phone, email, password, role } = body;
+      
+      // Проверка обязательных полей
+      if (!name || !phone || !email || !password) {
+        return NextResponse.json({ error: 'Все поля обязательны' }, { status: 400 });
+      }
+      
+      // Проверка существования пользователя с таким телефоном или email
+      const existingUserByPhone = await db.collection('users').findOne({ phone });
+      const existingUserByEmail = await db.collection('users').findOne({ email });
+      
+      if (existingUserByPhone) {
+        return NextResponse.json({ error: 'Пользователь с таким телефоном уже существует' }, { status: 400 });
+      }
+      if (existingUserByEmail) {
+        return NextResponse.json({ error: 'Пользователь с таким email уже существует' }, { status: 400 });
+      }
+      
+      // Хеширование пароля
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Создание пользователя
+      const newUserId = crypto.randomUUID();
+      const newUser = {
+        _id: newUserId,
+        name,
+        phone,
+        email,
+        password_hash: passwordHash,
+        role: role || 'renter',
+        rating: 5.0,
+        verification_status: 'verified', // Принудительно верифицирован
+        is_verified: true,
+        createdAt: new Date()
+      };
+      
+      await db.collection('users').insertOne(newUser);
+      
+      // Безопасный ответ (без хеша пароля)
+      const safeUser = { ...newUser };
+      delete safeUser.password_hash;
+      
+      return NextResponse.json({ success: true, user: safeUser });
+    }
+    
     return NextResponse.json({ error: 'Маршрут не найден' }, { status: 404 });
   } catch (error) {
     console.error('POST Error:', error);
@@ -751,7 +814,6 @@ export async function PATCH(request) {
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
   const body = await request.json();
-
   try {
     // Обновление профиля
     if (path === '/profile') {
@@ -759,42 +821,35 @@ export async function PATCH(request) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const { name, role } = body;
       const updateData = {};
       if (name) updateData.name = name;
       if (role) updateData.role = role;
-      
       await db.collection('users').updateOne(
         { _id: userId },
         { $set: updateData }
       );
-      
       return NextResponse.json({ success: true });
     }
-
+    
     // Обновление лота
     if (path.startsWith('/items/')) {
       const userId = request.headers.get('x-user-id');
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const itemId = path.split('/')[2];
       const item = await db.collection('items').findOne({ _id: itemId });
-      
       if (!item || item.owner_id !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       await db.collection('items').updateOne(
         { _id: itemId },
         { $set: { ...body, updatedAt: new Date() } }
       );
-      
       return NextResponse.json({ success: true });
     }
-
+    
     return NextResponse.json({ error: 'Маршрут не найден' }, { status: 404 });
   } catch (error) {
     console.error('PATCH Error:', error);
@@ -806,7 +861,6 @@ export async function DELETE(request) {
   const db = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
-
   try {
     // Удаление лота
     if (path.startsWith('/items/')) {
@@ -814,19 +868,15 @@ export async function DELETE(request) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      
       const itemId = path.split('/')[2];
       const item = await db.collection('items').findOne({ _id: itemId });
-      
       if (!item || item.owner_id !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      
       await db.collection('items').deleteOne({ _id: itemId });
-      
       return NextResponse.json({ success: true });
     }
-
+    
     return NextResponse.json({ error: 'Маршрут не найден' }, { status: 404 });
   } catch (error) {
     console.error('DELETE Error:', error);

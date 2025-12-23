@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Star, Upload, Calendar, Phone, Shield, Package, Zap, Shirt, Camera, CheckCircle, AlertCircle, User, Settings, BarChart } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Star, Upload, Calendar, Phone, Shield, Package, Zap, Shirt, Camera, CheckCircle, AlertCircle, User, Settings, BarChart, Plus, Eye, EyeOff, Edit2 } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -31,14 +31,18 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('renter'); // по умолчанию
-
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [subCategoryFilter, setSubCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  
+  // Catalog view
+  const [catalogView, setCatalogView] = useState('all'); // 'all' или 'mine'
+  const [showAllStatuses, setShowAllStatuses] = useState(false); // для отображения всех статусов в "Мои"
   
   // Modal state
   const [showItemModal, setShowItemModal] = useState(false);
@@ -46,12 +50,13 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-
   const [blockedBookingDates, setBlockedBookingDates] = useState([]);
+  const [showAdminUserModal, setShowAdminUserModal] = useState(false);
   
   // New item form
   const [newItem, setNewItem] = useState({
     category: 'stream',
+    subcategory: '',
     title: '',
     description: '',
     price_per_day: '',
@@ -59,6 +64,15 @@ export default function App() {
     deposit: '',
     address: '',
     attributes: {}
+  });
+  
+  // Admin user form
+  const [newAdminUser, setNewAdminUser] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    password: '',
+    role: 'renter'
   });
   
   // Booking form
@@ -76,12 +90,20 @@ export default function App() {
   });
   
   const [alert, setAlert] = useState(null);
+  
+  // Подкатегории для каждой категории
+  const categorySubcategories = {
+    stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
+    electronics: ['Телефоны', 'Ноутбуки', 'Планшеты', 'Фотоаппараты', 'Аудиотехника'],
+    clothing: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
+    sports: ['Велосипеды', 'Лыжи', 'Сноуборды', 'Спортивные залы', 'Инвентарь'],
+    tools: ['Строительные', 'Садовые', 'Ручные инструменты', 'Электроинструменты', 'Измерительные приборы']
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      // Всегда синхронизируем с актуальным статусом
       fetch('/api/auth/me', {
         headers: { 'x-user-id': user._id }
       })
@@ -95,13 +117,11 @@ export default function App() {
               loadItems();
             }
           } else {
-            // Не авторизован — сброс
             localStorage.removeItem('user');
             setShowAuth(true);
           }
         })
         .catch(() => {
-          // Если API недоступен — используем кэш, но показываем возможный риск
           setCurrentUser(user);
           setShowAuth(false);
           if (user.is_verified) loadItems();
@@ -119,7 +139,7 @@ export default function App() {
         loadAdminData();
       }
     }
-  }, [currentTab, currentUser]);
+  }, [currentTab, currentUser, catalogView, showAllStatuses]);
 
   const showAlert = (message, type = 'success') => {
     setAlert({ message, type });
@@ -183,7 +203,6 @@ export default function App() {
   const uploadDocument = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -200,24 +219,20 @@ export default function App() {
         });
         const data = await res.json();
         if (res.ok) {
-  showAlert('Документ загружен! Ожидайте проверки модератора.');
-  // Загружаем обновлённые данные пользователя
-  const userRes = await fetch('/api/auth/me', {
-    headers: { 'x-user-id': currentUser._id }
-  });
-  const userData = await userRes.json();
-  if (userRes.ok && userData.user) {
-    setCurrentUser(userData.user);
-    localStorage.setItem('user', JSON.stringify(userData.user));
-    if (userData.user.is_verified) {
-          setShowAuth(false);
-          loadItems();
+          showAlert('Документ загружен! Ожидайте проверки модератора.');
+          const userRes = await fetch('/api/auth/me', {
+            headers: { 'x-user-id': currentUser._id }
+          });
+          const userData = await userRes.json();
+          if (userRes.ok && userData.user) {
+            setCurrentUser(userData.user);
+            localStorage.setItem('user', JSON.stringify(userData.user));
+            if (userData.user.is_verified) {
+              setShowAuth(false);
+              loadItems();
+            }
+          }
         }
-      } else {
-        // Если модерация ещё не завершена — остаёмся в шаге verify
-        setAuthStep('verify');
-      }
-    }
       } catch (error) {
         showAlert('Ошибка загрузки документа', 'error');
       }
@@ -230,9 +245,18 @@ export default function App() {
     try {
       const params = new URLSearchParams();
       if (categoryFilter !== 'all') params.append('category', categoryFilter);
+      if (subCategoryFilter !== 'all') params.append('subcategory', subCategoryFilter);
       if (searchQuery) params.append('search', searchQuery);
       params.append('sort', sortBy);
       
+      // Параметры для фильтрации по владельцу и статусу
+      if (catalogView === 'mine' && currentUser) {
+        params.append('owner_id', currentUser._id);
+        if (showAllStatuses) {
+          params.append('show_all_statuses', 'true');
+        }
+      }
+
       const res = await fetch(`/api/items?${params}`);
       const data = await res.json();
       if (res.ok) {
@@ -258,16 +282,16 @@ export default function App() {
   };
 
   const loadBlockedBookingDates = async (itemId) => {
-  try {
-    const res = await fetch(`/api/items/${itemId}/blocked-booking-dates`);
-    const data = await res.json();
-    if (res.ok) {
-      setBlockedBookingDates(data.dates || []);
+    try {
+      const res = await fetch(`/api/items/${itemId}/blocked-booking-dates`);
+      const data = await res.json();
+      if (res.ok) {
+        setBlockedBookingDates(data.dates || []);
+      }
+    } catch (error) {
+      console.error('Error loading blocked dates:', error);
     }
-  } catch (error) {
-    console.error('Error loading blocked dates:', error);
-  }
-};
+  };
 
   const loadAdminData = async () => {
     try {
@@ -282,11 +306,9 @@ export default function App() {
           headers: { 'x-user-id': currentUser._id }
         })
       ]);
-      
       const usersData = await usersRes.json();
       const itemsData = await itemsRes.json();
       const statsData = await statsRes.json();
-      
       if (usersRes.ok) setPendingUsers(usersData.users || []);
       if (itemsRes.ok) setPendingItems(itemsData.items || []);
       if (statsRes.ok) setStats(statsData);
@@ -312,6 +334,7 @@ export default function App() {
         setShowItemModal(false);
         setNewItem({
           category: 'stream',
+          subcategory: '',
           title: '',
           description: '',
           price_per_day: '',
@@ -320,11 +343,54 @@ export default function App() {
           address: '',
           attributes: {}
         });
+        loadItems();
       } else {
         showAlert(data.error, 'error');
       }
     } catch (error) {
       showAlert('Ошибка создания лота', 'error');
+    }
+  };
+
+  const publishItem = async (itemId) => {
+    try {
+      const res = await fetch(`/api/items/${itemId}/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser._id
+        }
+      });
+      if (res.ok) {
+        showAlert('Лот опубликован');
+        loadItems();
+      } else {
+        const data = await res.json();
+        showAlert(data.error, 'error');
+      }
+    } catch (error) {
+      showAlert('Ошибка публикации', 'error');
+    }
+  };
+
+  const unpublishItem = async (itemId) => {
+    try {
+      const res = await fetch(`/api/items/${itemId}/unpublish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser._id
+        }
+      });
+      if (res.ok) {
+        showAlert('Лот снят с публикации');
+        loadItems();
+      } else {
+        const data = await res.json();
+        showAlert(data.error, 'error');
+      }
+    } catch (error) {
+      showAlert('Ошибка снятия с публикации', 'error');
     }
   };
 
@@ -349,6 +415,7 @@ export default function App() {
           rental_type: 'day',
           is_insured: false
         });
+        loadBookings();
       } else {
         showAlert(data.error, 'error');
       }
@@ -399,6 +466,7 @@ export default function App() {
         setShowReviewModal(false);
         setSelectedBooking(null);
         setReviewForm({ rating: 5, text: '' });
+        loadBookings(); // Обновляем список бронирований
       } else {
         showAlert(data.error, 'error');
       }
@@ -427,6 +495,55 @@ export default function App() {
     }
   };
 
+  const moderateItem = async (itemId, action) => {
+    try {
+      const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser._id
+        },
+        body: JSON.stringify({ action })
+      });
+      if (res.ok) {
+        showAlert(`Лот ${action === 'approve' ? 'одобрен' : 'отклонён'}`);
+        loadAdminData();
+      }
+    } catch (error) {
+      showAlert('Ошибка модерации', 'error');
+    }
+  };
+
+  const createUser = async () => {
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser._id
+        },
+        body: JSON.stringify(newAdminUser)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Пользователь создан!');
+        setShowAdminUserModal(false);
+        setNewAdminUser({
+          name: '',
+          phone: '',
+          email: '',
+          password: '',
+          role: 'renter'
+        });
+        loadAdminData();
+      } else {
+        showAlert(data.error, 'error');
+      }
+    } catch (error) {
+      showAlert('Ошибка создания пользователя', 'error');
+    }
+  };
+
   const loginByEmail = async () => {
     try {
       const res = await fetch('/api/auth/login', {
@@ -445,25 +562,6 @@ export default function App() {
       }
     } catch (error) {
       showAlert('Ошибка входа', 'error');
-    }
-  };
-
-  const moderateItem = async (itemId, action) => {
-    try {
-      const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
-        },
-        body: JSON.stringify({ action })
-      });
-      if (res.ok) {
-        showAlert(`Лот ${action === 'approve' ? 'одобрен' : 'отклонён'}`);
-        loadAdminData();
-      }
-    } catch (error) {
-      showAlert('Ошибка модерации', 'error');
     }
   };
 
@@ -488,6 +586,56 @@ export default function App() {
     }
   };
 
+  // UI functions
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'approved':
+        return <Badge variant="success" className="text-xs">Опубликован</Badge>;
+      case 'pending':
+        return <Badge variant="warning" className="text-xs">На модерации</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive" className="text-xs">Отклонен</Badge>;
+      case 'draft':
+        return <Badge variant="outline" className="text-xs">Снят</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'stream':
+        return <Zap className="w-4 h-4" />;
+      case 'electronics':
+        return <Camera className="w-4 h-4" />;
+      case 'clothing':
+        return <Shirt className="w-4 h-4" />;
+      case 'sports':
+        return <Shirt className="w-4 h-4" />;
+      case 'tools':
+        return <Shirt className="w-4 h-4" />;
+      default:
+        return <Package className="w-4 h-4" />;
+    }
+  };
+
+  const getCategoryName = (category) => {
+    switch (category) {
+      case 'stream':
+        return 'Стрим-оборудование';
+      case 'electronics':
+        return 'Электроника';
+      case 'clothing':
+        return 'Одежда';
+      case 'sports':
+        return 'Спорт';
+      case 'tools':
+        return 'Инструменты';
+      default:
+        return category;
+    }
+  };
+
   // Auth modal
   if (showAuth) {
     return (
@@ -499,7 +647,7 @@ export default function App() {
           </CardHeader>
           <CardContent>
             {authStep === 'phone' && (<>
-              <h3  className="text-center">Регистрация</h3>
+              <h3 className="text-center">Регистрация</h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="phone">Номер телефона</Label>
@@ -527,7 +675,6 @@ export default function App() {
                 </button>
               </div>
             </>)}
-            
             {authStep === 'code' && (
               <div className="space-y-4">
                 <div>
@@ -586,7 +733,6 @@ export default function App() {
                 </Button>
               </div>
             )}
-            
             {authStep === 'verify' && (
               <div className="space-y-4">
                 <Alert>
@@ -610,9 +756,8 @@ export default function App() {
                 </Button>
               </div>
             )}
-
             {authStep === 'login' && (<>
-              <h3  className="text-center">Вход</h3>
+              <h3 className="text-center">Вход</h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="loginEmail">Email</Label>
@@ -686,7 +831,7 @@ export default function App() {
           </div>
         </div>
       </header>
-
+      
       {/* Alert */}
       {alert && (
         <div className="fixed top-20 right-4 z-50 animate-in slide-in-from-top">
@@ -696,7 +841,7 @@ export default function App() {
           </Alert>
         </div>
       )}
-
+      
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
@@ -720,9 +865,37 @@ export default function App() {
               </TabsTrigger>
             )}
           </TabsList>
-
+          
           {/* Catalog Tab */}
           <TabsContent value="catalog" className="space-y-6">
+            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+              <div className="flex gap-2 border-b border-gray-200">
+                <button
+                  onClick={() => setCatalogView('all')}
+                  className={`px-4 py-2 font-medium ${catalogView === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                >
+                  Все лоты
+                </button>
+                <button
+                  onClick={() => setCatalogView('mine')}
+                  className={`px-4 py-2 font-medium ${catalogView === 'mine' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                >
+                  Мои лоты
+                </button>
+              </div>
+              
+              {catalogView === 'mine' && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="showAllStatuses"
+                    checked={showAllStatuses}
+                    onCheckedChange={(checked) => setShowAllStatuses(checked)}
+                  />
+                  <Label htmlFor="showAllStatuses" className="text-sm">Показать все статусы</Label>
+                </div>
+              )}
+            </div>
+            
             <div className="flex flex-col lg:flex-row gap-4">
               <Input
                 placeholder="Поиск по названию или описанию..."
@@ -731,7 +904,10 @@ export default function App() {
                 onKeyUp={(e) => e.key === 'Enter' && loadItems()}
                 className="flex-1"
               />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select value={categoryFilter} onValueChange={(value) => {
+                setCategoryFilter(value);
+                setSubCategoryFilter('all');
+              }}>
                 <SelectTrigger className="w-full lg:w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -755,8 +931,35 @@ export default function App() {
                       Одежда
                     </div>
                   </SelectItem>
+                  <SelectItem value="sports">
+                    <div className="flex items-center gap-2">
+                      <Shirt className="w-4 h-4" />
+                      Спорт
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="tools">
+                    <div className="flex items-center gap-2">
+                      <Shirt className="w-4 h-4" />
+                      Инструменты
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+              
+              {categoryFilter !== 'all' && (
+                <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
+                  <SelectTrigger className="w-full lg:w-[200px]">
+                    <SelectValue placeholder="Подкатегория" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все подкатегории</SelectItem>
+                    {categorySubcategories[categoryFilter]?.map((subcat) => (
+                      <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-full lg:w-[200px]">
                   <SelectValue />
@@ -770,14 +973,14 @@ export default function App() {
               </Select>
               <Button onClick={loadItems}>Поиск</Button>
             </div>
-
-            {currentUser?.is_verified && (
+            
+            {currentUser?.is_verified && catalogView === 'mine' && (
               <Button onClick={() => setShowItemModal(true)} className="w-full lg:w-auto">
                 <Upload className="w-4 h-4 mr-2" />
                 Разместить лот
               </Button>
             )}
-
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {items.map((item) => (
                 <Card key={item._id} className="hover:shadow-lg transition-shadow">
@@ -785,13 +988,14 @@ export default function App() {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-lg">{item.title}</CardTitle>
-                        <CardDescription className="flex items-center gap-1 mt-1">
-                          {item.category === 'stream' && <Zap className="w-4 h-4" />}
-                          {item.category === 'electronics' && <Camera className="w-4 h-4" />}
-                          {item.category === 'clothing' && <Shirt className="w-4 h-4" />}
-                          {item.category === 'stream' && 'Стрим-оборудование'}
-                          {item.category === 'electronics' && 'Электроника'}
-                          {item.category === 'clothing' && 'Одежда'}
+                        <CardDescription className="flex flex-col gap-1 mt-1">
+                          <div className="flex items-center gap-1">
+                            {getCategoryIcon(item.category)}
+                            <span>{getCategoryName(item.category)}</span>
+                            {item.subcategory && (
+                              <span className="text-xs text-gray-500">({item.subcategory})</span>
+                            )}
+                          </div>
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-1 text-yellow-500">
@@ -824,34 +1028,85 @@ export default function App() {
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <Button
-                      onClick={() => {
-                        if (!currentUser?.is_verified) {
-                          showAlert('Требуется верификация', 'error');
-                          return;
-                        }
-                        setSelectedItem(item);
-                        setShowBookingModal(true);
-                        loadBlockedBookingDates(item._id);
-                      }}
-                      className="w-full"
-                    >
-                      Забронировать
-                    </Button>
+                  <CardFooter className="flex flex-col gap-2">
+                    {/* Статус лота */}
+                    <div className="w-full flex justify-end">
+                      {getStatusBadge(item.status)}
+                    </div>
+                    
+                    <div className="w-full flex gap-2">
+                      {/* Кнопки управления для владельца/модератора/админа */}
+                      {((currentUser?.role === 'owner' && item.owner_id === currentUser._id) || 
+                        currentUser?.role === 'moderator' || 
+                        currentUser?.role === 'admin') && (
+                        <div className="w-full flex gap-2">
+                          {item.status === 'approved' ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex-1"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await unpublishItem(item._id);
+                              }}
+                            >
+                              <EyeOff className="w-4 h-4 mr-1" />
+                              Скрыть
+                            </Button>
+                          ) : (item.status === 'draft' || item.status === 'rejected') && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex-1"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await publishItem(item._id);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Опубликовать
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Кнопка бронирования */}
+                      {(!((currentUser?.role === 'owner' && item.owner_id === currentUser._id) || 
+                        currentUser?.role === 'moderator' || 
+                        currentUser?.role === 'admin') || 
+                        item.status === 'approved') && (
+                        <Button
+                          onClick={() => {
+                            if (!currentUser?.is_verified) {
+                              showAlert('Требуется верификация', 'error');
+                              return;
+                            }
+                            setSelectedItem(item);
+                            setShowBookingModal(true);
+                            loadBlockedBookingDates(item._id);
+                          }}
+                          className="w-full"
+                          disabled={item.status !== 'approved'}
+                        >
+                          {item.status !== 'approved' ? 'Лот не доступен' : 'Забронировать'}
+                        </Button>
+                      )}
+                    </div>
                   </CardFooter>
                 </Card>
               ))}
             </div>
-
+            
             {items.length === 0 && (
               <div className="text-center py-12">
                 <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">Лотов не найдено</p>
+                <p className="text-gray-500">
+                  {catalogView === 'mine' ? 'У вас пока нет лотов' : 'Лотов не найдено'}
+                </p>
               </div>
             )}
           </TabsContent>
-
+          
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="space-y-6">
             <div className="grid grid-cols-1 gap-4">
@@ -905,21 +1160,28 @@ export default function App() {
                       </Button>
                     )}
                     {booking.status === 'completed' && booking.renter_id === currentUser._id && (
-                      <Button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setShowReviewModal(true);
-                        }}
-                        className="flex-1"
-                      >
-                        Оставить отзыв
-                      </Button>
+                      booking.review ? (
+                        <div className="flex items-center gap-1 text-yellow-500 flex-1 justify-center">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span>{booking.review.rating}/5</span>
+                          <span className="text-gray-500 text-sm">(отзыв оставлен)</span>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setShowReviewModal(true);
+                          }}
+                          className="flex-1"
+                        >
+                          Оставить отзыв
+                        </Button>
+                      )
                     )}
                   </CardFooter>
                 </Card>
               ))}
             </div>
-
             {bookings.length === 0 && (
               <div className="text-center py-12">
                 <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -927,7 +1189,7 @@ export default function App() {
               </div>
             )}
           </TabsContent>
-
+          
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
             <Card>
@@ -989,7 +1251,7 @@ export default function App() {
               </CardContent>
             </Card>
           </TabsContent>
-
+          
           {/* Admin Tab */}
           {(currentUser?.role === 'moderator' || currentUser?.role === 'admin') && (
             <TabsContent value="admin" className="space-y-6">
@@ -1024,7 +1286,22 @@ export default function App() {
                   </Card>
                 </div>
               )}
-
+              
+              {currentUser?.role === 'admin' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Создание пользователя</CardTitle>
+                    <CardDescription>Создайте нового пользователя с любой ролью</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={() => setShowAdminUserModal(true)} className="w-full">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Создать пользователя
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              
               <Card>
                 <CardHeader>
                   <CardTitle>Верификация пользователей</CardTitle>
@@ -1056,7 +1333,7 @@ export default function App() {
                   </div>
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardHeader>
                   <CardTitle>Модерация лотов</CardTitle>
@@ -1094,7 +1371,7 @@ export default function App() {
           )}
         </Tabs>
       </div>
-
+      
       {/* Create Item Modal */}
       <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1107,7 +1384,9 @@ export default function App() {
               <Label>Категория</Label>
               <Select
                 value={newItem.category}
-                onValueChange={(value) => setNewItem({ ...newItem, category: value })}
+                onValueChange={(value) => {
+                  setNewItem({ ...newItem, category: value, subcategory: '' });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1116,9 +1395,31 @@ export default function App() {
                   <SelectItem value="stream">Стрим-оборудование</SelectItem>
                   <SelectItem value="electronics">Электроника</SelectItem>
                   <SelectItem value="clothing">Одежда</SelectItem>
+                  <SelectItem value="sports">Спорт</SelectItem>
+                  <SelectItem value="tools">Инструменты</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
+            {newItem.category && (
+              <div>
+                <Label>Подкатегория</Label>
+                <Select
+                  value={newItem.subcategory || ''}
+                  onValueChange={(value) => setNewItem({ ...newItem, subcategory: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите подкатегорию" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorySubcategories[newItem.category].map((subcat) => (
+                      <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
             <div>
               <Label>Название</Label>
               <Input
@@ -1142,7 +1443,7 @@ export default function App() {
                 <Input
                   type="number"
                   value={newItem.price_per_day}
-                  onChange={(e) => setNewItem({ ...newItem, price_per_day: parseFloat(e.target.value) })}
+                  onChange={(e) => setNewItem({ ...newItem, price_per_day: parseFloat(e.target.value) || '' })}
                 />
               </div>
               <div>
@@ -1150,7 +1451,7 @@ export default function App() {
                 <Input
                   type="number"
                   value={newItem.price_per_month}
-                  onChange={(e) => setNewItem({ ...newItem, price_per_month: parseFloat(e.target.value) })}
+                  onChange={(e) => setNewItem({ ...newItem, price_per_month: parseFloat(e.target.value) || '' })}
                 />
               </div>
             </div>
@@ -1159,7 +1460,7 @@ export default function App() {
               <Input
                 type="number"
                 value={newItem.deposit}
-                onChange={(e) => setNewItem({ ...newItem, deposit: parseFloat(e.target.value) })}
+                onChange={(e) => setNewItem({ ...newItem, deposit: parseFloat(e.target.value) || '' })}
               />
             </div>
             <div>
@@ -1179,7 +1480,75 @@ export default function App() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
+      {/* Create Admin User Modal */}
+      <Dialog open={showAdminUserModal} onOpenChange={setShowAdminUserModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Создать пользователя</DialogTitle>
+            <DialogDescription>Заполните информацию о новом пользователе</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Имя</Label>
+              <Input
+                value={newAdminUser.name}
+                onChange={(e) => setNewAdminUser({ ...newAdminUser, name: e.target.value })}
+                placeholder="Иван Иванов"
+              />
+            </div>
+            <div>
+              <Label>Телефон</Label>
+              <Input
+                value={newAdminUser.phone}
+                onChange={(e) => setNewAdminUser({ ...newAdminUser, phone: e.target.value })}
+                placeholder="+7 (999) 123-45-67"
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                value={newAdminUser.email}
+                onChange={(e) => setNewAdminUser({ ...newAdminUser, email: e.target.value })}
+                placeholder="example@mail.com"
+              />
+            </div>
+            <div>
+              <Label>Пароль</Label>
+              <Input
+                type="password"
+                value={newAdminUser.password}
+                onChange={(e) => setNewAdminUser({ ...newAdminUser, password: e.target.value })}
+                placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <Label>Роль</Label>
+              <Select
+                value={newAdminUser.role}
+                onValueChange={(value) => setNewAdminUser({ ...newAdminUser, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="renter">Арендатор</SelectItem>
+                  <SelectItem value="owner">Арендодатель</SelectItem>
+                  <SelectItem value="moderator">Модератор</SelectItem>
+                  <SelectItem value="admin">Администратор</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdminUserModal(false)}>
+              Отмена
+            </Button>
+            <Button onClick={createUser}>Создать пользователя</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       {/* Booking Modal */}
       <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
         <DialogContent>
@@ -1194,6 +1563,7 @@ export default function App() {
                 type="date"
                 value={bookingForm.start_date}
                 onChange={(e) => setBookingForm({ ...bookingForm, start_date: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
               />
             </div>
             <div>
@@ -1202,11 +1572,12 @@ export default function App() {
                 type="date"
                 value={bookingForm.end_date}
                 onChange={(e) => setBookingForm({ ...bookingForm, end_date: e.target.value })}
+                min={bookingForm.start_date || new Date().toISOString().split('T')[0]}
               />
             </div>
             {blockedBookingDates.length > 0 && (
               <div className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
-                <strong>Занятые дни:</strong> {blockedBookingDates.map(formatDate).join(', ')}
+                <strong>Занятые дни:</strong> {blockedBookingDates.join(', ')}
               </div>
             )}
             <div>
@@ -1225,12 +1596,10 @@ export default function App() {
               </Select>
             </div>
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="insurance"
                 checked={bookingForm.is_insured}
-                onChange={(e) => setBookingForm({ ...bookingForm, is_insured: e.target.checked })}
-                className="rounded"
+                onCheckedChange={(checked) => setBookingForm({ ...bookingForm, is_insured: checked })}
               />
               <Label htmlFor="insurance" className="cursor-pointer">
                 Добавить страховку (+10% от стоимости)
@@ -1258,7 +1627,7 @@ export default function App() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
       {/* Review Modal */}
       <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
         <DialogContent>
