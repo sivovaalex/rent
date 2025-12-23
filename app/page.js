@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Star, Upload, Calendar, Phone, Shield, Package, Zap, Shirt, Camera, CheckCircle, AlertCircle, User, Settings, BarChart, Plus, Eye, EyeOff, Edit2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Star, Upload, Calendar, Phone, Shield, Package, Zap, Shirt, Camera, CheckCircle, AlertCircle, User, Settings, BarChart, Plus, Users, ThumbsUp, LogIn, ArrowRight, TrendingUp, Lock, Smartphone, MessageSquare, HelpCircle, Coins, Clock, Tag, ChevronDown, ChevronUp, EyeOff, Dumbbell, Hammer } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -20,11 +21,12 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [pendingItems, setPendingItems] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [stats, setStats] = useState(null);
   
   // Auth state
   const [showAuth, setShowAuth] = useState(true);
-  const [authStep, setAuthStep] = useState('login'); // 'phone', 'code', 'verify', 'login'
+  const [authStep, setAuthStep] = useState('welcome'); // 'welcome', 'phone', 'code', 'verify', 'login'
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -33,6 +35,9 @@ export default function App() {
   const [role, setRole] = useState('renter'); // по умолчанию
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  
+  // Admin sub tabs
+  const [adminSubTab, setAdminSubTab] = useState('stats');
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,6 +105,51 @@ export default function App() {
     tools: ['Строительные', 'Садовые', 'Ручные инструменты', 'Электроинструменты', 'Измерительные приборы']
   };
 
+  // Testimonials data
+  const testimonials = [
+    {
+      name: 'Алексей К.',
+      role: 'Стример',
+      text: 'Нашел микрофон Rode NT-USB за 900 ₽ в день вместо покупки за 18 000 ₽. Качество на высоте, а залог вернули сразу после возврата.',
+      rating: 5
+    },
+    {
+      name: 'Мария С.',
+      role: 'Фотограф',
+      text: 'Арендовала профессиональную камеру Sony A7III для свадебной съемки. Экономия составила 40 000 ₽ по сравнению с покупкой. Теперь пользуюсь платформой постоянно.',
+      rating: 5
+    },
+    {
+      name: 'Дмитрий П.',
+      role: 'Арендодатель',
+      text: 'Выставил на аренду свою видеокамеру, которая простаивала без дела. За месяц заработал 15 000 ₽, а камера осталась в целости благодаря страховке и залогу.',
+      rating: 5
+    }
+  ];
+
+  // FAQ data
+  const faqItems = [
+    {
+      question: 'Безопасно ли пользоваться платформой?',
+      answer: 'Абсолютно безопасно. Все транзакции защищены, а для каждой аренды предусмотрен залог и страховка. Все пользователи проходят верификацию и получают рейтинг на основе отзывов.'
+    },
+    {
+      question: 'Что происходит, если предмет поврежден при аренде?',
+      answer: 'В случае повреждения предмета, арендатор несет ответственность в пределах залога. Для дополнительной защиты рекомендуем оформить страховку при бронировании (+10% от стоимости аренды).'
+    },
+    {
+      question: 'Как долго рассматривается заявка на верификацию?',
+      answer: 'Верификация обычно занимает от 2 до 24 часов. Мы проверяем предоставленные документы и подтверждаем вашу личность для обеспечения безопасности всех пользователей платформы.'
+    },
+    {
+      question: 'Можно ли арендовать предмет на длительный срок?',
+      answer: 'Да, мы предлагаем как краткосрочную аренду по дням, так и долгосрочную по месяцам со специальными условиями и скидками. Многие арендодатели предоставляют скидки при аренде от 7 дней и более.'
+    }
+  ];
+
+  // State for FAQ accordion
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -113,24 +163,27 @@ export default function App() {
             setCurrentUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
             setShowAuth(false);
+            setAuthStep('logged');
             if (data.user.is_verified) {
               loadItems();
             }
           } else {
             localStorage.removeItem('user');
             setShowAuth(true);
+            setAuthStep('welcome');
           }
         })
         .catch(() => {
           setCurrentUser(user);
           setShowAuth(false);
+          setAuthStep('logged');
           if (user.is_verified) loadItems();
         });
     }
   }, []);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && authStep === 'logged') {
       if (currentTab === 'catalog') {
         loadItems();
       } else if (currentTab === 'bookings') {
@@ -139,7 +192,7 @@ export default function App() {
         loadAdminData();
       }
     }
-  }, [currentTab, currentUser, catalogView, showAllStatuses]);
+  }, [currentTab, currentUser, catalogView, showAllStatuses, authStep]);
 
   const showAlert = (message, type = 'success') => {
     setAlert({ message, type });
@@ -178,6 +231,7 @@ export default function App() {
         setCurrentUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
         setShowAuth(false);
+        setAuthStep('logged');
         if (!data.user.is_verified) {
           setAuthStep('verify');
           setShowAuth(true);
@@ -229,6 +283,7 @@ export default function App() {
             localStorage.setItem('user', JSON.stringify(userData.user));
             if (userData.user.is_verified) {
               setShowAuth(false);
+              setAuthStep('logged');
               loadItems();
             }
           }
@@ -295,7 +350,7 @@ export default function App() {
 
   const loadAdminData = async () => {
     try {
-      const [usersRes, itemsRes, statsRes] = await Promise.all([
+      const [usersRes, itemsRes, statsRes, allUsersRes] = await Promise.all([
         fetch('/api/admin/users?status=pending', {
           headers: { 'x-user-id': currentUser._id }
         }),
@@ -304,16 +359,26 @@ export default function App() {
         }),
         fetch('/api/admin/stats', {
           headers: { 'x-user-id': currentUser._id }
+        }),
+        fetch('/api/admin/users/all', {
+          headers: { 'x-user-id': currentUser._id }
         })
       ]);
       const usersData = await usersRes.json();
       const itemsData = await itemsRes.json();
       const statsData = await statsRes.json();
+      const allUsersData = await allUsersRes.json();
+      
       if (usersRes.ok) setPendingUsers(usersData.users || []);
       if (itemsRes.ok) setPendingItems(itemsData.items || []);
       if (statsRes.ok) setStats(statsData);
+      
+      // Загружаем всех пользователей только если текущий пользователь - админ
+      if (allUsersRes.ok && currentUser?.role === 'admin') {
+        setAllUsers(allUsersData.users || []);
+      }
     } catch (error) {
-      console.error('Error loading admin data:', error);
+      console.error('Error loading admin ', error);
     }
   };
 
@@ -556,6 +621,7 @@ export default function App() {
         setCurrentUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
         setShowAuth(false);
+        setAuthStep('logged');
         loadItems();
       } else {
         showAlert(data.error, 'error');
@@ -635,6 +701,230 @@ export default function App() {
         return category;
     }
   };
+
+  const getRoleBadge = (role) => {
+    switch (role) {
+      case 'admin':
+        return <Badge variant="destructive">Админ</Badge>;
+      case 'moderator':
+        return <Badge variant="warning">Модератор</Badge>;
+      case 'owner':
+        return <Badge variant="secondary">Арендодатель</Badge>;
+      case 'renter':
+        return <Badge variant="outline">Арендатор</Badge>;
+      default:
+        return <Badge variant="outline">{role}</Badge>;
+    }
+  };
+
+  // Welcome page for non-authorized users
+  if (authStep === 'welcome') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        {/* Header */}
+        <header className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="w-8 h-8 text-indigo-600" />
+              <h1 className="text-2xl font-bold text-indigo-600">Аренда PRO</h1>
+            </div>
+            <Button onClick={() => setShowAuth(true)} variant="outline">
+              Войти
+            </Button>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-12">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="space-y-8">
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
+                    Умная аренда всего, что нужно
+                  </h1>
+                  <p className="text-xl text-gray-600 mt-4">
+                    Экономьте деньги, арендуя вместо покупки. Найдите идеальные вещи для любых задач — от профессионального оборудования до одежды для мероприятий.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-l-4 border-indigo-500">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-indigo-100 p-2 rounded-full">
+                          <TrendingUp className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg">Экономия до 70%</h3>
+                          <p className="text-gray-600 mt-1">Арендуйте дорогое оборудование вместо покупки</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-l-4 border-green-500">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-green-100 p-2 rounded-full">
+                          <Lock className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg">Надежная защита</h3>
+                          <p className="text-gray-600 mt-1">Страховка и залог для безопасности каждой сделки</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <div className="space-y-4">
+                  <Button 
+                    onClick={() => {
+                      setAuthStep('phone');
+                      setShowAuth(true);
+                    }} 
+                    className="w-full py-6 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    Начать бесплатно <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                  <p className="text-center text-gray-500 text-sm">
+                    Уже есть аккаунт? <button onClick={() => {
+                      setAuthStep('login');
+                      setShowAuth(true);
+                    }} className="text-indigo-600 hover:underline">Войти</button>
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-2 border-dashed border-gray-200 h-64 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <Smartphone className="w-12 h-12 mx-auto text-indigo-400" />
+                    <p className="mt-2 text-gray-500">Стрим-оборудование</p>
+                  </div>
+                </Card>
+                
+                <Card className="border-2 border-dashed border-gray-200 h-64 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <Camera className="w-12 h-12 mx-auto text-indigo-400" />
+                    <p className="mt-2 text-gray-500">Фото и видео</p>
+                  </div>
+                </Card>
+                
+                <Card className="border-2 border-dashed border-gray-200 h-64 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <Shirt className="w-12 h-12 mx-auto text-indigo-400" />
+                    <p className="mt-2 text-gray-500">Одежда и аксессуары</p>
+                  </div>
+                </Card>
+                
+                <Card className="border-2 border-dashed border-gray-200 h-64 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <Zap className="w-12 h-12 mx-auto text-indigo-400" />
+                    <p className="mt-2 text-gray-500">Инструменты</p>
+                  </div>
+                </Card>
+              </div>
+            </div>
+            
+            <div className="mt-20 text-center">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8">Как это работает</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                <div className="space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-indigo-600">1</span>
+                  </div>
+                  <h3 className="text-xl font-semibold">Выберите и забронируйте</h3>
+                  <p className="text-gray-600">Найдите подходящий предмет и забронируйте его на нужные даты</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-indigo-600">2</span>
+                  </div>
+                  <h3 className="text-xl font-semibold">Оплатите и получите</h3>
+                  <p className="text-gray-600">Оплатите аренду и получите предмет у владельца или с доставкой</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-indigo-600">3</span>
+                  </div>
+                  <h3 className="text-xl font-semibold">Верните и оцените</h3>
+                  <p className="text-gray-600">Верните предмет и оставьте отзыв об опыте аренды</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* New section: Testimonials */}
+            <div className="mt-20">
+              <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Отзывы наших пользователей</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                {testimonials.map((testimonial, index) => (
+                  <Card key={index} className="border border-gray-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-indigo-100 w-12 h-12 rounded-full flex items-center justify-center mr-4">
+                          <span className="text-indigo-600 font-bold text-lg">{testimonial.name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{testimonial.name}</h3>
+                          <p className="text-sm text-gray-500">{testimonial.role}</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 mb-4">{testimonial.text}</p>
+                      <div className="flex">
+                        {[...Array(testimonial.rating)].map((_, i) => (
+                          <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            
+            {/* New section: FAQ */}
+            <div className="mt-20 mb-20">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900">Частые вопросы</h2>
+                <p className="text-gray-600 mt-2">Найдите ответы на самые популярные вопросы</p>
+              </div>
+              
+              <div className="max-w-3xl mx-auto space-y-4">
+                {faqItems.map((item, index) => (
+                  <Card key={index} className="border border-gray-200 overflow-hidden">
+                    <button
+                      onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                      className="flex justify-between items-center w-full p-4 text-left font-medium hover:bg-gray-50"
+                    >
+                      <span>{item.question}</span>
+                      <ChevronDown 
+                        className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
+                          openFaqIndex === index ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    {openFaqIndex === index && (
+                      <div className="px-4 pb-4 pt-0 text-gray-600 border-t border-gray-100">
+                        {item.answer}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+        
+        <footer className="bg-white border-t py-8 mt-20">
+          <div className="container mx-auto px-4 text-center text-gray-500">
+            <p>© {new Date().getFullYear()} Аренда PRO. Все права защищены.</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   // Auth modal
   if (showAuth) {
@@ -751,7 +1041,10 @@ export default function App() {
                     onChange={uploadDocument}
                   />
                 </div>
-                <Button onClick={() => setShowAuth(false)} variant="outline" className="w-full">
+                <Button onClick={() => {
+                  setShowAuth(false);
+                  setAuthStep('welcome');
+                }} variant="outline" className="w-full">
                   Загрузить позже
                 </Button>
               </div>
@@ -780,16 +1073,32 @@ export default function App() {
                 <Button onClick={loginByEmail} className="w-full">
                   Войти
                 </Button>
-                <Button variant="outline" onClick={() => setAuthStep('phone')} className="w-full">
+                <Button variant="outline" onClick={() => {
+                  setAuthStep('phone');
+                  setShowAuth(true);
+                }} className="w-full">
                   Регистрация
                 </Button>
               </div>
             </>)}
+            <div className="mt-6 text-center">
+              <button 
+                onClick={() => {
+                  setShowAuth(false);
+                  setAuthStep('welcome');
+                }}
+                className="text-sm text-indigo-600 hover:underline"
+              >
+                Вернуться на главную страницу
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  // All other code remains the same as before...
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -825,6 +1134,7 @@ export default function App() {
               localStorage.removeItem('user');
               setCurrentUser(null);
               setShowAuth(true);
+              setAuthStep('login');
             }}>
               Выйти
             </Button>
@@ -933,13 +1243,13 @@ export default function App() {
                   </SelectItem>
                   <SelectItem value="sports">
                     <div className="flex items-center gap-2">
-                      <Shirt className="w-4 h-4" />
+                      <Dumbbell className="w-4 h-4" />
                       Спорт
                     </div>
                   </SelectItem>
                   <SelectItem value="tools">
                     <div className="flex items-center gap-2">
-                      <Shirt className="w-4 h-4" />
+                      <Hammer className="w-4 h-4" />
                       Инструменты
                     </div>
                   </SelectItem>
@@ -1255,118 +1565,198 @@ export default function App() {
           {/* Admin Tab */}
           {(currentUser?.role === 'moderator' || currentUser?.role === 'admin') && (
             <TabsContent value="admin" className="space-y-6">
-              {currentUser?.role === 'admin' && stats && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Пользователи</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">{stats.totalUsers}</p>
-                      <p className="text-sm text-gray-600 mt-1">На проверке: {stats.pendingVerifications}</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Лоты</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">{stats.totalItems}</p>
-                      <p className="text-sm text-gray-600 mt-1">На проверке: {stats.pendingItems}</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Комиссия</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">{stats.totalRevenue?.toFixed(0)} ₽<span className="text-xs text-gray-500 ml-1 align-top">от завершенных бронирований</span></p>
-                      <p className="text-sm text-gray-600 mt-1">Всего бронирований: {stats.totalBookings}</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-              
-              {currentUser?.role === 'admin' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Создание пользователя</CardTitle>
-                    <CardDescription>Создайте нового пользователя с любой ролью</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button onClick={() => setShowAdminUserModal(true)} className="w-full">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Создать пользователя
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Верификация пользователей</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {pendingUsers.map((user) => (
-                      <div key={user._id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-gray-600">{user.phone}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Подано: {new Date(user.verification_submitted_at).toLocaleString()}
-                          </p>
+              <Tabs value={adminSubTab} onValueChange={setAdminSubTab}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="stats">
+                    <BarChart className="w-4 h-4 mr-2" />
+                    Статистика
+                  </TabsTrigger>
+                  <TabsTrigger value="verification">
+                    <ThumbsUp className="w-4 h-4 mr-2" />
+                    Верификация
+                  </TabsTrigger>
+                  {currentUser?.role === 'admin' && (
+                    <TabsTrigger value="users">
+                      <Users className="w-4 h-4 mr-2" />
+                      Пользователи
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+                
+                {/* Stats Tab */}
+                <TabsContent value="stats">
+                  {currentUser?.role === 'admin' && stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Пользователи</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-3xl font-bold">{stats.totalUsers}</p>
+                          <p className="text-sm text-gray-600 mt-1">На проверке: {stats.pendingVerifications}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Лоты</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-3xl font-bold">{stats.totalItems}</p>
+                          <p className="text-sm text-gray-600 mt-1">На проверке: {stats.pendingItems}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Комиссия</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-3xl font-bold">{stats.totalRevenue?.toFixed(0)} ₽<span className="text-xs text-gray-500 ml-1 align-top">от завершенных бронирований</span></p>
+                          <p className="text-sm text-gray-600 mt-1">Всего бронирований: {stats.totalBookings}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Verification Tab - доступен админам и модераторам */}
+                <TabsContent value="verification">
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Верификация пользователей</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {pendingUsers.map((user) => (
+                            <div key={user._id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div>
+                                <p className="font-medium">{user.name}</p>
+                                <p className="text-sm text-gray-600">{user.phone}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Подано: {new Date(user.verification_submitted_at).toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => verifyUser(user._id, 'approve')}>
+                                  Одобрить
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => verifyUser(user._id, 'reject')}>
+                                  Отклонить
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          {pendingUsers.length === 0 && (
+                            <p className="text-center text-gray-500 py-4">Нет пользователей на проверке</p>
+                          )}
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => verifyUser(user._id, 'approve')}>
-                            Одобрить
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => verifyUser(user._id, 'reject')}>
-                            Отклонить
-                          </Button>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Модерация лотов</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {pendingItems.map((item) => (
+                            <div key={item._id} className="flex items-start justify-between p-4 border rounded-lg">
+                              <div className="flex-1">
+                                <p className="font-medium">{item.title}</p>
+                                <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                                <div className="flex items-center gap-4 mt-2 text-sm">
+                                  <span>Владелец: {item.owner_name}</span>
+                                  <span>Цена: {item.price_per_day} ₽/день</span>
+                                  <span>Залог: {item.deposit} ₽</span>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                <Button size="sm" onClick={() => moderateItem(item._id, 'approve')}>
+                                  Одобрить
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => moderateItem(item._id, 'reject')}>
+                                  Отклонить
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          {pendingItems.length === 0 && (
+                            <p className="text-center text-gray-500 py-4">Нет лотов на проверке</p>
+                          )}
                         </div>
-                      </div>
-                    ))}
-                    {pendingUsers.length === 0 && (
-                      <p className="text-center text-gray-500 py-4">Нет пользователей на проверке</p>
-                    )}
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Модерация лотов</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {pendingItems.map((item) => (
-                      <div key={item._id} className="flex items-start justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{item.title}</p>
-                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                          <div className="flex items-center gap-4 mt-2 text-sm">
-                            <span>Владелец: {item.owner_name}</span>
-                            <span>Цена: {item.price_per_day} ₽/день</span>
-                            <span>Залог: {item.deposit} ₽</span>
+                </TabsContent>
+                
+                {/* Users Tab - только для администраторов */}
+                {currentUser?.role === 'admin' && (
+                  <TabsContent value="users">
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold">Все пользователи</h2>
+                        <Button onClick={() => setShowAdminUserModal(true)}>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Добавить пользователя
+                        </Button>
+                      </div>
+                      
+                      <Card>
+                        <CardContent>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Имя</TableHead>
+                                  <TableHead>Email</TableHead>
+                                  <TableHead>Телефон</TableHead>
+                                  <TableHead>Роль</TableHead>
+                                  <TableHead>Рейтинг</TableHead>
+                                  <TableHead>Статус</TableHead>
+                                  <TableHead>Зарегистрирован</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {allUsers.map((user) => (
+                                  <TableRow key={user._id}>
+                                    <TableCell className="font-medium">{user.name}</TableCell>
+                                    <TableCell>{user.email}</TableCell>
+                                    <TableCell>{user.phone}</TableCell>
+                                    <TableCell>{getRoleBadge(user.role)}</TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-1">
+                                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                        <span>{user.rating?.toFixed(1)}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      {user.is_verified ? (
+                                        <Badge variant="success">Верифицирован</Badge>
+                                      ) : (
+                                        <Badge variant="warning">Не верифицирован</Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {new Date(user.createdAt).toLocaleDateString()}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
                           </div>
-                        </div>
-                        <div className="flex gap-2 ml-4">
-                          <Button size="sm" onClick={() => moderateItem(item._id, 'approve')}>
-                            Одобрить
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => moderateItem(item._id, 'reject')}>
-                            Отклонить
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    {pendingItems.length === 0 && (
-                      <p className="text-center text-gray-500 py-4">Нет лотов на проверке</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                          
+                          {allUsers.length === 0 && (
+                            <div className="text-center py-8">
+                              <Users className="w-12 h-12 mx-auto text-gray-400" />
+                              <p className="text-gray-500 mt-2">Пользователи не найдены</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+                )}
+              </Tabs>
             </TabsContent>
           )}
         </Tabs>

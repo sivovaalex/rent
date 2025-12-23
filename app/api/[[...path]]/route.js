@@ -241,6 +241,20 @@ export async function GET(request) {
       return NextResponse.json({ users });
     }
     
+    // Получить всех пользователей (только для админов)
+    if (path === '/admin/users/all') {
+      const userId = request.headers.get('x-user-id');
+      const user = await db.collection('users').findOne({ _id: userId });
+      if (!user || user.role !== 'admin') {
+        return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
+      }
+      const users = await db.collection('users')
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+      return NextResponse.json({ users });
+    }
+    
     // Получить лоты для модерации
     if (path === '/admin/items') {
       const userId = request.headers.get('x-user-id');
@@ -308,14 +322,7 @@ export async function POST(request) {
   const db = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
-  let body = {};
-  // Пытаемся получить тело запроса только если оно есть
-  try {
-    body = await request.json();
-  } catch (e) {
-    // Если нет тела запроса, оставляем пустой объект
-  }
-  
+  const body = await request.json();
   try {
     // Отправка SMS-кода
     if (path === '/auth/send-sms') {
@@ -574,7 +581,7 @@ export async function POST(request) {
         is_insured,
         status: 'pending_payment',
         deposit_status: 'held',
-        payment_id: `MOCK_${crypto.randomUUID()}`, // Мок-ID платежа
+        payment_id: `MOCK_${bookingId}`, // Мок-ID платежа
         createdAt: new Date()
       };
       await db.collection('bookings').insertOne(booking);
@@ -753,7 +760,7 @@ export async function POST(request) {
     if (path === '/admin/create-user') {
       const userId = request.headers.get('x-user-id');
       const currentUser = await db.collection('users').findOne({ _id: userId });
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+      if (!currentUser || currentUser.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       
