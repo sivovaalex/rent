@@ -551,7 +551,7 @@ export async function POST(request) {
       // Рассчитываем стоимость
       const start = new Date(start_date);
       const end = new Date(end_date);
-      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
       let rentalPrice = 0;
       if (rental_type === 'day') {
         rentalPrice = item.price_per_day * days;
@@ -559,10 +559,10 @@ export async function POST(request) {
         const months = Math.ceil(days / 30);
         rentalPrice = item.price_per_month * months;
       }
-      const deposit = item.deposit;
+      const deposit = Number(item.deposit);
       const commission = rentalPrice * 0.15;
       const insurance = is_insured ? rentalPrice * 0.10 : 0;
-      const total = rentalPrice + deposit + insurance;
+      const total = rentalPrice + deposit + commission + insurance;
       const prepayment = rentalPrice * 0.30; // 30% предоплата
       const bookingId = crypto.randomUUID();
       const booking = {
