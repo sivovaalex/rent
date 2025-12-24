@@ -211,7 +211,7 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                   Отзывы <span className="text-sm">({item.reviews?.length || 0})</span>
                   <div className="flex items-center gap-1">
                     <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                    <span className="text-s">{item.owner_rating?.toFixed(1) || '5.0'}</span>
+                    <span className="text-s">{item.rating?.toFixed(1) || '5.0'}</span>
                   </div>
                 </h3>
                 {/*{currentUser?.is_verified && item.owner_id !== currentUser._id && (
