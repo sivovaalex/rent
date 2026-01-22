@@ -25,7 +25,7 @@ function encryptDocument(data: string): string {
   const algorithm = 'aes-256-cbc';
   const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-secret-key-change-me', 'salt', 32);
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  const cipher = crypto.createCipheriv(algorithm, new Uint8Array(key), new Uint8Array(iv));
   let encrypted = cipher.update(data, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   return iv.toString('hex') + ':' + encrypted;
@@ -37,7 +37,7 @@ function decryptDocument(encryptedData: string): string {
   const parts = encryptedData.split(':');
   const iv = Buffer.from(parts[0], 'hex');
   const encrypted = parts[1];
-  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  const decipher = crypto.createDecipheriv(algorithm, new Uint8Array(key), new Uint8Array(iv));
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;

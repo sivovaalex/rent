@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(node -e:*)",
+      "Bash(npm install:*)",
+      "Bash(ls:*)"
     ]
   }
 }
