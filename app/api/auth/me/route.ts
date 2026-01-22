@@ -1,4 +1,4 @@
-import { MongoClient, Db, ObjectId } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
 
 const client = new MongoClient(process.env.MONGODB_URI!);
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const user = await database.collection('users').findOne({ _id: new ObjectId(userId) });
+    const user = await database.collection('users').findOne({ _id: userId });
 
     if (!user) {
       return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });

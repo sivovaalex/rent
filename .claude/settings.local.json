@@ -6,7 +6,8 @@
       "Bash(node -e:*)",
       "Bash(npm install:*)",
       "Bash(ls:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(grep:*)"
     ]
   }
 }

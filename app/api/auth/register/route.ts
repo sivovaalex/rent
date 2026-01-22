@@ -1,4 +1,3 @@
-import { ObjectId } from './../../../../node_modules/bson/src/objectid';
 import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
@@ -16,7 +15,7 @@ async function connectDB(): Promise<Db> {
 }
 
 export async function POST(request: NextRequest) {
-  const db = await connectDB();
+  const database = await connectDB();
   const body = await request.json();
 
   try {
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Все поля обязательны' }, { status: 400 });
     }
 
-    const existingUser = await db.collection('users').findOne({
+    const existingUser = await database.collection('users').findOne({
       $or: [{ email }, { phone }]
     });
 
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = {
-      _id: new ObjectId(userId),
+      _id: userId,
       name,
       email,
       phone,
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date()
     };
 
-    await db.collection('users').insertOne(user);
+    await database.collection('users').insertOne(user as any);
 
     const safeUser = {
       _id: user._id,

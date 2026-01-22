@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { MongoClient, Db, ObjectId } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import crypto from 'crypto';
 
 const client = new MongoClient(process.env.MONGODB_URI!);
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const reviewId = crypto.randomUUID();
 
     const review = {
-      _id: new ObjectId(reviewId),
+      _id: reviewId,
       booking_id: booking_id,
       item_id: item_id,
       user_id: userIdHeader,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date()
     };
 
-    const result = await database.collection('reviews').insertOne(review);
+    const result = await database.collection('reviews').insertOne(review as any);
     if (!result.insertedId) {
       throw new Error('Не удалось сохранить отзыв');
     }

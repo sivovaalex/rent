@@ -1,4 +1,4 @@
-import { MongoClient, Db, ObjectId } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -36,13 +36,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Неверный код' }, { status: 400 });
     }
 
-    let user = await db.collection('users').findOne({ phone });
+    let user: any = await db.collection('users').findOne({ phone });
 
     if (!user) {
       const userId = crypto.randomUUID();
 
       user = {
-        _id: new ObjectId(userId),
+        _id: userId,
         phone,
         name,
         email: email || null,
@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
         createdAt: new Date()
       };
 
-      await db.collection('users').insertOne(user);
+      await db.collection('users').insertOne(user as any);
     } else {
       if (!user.password_hash && password) {
         await db.collection('users').updateOne(

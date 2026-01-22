@@ -1,4 +1,4 @@
-import { MongoClient, Db, ObjectId } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
 
 const client = new MongoClient(process.env.MONGODB_URI!);
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const item = await db.collection('items').findOne({ _id: new ObjectId(id) });
+    const item = await db.collection('items').findOne({ _id: id });
 
     if (!item) {
       return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const reviews = await db.collection('reviews')
-      .find({ item_id: new ObjectId(id) })
+      .find({ item_id: id })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const item = await db.collection('items').findOne({ _id: new ObjectId(id) });
+    const item = await db.collection('items').findOne({ _id: id });
 
     if (!item) {
       return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     };
 
     await db.collection('items').updateOne(
-      { _id: new ObjectId(id) },
+      { _id: id },
       { $set: updateData }
     );
 
@@ -135,7 +135,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const item = await db.collection('items').findOne({ _id: new ObjectId(id) });
+    const item = await db.collection('items').findOne({ _id: id });
 
     if (!item) {
       return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
@@ -145,7 +145,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
     }
 
-    await db.collection('items').deleteOne({ _id: new ObjectId(id) });
+    await db.collection('items').deleteOne({ _id: id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

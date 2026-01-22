@@ -1,4 +1,4 @@
-import { MongoClient, Db, ObjectId } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
 import fs from 'fs';
 import nodePath from 'path';
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId) });
+      const user = await database.collection('users').findOne({ _id: userId });
       if (!user) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
       }
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
     // Получить конкретный лот
     if (path.startsWith('/items/') && !path.includes('book') && !path.includes('publish') && !path.includes('unpublish')) {
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: new ObjectId(itemId) });
+      const item = await database.collection('items').findOne({ _id: itemId });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
@@ -226,7 +226,7 @@ export async function GET(request: NextRequest) {
     // Получить пользователей для модерации
     if (path === '/admin/users') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -245,7 +245,7 @@ export async function GET(request: NextRequest) {
     // Получить всех пользователей (только для админов)
     if (path === '/admin/users/all') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || user.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
     // Получить лоты для модерации
     if (path === '/admin/items') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -286,7 +286,7 @@ export async function GET(request: NextRequest) {
     // Получить статистику (для админов)
     if (path === '/admin/stats') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || user.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Неверный код' }, { status: 400 });
       }
       // Проверяем, существует ли пользователь
-      let user = await database.collection('users').findOne({ phone });
+      let user: any = await database.collection('users').findOne({ phone });
       if (!user) {
         // Создаём нового пользователя
         const userId = crypto.randomUUID();
@@ -360,7 +360,7 @@ export async function POST(request: NextRequest) {
           passwordHash = await bcrypt.hash(body.password, 10);
         }
         const newUser = {
-          _id: new ObjectId(userId),
+          _id: userId,
           phone,
           name: name || 'Пользователь',
           email: body.email || null,
@@ -371,7 +371,7 @@ export async function POST(request: NextRequest) {
           is_verified: false,
           createdAt: new Date()
         };
-        await database.collection('users').insertOne(newUser);
+        await database.collection('users').insertOne(newUser as any);
         user = newUser;
       }
       // Удаляем использованный код
@@ -397,7 +397,7 @@ export async function POST(request: NextRequest) {
       const filepath = nodePath.join(uploadsDir, filename);
       //fs.writeFileSync(filepath, encryptedData);
       await database.collection('users').updateOne(
-        { _id: new ObjectId(userId) },
+        { _id: userId },
         {
           $set: {
             encrypted_document: encryptedData, // ← сохраняем в БД
@@ -409,7 +409,7 @@ export async function POST(request: NextRequest) {
       );
       // Обновляем пользователя
       await database.collection('users').updateOne(
-        { _id: new ObjectId(userId) },
+        { _id: userId },
         {
           $set: {
             document_path: filepath,
@@ -446,7 +446,7 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId) });
+      const user = await database.collection('users').findOne({ _id: userId });
       if (!user || !user.is_verified) {
         return NextResponse.json({ error: 'Требуется верификация' }, { status: 403 });
       }
@@ -458,7 +458,7 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         createdAt: new Date()
       };
-      await database.collection('items').insertOne(item);
+      await database.collection('items').insertOne(item as any);
       return NextResponse.json({ success: true, item });
     }
 
@@ -469,13 +469,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
 
-      const currentUser = await database.collection('users').findOne({ _id: new ObjectId(userId) });
+      const currentUser = await database.collection('users').findOne({ _id: userId });
       if (!currentUser) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
       }
 
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: new ObjectId(itemId) });
+      const item = await database.collection('items').findOne({ _id: itemId });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
       }
 
       await database.collection('items').updateOne(
-        { _id: new ObjectId(itemId) },
+        { _id: itemId },
         { $set: { status: newStatus, updatedAt: new Date() } }
       );
 
@@ -507,13 +507,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
 
-      const currentUser = await database.collection('users').findOne({ _id: new ObjectId(userId) });
+      const currentUser = await database.collection('users').findOne({ _id: userId });
       if (!currentUser) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
       }
 
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: new ObjectId(itemId) });
+      const item = await database.collection('items').findOne({ _id: itemId });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
@@ -527,7 +527,7 @@ export async function POST(request: NextRequest) {
       const newStatus = 'draft';
 
       await database.collection('items').updateOne(
-        { _id: new ObjectId(itemId) },
+        { _id: itemId },
         { $set: { status: newStatus, updatedAt: new Date() } }
       );
 
@@ -540,12 +540,12 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId) });
+      const user = await database.collection('users').findOne({ _id: userId });
       if (!user || !user.is_verified) {
         return NextResponse.json({ error: 'Требуется верификация' }, { status: 403 });
       }
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: new ObjectId(itemId) });
+      const item = await database.collection('items').findOne({ _id: itemId });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
@@ -568,7 +568,7 @@ export async function POST(request: NextRequest) {
       const prepayment = rentalPrice * 0.30; // 30% предоплата
       const bookingId = crypto.randomUUID();
       const booking = {
-        _id: new ObjectId(bookingId),
+        _id: bookingId,
         item_id: itemId,
         renter_id: userId,
         start_date: start,
@@ -586,13 +586,13 @@ export async function POST(request: NextRequest) {
         payment_id: `MOCK_${bookingId}`, // Мок-ID платежа
         createdAt: new Date()
       };
-      await database.collection('bookings').insertOne(booking);
+      await database.collection('bookings').insertOne(booking as any);
       // Мок: симулируем успешный платёж
       console.log(`💳 Мок-платёж создан для бронирования ${bookingId}`);
       console.log(`Сумма: ${total} ₽ (предоплата: ${prepayment} ₽, залог: ${deposit} ₽)`);
       // Обновляем статус на "оплачено"
       await database.collection('bookings').updateOne(
-        { _id: new ObjectId(bookingId) },
+        { _id: bookingId },
         { $set: { status: 'paid', paid_at: new Date() } }
       );
       return NextResponse.json({ success: true, booking });
@@ -606,13 +606,13 @@ export async function POST(request: NextRequest) {
       }
       const bookingId = path.split('/')[2];
       const { photos, type } = body; // type: 'handover' или 'return'
-      const booking = await database.collection('bookings').findOne({ _id: new ObjectId(bookingId) });
+      const booking = await database.collection('bookings').findOne({ _id: bookingId });
       if (!booking) {
         return NextResponse.json({ error: 'Бронирование не найдено' }, { status: 404 });
       }
       const updateField = type === 'handover' ? 'handover_photos' : 'return_photos';
       await database.collection('bookings').updateOne(
-        { _id: new ObjectId(bookingId) },
+        { _id: bookingId },
         { $set: { [updateField]: photos, [`${type}_confirmed_at`]: new Date() } }
       );
       return NextResponse.json({ success: true });
@@ -625,7 +625,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const bookingId = path.split('/')[2];
-      const booking = await database.collection('bookings').findOne({ _id: new ObjectId(bookingId) });
+      const booking = await database.collection('bookings').findOne({ _id: bookingId });
       if (!booking) {
         return NextResponse.json({ error: 'Бронирование не найдено' }, { status: 404 });
       }
@@ -636,7 +636,7 @@ export async function POST(request: NextRequest) {
       }
       // Обновляем статус
       await database.collection('bookings').updateOne(
-        { _id: new ObjectId(bookingId) },
+        { _id: bookingId },
         {
           $set: {
             status: 'completed',
@@ -665,7 +665,7 @@ export async function POST(request: NextRequest) {
       }
       const reviewId = crypto.randomUUID();
       const review = {
-        _id: new ObjectId(reviewId),
+        _id: reviewId,
         booking_id,
         item_id,
         user_id: userId,
@@ -674,7 +674,7 @@ export async function POST(request: NextRequest) {
         photos: photos || [],
         createdAt: new Date()
       };
-      await database.collection('reviews').insertOne(review);
+      await database.collection('reviews').insertOne(review as any);
       // Обновляем рейтинг владельца
       const item = await database.collection('items').findOne({ _id: item_id });
       if (item) {
@@ -691,7 +691,7 @@ export async function POST(request: NextRequest) {
     // Модерация пользователя
     if (path.startsWith('/admin/users/') && path.endsWith('/verify')) {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -707,7 +707,7 @@ export async function POST(request: NextRequest) {
         updateData.rejection_reason = reason;
       }
       await database.collection('users').updateOne(
-        { _id: new ObjectId(targetUserId) },
+        { _id: targetUserId },
         { $set: updateData }
       );
       return NextResponse.json({ success: true });
@@ -716,7 +716,7 @@ export async function POST(request: NextRequest) {
     // Модерация лота
     if (path.startsWith('/admin/items/') && path.endsWith('/moderate')) {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -731,7 +731,7 @@ export async function POST(request: NextRequest) {
         updateData.rejection_reason = reason;
       }
       await database.collection('items').updateOne(
-        { _id: new ObjectId(itemId) },
+        { _id: itemId },
         { $set: updateData }
       );
       return NextResponse.json({ success: true });
@@ -740,14 +740,14 @@ export async function POST(request: NextRequest) {
     // Блокировка пользователя
     if (path.startsWith('/admin/users/') && path.endsWith('/block')) {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const user = await database.collection('users').findOne({ _id: userId! });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       const targetUserId = path.split('/')[3];
       const { reason } = body;
       await database.collection('users').updateOne(
-        { _id: new ObjectId(targetUserId) },
+        { _id: targetUserId },
         {
           $set: {
             is_blocked: true,
@@ -763,7 +763,7 @@ export async function POST(request: NextRequest) {
     // Создание пользователя (админ)
     if (path === '/admin/create-user') {
       const userId = request.headers.get('x-user-id');
-      const currentUser = await database.collection('users').findOne({ _id: new ObjectId(userId!) });
+      const currentUser = await database.collection('users').findOne({ _id: userId! });
       if (!currentUser || currentUser.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
@@ -792,7 +792,7 @@ export async function POST(request: NextRequest) {
       // Создание пользователя
       const newUserId = crypto.randomUUID();
       const newUser = {
-        _id: new ObjectId(newUserId),
+        _id: newUserId,
         name,
         phone,
         email,
@@ -804,7 +804,7 @@ export async function POST(request: NextRequest) {
         createdAt: new Date()
       };
 
-      await database.collection('users').insertOne(newUser);
+      await database.collection('users').insertOne(newUser as any);
 
       // Безопасный ответ (без хеша пароля)
       const safeUser: Record<string, unknown> = { ...newUser };
@@ -837,7 +837,7 @@ export async function PATCH(request: NextRequest) {
       if (name) updateData.name = name;
       if (role) updateData.role = role;
       await database.collection('users').updateOne(
-        { _id: new ObjectId(userId) },
+        { _id: userId },
         { $set: updateData }
       );
       return NextResponse.json({ success: true });
@@ -850,12 +850,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: new ObjectId(itemId) });
+      const item = await database.collection('items').findOne({ _id: itemId });
       if (!item || item.owner_id !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       await database.collection('items').updateOne(
-        { _id: new ObjectId(itemId) },
+        { _id: itemId },
         { $set: { ...body, updatedAt: new Date() } }
       );
       return NextResponse.json({ success: true });
@@ -880,11 +880,11 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: new ObjectId(itemId) });
+      const item = await database.collection('items').findOne({ _id: itemId });
       if (!item || item.owner_id !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      await database.collection('items').deleteOne({ _id: new ObjectId(itemId) });
+      await database.collection('items').deleteOne({ _id: itemId });
       return NextResponse.json({ success: true });
     }
 
