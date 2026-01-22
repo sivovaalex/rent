@@ -5,7 +5,8 @@
       "Bash(npm run type-check:*)",
       "Bash(node -e:*)",
       "Bash(npm install:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

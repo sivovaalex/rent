@@ -5,9 +5,9 @@ const nextConfig = {
   },
   experimental: {
     // Remove if not using Server Components
-    serverComponentsExternalPackages: ['mongodb'],
+    serverComponentsExternalPackages: ['mongodb', 'bson'],
   },
-  webpack(config, { dev }) {
+  webpack(config, { dev, isServer }) {
     if (dev) {
       // Reduce CPU/memory from file watching
       config.watchOptions = {
@@ -15,6 +15,11 @@ const nextConfig = {
         aggregateTimeout: 300, // wait before rebuilding
         ignored: ['**/node_modules'],
       };
+    }
+    // Externalize mongodb and bson for server-side builds
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push('mongodb', 'bson');
     }
     return config;
   },
