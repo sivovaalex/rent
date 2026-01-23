@@ -1,20 +1,8 @@
-import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
-import fs from 'fs';
-import nodePath from 'path';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-
-const client = new MongoClient(process.env.MONGODB_URI!);
-let db: Db | null = null;
-
-async function connectDB(): Promise<Db> {
-  if (!db) {
-    await client.connect();
-    db = client.db('arendapro');
-  }
-  return db;
-}
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // Утилиты
 function generateSMSCode(): string {
@@ -31,23 +19,11 @@ function encryptDocument(data: string): string {
   return iv.toString('hex') + ':' + encrypted;
 }
 
-function decryptDocument(encryptedData: string): string {
-  const algorithm = 'aes-256-cbc';
-  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-secret-key-change-me', 'salt', 32);
-  const parts = encryptedData.split(':');
-  const iv = Buffer.from(parts[0], 'hex');
-  const encrypted = parts[1];
-  const decipher = crypto.createDecipheriv(algorithm, new Uint8Array(key), new Uint8Array(iv));
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
-}
-
 // API Routes
 export async function GET(request: NextRequest) {
-  const database = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
+
   try {
     // Получить текущего пользователя
     if (path === '/auth/me') {
@@ -55,11 +31,12 @@ export async function GET(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const user = await database.collection('users').findOne({ _id: userId });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
       }
-      return NextResponse.json({ user });
+      const { passwordHash: _, ...safeUser } = user;
+      return NextResponse.json({ user: safeUser });
     }
 
     // Получить список лотов с фильтрацией
@@ -70,105 +47,126 @@ export async function GET(request: NextRequest) {
       const minPrice = url.searchParams.get('minPrice');
       const maxPrice = url.searchParams.get('maxPrice');
       const sort = url.searchParams.get('sort') || 'newest';
-
-      // Фильтрация по владельцу
       const owner_id = url.searchParams.get('owner_id');
       const show_all_statuses = url.searchParams.get('show_all_statuses') === 'true';
 
-      const query: Record<string, unknown> = {};
+      const where: Prisma.ItemWhereInput = {};
 
-      // Если фильтрация по владельцу
       if (owner_id) {
-        query.owner_id = owner_id;
-        // Если показывать все статусы
+        where.ownerId = owner_id;
         if (show_all_statuses) {
-          query.status = { $in: ['approved', 'pending', 'rejected', 'draft'] };
+          where.status = { in: ['approved', 'pending', 'rejected', 'draft'] };
         } else {
-          query.status = 'approved'; // Только опубликованные по умолчанию
+          where.status = 'approved';
         }
       } else {
-        // Для всех лотов показываем только опубликованные
-        query.status = 'approved';
+        where.status = 'approved';
       }
 
-      if (category && category !== 'all') query.category = category;
-      if (subcategory && subcategory !== 'all') query.subcategory = subcategory;
+      if (category && category !== 'all') {
+        where.category = category as any;
+      }
+      if (subcategory && subcategory !== 'all') {
+        where.subcategory = subcategory;
+      }
 
       if (search) {
-        query.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } }
+        where.OR = [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } }
         ];
       }
 
       if (minPrice || maxPrice) {
-        const priceQuery: Record<string, number> = {};
-        if (minPrice) priceQuery.$gte = parseFloat(minPrice);
-        if (maxPrice) priceQuery.$lte = parseFloat(maxPrice);
-        query.price_per_day = priceQuery;
+        where.pricePerDay = {};
+        if (minPrice) where.pricePerDay.gte = parseFloat(minPrice);
+        if (maxPrice) where.pricePerDay.lte = parseFloat(maxPrice);
       }
 
-      let sortQuery: Record<string, 1 | -1> = {};
-      if (sort === 'newest') sortQuery = { createdAt: -1 };
-      if (sort === 'price_asc') sortQuery = { price_per_day: 1 };
-      if (sort === 'price_desc') sortQuery = { price_per_day: -1 };
-      if (sort === 'rating') sortQuery = { owner_rating: -1 };
+      let orderBy: Prisma.ItemOrderByWithRelationInput = {};
+      if (sort === 'newest') orderBy = { createdAt: 'desc' };
+      if (sort === 'price_asc') orderBy = { pricePerDay: 'asc' };
+      if (sort === 'price_desc') orderBy = { pricePerDay: 'desc' };
+      if (sort === 'rating') orderBy = { rating: 'desc' };
 
-      const items = await database.collection('items')
-        .find(query)
-        .sort(sortQuery)
-        .limit(50)
-        .toArray();
-
-      // Добавляем информацию о владельце
-      for (const item of items) {
-        const owner = await database.collection('users').findOne({ _id: item.owner_id });
-        if (owner) {
-          item.owner_name = owner.name;
-          item.owner_rating = owner.rating;
+      const items = await prisma.item.findMany({
+        where,
+        orderBy,
+        take: 50,
+        include: {
+          owner: {
+            select: { id: true, name: true, rating: true, phone: true }
+          }
         }
-      }
+      });
 
-      return NextResponse.json({ items });
+      const transformedItems = items.map(item => ({
+        _id: item.id,
+        ...item,
+        owner_id: item.ownerId,
+        owner_name: item.owner.name,
+        owner_rating: item.owner.rating,
+        price_per_day: item.pricePerDay,
+        price_per_month: item.pricePerMonth,
+      }));
+
+      return NextResponse.json({ items: transformedItems });
     }
 
     // Получить конкретный лот
-    if (path.startsWith('/items/') && !path.includes('book') && !path.includes('publish') && !path.includes('unpublish')) {
+    if (path.startsWith('/items/') && !path.includes('book') && !path.includes('publish') && !path.includes('unpublish') && !path.includes('blocked')) {
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: itemId });
+      const item = await prisma.item.findUnique({
+        where: { id: itemId },
+        include: {
+          owner: { select: { id: true, name: true, rating: true, phone: true } },
+          reviews: {
+            orderBy: { createdAt: 'desc' },
+            include: { user: { select: { name: true } } }
+          }
+        }
+      });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
-      // Добавляем информацию о владельце
-      const owner = await database.collection('users').findOne({ _id: item.owner_id });
-      if (owner) {
-        item.owner_name = owner.name;
-        item.owner_rating = owner.rating;
-        item.owner_phone = owner.phone;
-      }
-      // Добавляем отзывы
-      const reviews = await database.collection('reviews')
-        .find({ item_id: itemId })
-        .sort({ createdAt: -1 })
-        .toArray();
-      item.reviews = reviews;
-      return NextResponse.json({ item });
+
+      const transformedItem = {
+        _id: item.id,
+        ...item,
+        owner_id: item.ownerId,
+        owner_name: item.owner.name,
+        owner_rating: item.owner.rating,
+        owner_phone: item.owner.phone,
+        price_per_day: item.pricePerDay,
+        price_per_month: item.pricePerMonth,
+        reviews: item.reviews.map(r => ({
+          _id: r.id,
+          ...r,
+          user_id: r.userId,
+          item_id: r.itemId,
+          booking_id: r.bookingId
+        }))
+      };
+
+      return NextResponse.json({ item: transformedItem });
     }
 
     // Получить занятые даты для лота
     if (path.startsWith('/items/') && path.endsWith('/blocked-booking-dates')) {
       const itemId = path.split('/')[2];
-      const bookings = await database.collection('bookings').find({
-        item_id: itemId,
-        status: { $in: ['pending_payment', 'paid'] }
-      }).toArray();
+      const bookings = await prisma.booking.findMany({
+        where: {
+          itemId,
+          status: { in: ['pending_payment', 'paid'] }
+        }
+      });
 
       const dates: string[] = [];
       for (const b of bookings) {
-        const start = new Date(b.start_date);
-        const end = new Date(b.end_date);
+        const start = new Date(b.startDate);
+        const end = new Date(b.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          dates.push(d.toISOString().split('T')[0]); // "YYYY-MM-DD"
+          dates.push(d.toISOString().split('T')[0]);
         }
       }
 
@@ -182,125 +180,146 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
 
-      const userType = url.searchParams.get('type'); // 'renter' или 'owner'
-      const query: Record<string, unknown> = {};
+      const userType = url.searchParams.get('type');
+      let where: Prisma.BookingWhereInput = {};
+
       if (userType === 'renter') {
-        query.renter_id = userId;
+        where.renterId = userId;
       } else if (userType === 'owner') {
-        // Находим все лоты пользователя
-        const userItems = await database.collection('items').find({ owner_id: userId }).toArray();
-        const itemIds = userItems.map(item => item._id);
-        query.item_id = { $in: itemIds };
+        where.item = { ownerId: userId };
       } else {
-        // Все бронирования пользователя
-        const userItems = await database.collection('items').find({ owner_id: userId }).toArray();
-        const itemIds = userItems.map(item => item._id);
-        query.$or = [
-          { renter_id: userId },
-          { item_id: { $in: itemIds } }
+        where.OR = [
+          { renterId: userId },
+          { item: { ownerId: userId } }
         ];
       }
 
-      const bookings = await database.collection('bookings')
-        .find(query)
-        .sort({ createdAt: -1 })
-        .toArray();
-
-      // Добавляем информацию о лотах, пользователях и отзывах
-      for (const booking of bookings) {
-        const item = await database.collection('items').findOne({ _id: booking.item_id });
-        const renter = await database.collection('users').findOne({ _id: booking.renter_id });
-        booking.item = item;
-        booking.renter = renter;
-
-        // Проверяем, есть ли отзыв для этого бронирования
-        const review = await database.collection('reviews').findOne({ booking_id: booking._id });
-        if (review) {
-          booking.review = review;
+      const bookings = await prisma.booking.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          item: true,
+          renter: { select: { id: true, name: true, phone: true, email: true } },
+          review: true
         }
-      }
+      });
 
-      return NextResponse.json({ bookings });
+      const transformedBookings = bookings.map(b => ({
+        _id: b.id,
+        ...b,
+        item_id: b.itemId,
+        renter_id: b.renterId,
+        start_date: b.startDate,
+        end_date: b.endDate,
+        rental_type: b.rentalType,
+        rental_price: b.rentalPrice,
+        total_price: b.totalPrice,
+        is_insured: b.isInsured,
+        deposit_status: b.depositStatus,
+        payment_id: b.paymentId,
+        handover_photos: b.handoverPhotos,
+        return_photos: b.returnPhotos,
+        item: b.item ? {
+          _id: b.item.id,
+          ...b.item,
+          owner_id: b.item.ownerId,
+          price_per_day: b.item.pricePerDay,
+          price_per_month: b.item.pricePerMonth
+        } : null,
+        renter: b.renter,
+        review: b.review ? { _id: b.review.id, ...b.review } : null
+      }));
+
+      return NextResponse.json({ bookings: transformedBookings });
     }
 
     // Получить пользователей для модерации
     if (path === '/admin/users') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       const status = url.searchParams.get('status');
-      const query: Record<string, unknown> = {};
+      const where: Prisma.UserWhereInput = {};
       if (status === 'pending') {
-        query.verification_status = 'pending';
+        where.verificationStatus = 'pending';
       }
-      const users = await database.collection('users')
-        .find(query)
-        .sort({ createdAt: -1 })
-        .toArray();
-      return NextResponse.json({ users });
+      const users = await prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' }
+      });
+      const safeUsers = users.map(u => {
+        const { passwordHash: _, ...safe } = u;
+        return { _id: u.id, ...safe, verification_status: u.verificationStatus, is_verified: u.isVerified };
+      });
+      return NextResponse.json({ users: safeUsers });
     }
 
     // Получить всех пользователей (только для админов)
     if (path === '/admin/users/all') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || user.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      const users = await database.collection('users')
-        .find({})
-        .sort({ createdAt: -1 })
-        .toArray();
-      return NextResponse.json({ users });
+      const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+      const safeUsers = users.map(u => {
+        const { passwordHash: _, ...safe } = u;
+        return { _id: u.id, ...safe, verification_status: u.verificationStatus, is_verified: u.isVerified };
+      });
+      return NextResponse.json({ users: safeUsers });
     }
 
     // Получить лоты для модерации
     if (path === '/admin/items') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       const status = url.searchParams.get('status');
-      const query: Record<string, unknown> = {};
+      const where: Prisma.ItemWhereInput = {};
       if (status === 'pending') {
-        query.status = 'pending';
+        where.status = 'pending';
       }
-      const items = await database.collection('items')
-        .find(query)
-        .sort({ createdAt: -1 })
-        .toArray();
-      // Добавляем информацию о владельце
-      for (const item of items) {
-        const owner = await database.collection('users').findOne({ _id: item.owner_id });
-        if (owner) {
-          item.owner_name = owner.name;
-          item.owner_phone = owner.phone;
-        }
-      }
-      return NextResponse.json({ items });
+      const items = await prisma.item.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: { owner: { select: { name: true, phone: true } } }
+      });
+      const transformedItems = items.map(item => ({
+        _id: item.id,
+        ...item,
+        owner_id: item.ownerId,
+        owner_name: item.owner.name,
+        owner_phone: item.owner.phone,
+        price_per_day: item.pricePerDay,
+        price_per_month: item.pricePerMonth
+      }));
+      return NextResponse.json({ items: transformedItems });
     }
 
     // Получить статистику (для админов)
     if (path === '/admin/stats') {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || user.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      const totalUsers = await database.collection('users').countDocuments();
-      const totalItems = await database.collection('items').countDocuments();
-      const totalBookings = await database.collection('bookings').countDocuments();
-      const pendingVerifications = await database.collection('users').countDocuments({ verification_status: 'pending' });
-      const pendingItems = await database.collection('items').countDocuments({ status: 'pending' });
+      const [totalUsers, totalItems, totalBookings, pendingVerifications, pendingItems] = await Promise.all([
+        prisma.user.count(),
+        prisma.item.count(),
+        prisma.booking.count(),
+        prisma.user.count({ where: { verificationStatus: 'pending' } }),
+        prisma.item.count({ where: { status: 'pending' } })
+      ]);
 
-      // Общая сумма комиссий (15% от всех завершенных бронирований)
-      const completedBookings = await database.collection('bookings')
-        .find({ status: 'completed' })
-        .toArray();
-      const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.commission || 0), 0);
+      const completedBookings = await prisma.booking.findMany({
+        where: { status: 'completed' },
+        select: { commission: true }
+      });
+      const totalRevenue = completedBookings.reduce((sum, b) => sum + b.commission, 0);
 
       return NextResponse.json({
         totalUsers,
@@ -320,10 +339,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const database = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
   const body = await request.json();
+
   try {
     // Отправка SMS-кода
     if (path === '/auth/send-sms') {
@@ -332,13 +351,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Телефон обязателен' }, { status: 400 });
       }
       const code = generateSMSCode();
-      // Сохраняем код в БД
-      await database.collection('sms_codes').updateOne(
-        { phone },
-        { $set: { phone, code, createdAt: new Date() } },
-        { upsert: true }
-      );
-      // Мок: выводим код в консоль
+      await prisma.smsCode.upsert({
+        where: { phone },
+        update: { code, createdAt: new Date(), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+        create: { phone, code, expiresAt: new Date(Date.now() + 5 * 60 * 1000) }
+      });
       console.log(`📱 SMS код для ${phone}: ${code}`);
       return NextResponse.json({ success: true, message: 'Код отправлен' });
     }
@@ -346,37 +363,30 @@ export async function POST(request: NextRequest) {
     // Верификация SMS-кода и регистрация/вход
     if (path === '/auth/verify-sms') {
       const { phone, code, name } = body;
-      const smsRecord = await database.collection('sms_codes').findOne({ phone });
+      const smsRecord = await prisma.smsCode.findUnique({ where: { phone } });
       if (!smsRecord || smsRecord.code !== code) {
         return NextResponse.json({ error: 'Неверный код' }, { status: 400 });
       }
-      // Проверяем, существует ли пользователь
-      let user: any = await database.collection('users').findOne({ phone });
+
+      let user = await prisma.user.findUnique({ where: { phone } });
       if (!user) {
-        // Создаём нового пользователя
-        const userId = crypto.randomUUID();
         let passwordHash: string | null = null;
         if (body.password) {
           passwordHash = await bcrypt.hash(body.password, 10);
         }
-        const newUser = {
-          _id: userId,
-          phone,
-          name: name || 'Пользователь',
-          email: body.email || null,
-          password_hash: passwordHash,
-          role: body.role || 'renter', // ← роль из формы
-          rating: 5.0,
-          verification_status: 'not_verified',
-          is_verified: false,
-          createdAt: new Date()
-        };
-        await database.collection('users').insertOne(newUser as any);
-        user = newUser;
+        user = await prisma.user.create({
+          data: {
+            phone,
+            name: name || 'Пользователь',
+            email: body.email || null,
+            passwordHash,
+            role: body.role || 'renter'
+          }
+        });
       }
-      // Удаляем использованный код
-      await database.collection('sms_codes').deleteOne({ phone });
-      return NextResponse.json({ success: true, user });
+      await prisma.smsCode.delete({ where: { phone } });
+      const { passwordHash: _, ...safeUser } = user;
+      return NextResponse.json({ success: true, user: { _id: user.id, ...safeUser, verification_status: user.verificationStatus, is_verified: user.isVerified } });
     }
 
     // Загрузка документа для верификации
@@ -385,59 +395,36 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const { documentData, documentType } = body; // documentData - base64
-      // Шифруем и сохраняем документ
+      const { documentData, documentType } = body;
       const encryptedData = encryptDocument(documentData);
-      // Сохраняем в файл
-      const uploadsDir = nodePath.join(process.cwd(), 'uploads', 'documents');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      const filename = `${userId}_${Date.now()}.enc`;
-      const filepath = nodePath.join(uploadsDir, filename);
-      //fs.writeFileSync(filepath, encryptedData);
-      await database.collection('users').updateOne(
-        { _id: userId },
-        {
-          $set: {
-            encrypted_document: encryptedData, // ← сохраняем в БД
-            document_type: documentType,
-            verification_status: 'pending',
-            verification_submitted_at: new Date()
-          }
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          encryptedDocument: encryptedData,
+          documentType,
+          verificationStatus: 'pending',
+          verificationSubmittedAt: new Date()
         }
-      );
-      // Обновляем пользователя
-      await database.collection('users').updateOne(
-        { _id: userId },
-        {
-          $set: {
-            document_path: filepath,
-            document_type: documentType,
-            verification_status: 'pending',
-            verification_submitted_at: new Date()
-          }
-        }
-      );
+      });
       return NextResponse.json({ success: true, message: 'Документ загружен на проверку' });
     }
 
+    // Логин по email
     if (path === '/auth/login') {
       const { email, password } = body;
       if (!email || !password) {
         return NextResponse.json({ error: 'Email и пароль обязательны' }, { status: 400 });
       }
-      const user = await database.collection('users').findOne({ email });
-      if (!user || !user.password_hash) {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user || !user.passwordHash) {
         return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
       }
-      const isValid = await bcrypt.compare(password, user.password_hash);
+      const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
         return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
       }
-      const safeUser = { ...user };
-      delete safeUser.password_hash;
-      return NextResponse.json({ success: true, user: safeUser });
+      const { passwordHash: _, ...safeUser } = user;
+      return NextResponse.json({ success: true, user: { _id: user.id, ...safeUser, verification_status: user.verificationStatus, is_verified: user.isVerified } });
     }
 
     // Создание лота
@@ -446,20 +433,27 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const user = await database.collection('users').findOne({ _id: userId });
-      if (!user || !user.is_verified) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user || !user.isVerified) {
         return NextResponse.json({ error: 'Требуется верификация' }, { status: 403 });
       }
-      const itemId = crypto.randomUUID();
-      const item = {
-        _id: itemId,
-        owner_id: userId,
-        ...body,
-        status: 'pending',
-        createdAt: new Date()
-      };
-      await database.collection('items').insertOne(item as any);
-      return NextResponse.json({ success: true, item });
+      const item = await prisma.item.create({
+        data: {
+          ownerId: userId,
+          category: body.category,
+          subcategory: body.subcategory || null,
+          title: body.title,
+          description: body.description,
+          pricePerDay: body.price_per_day || body.pricePerDay,
+          pricePerMonth: body.price_per_month || body.pricePerMonth,
+          deposit: body.deposit,
+          address: body.address,
+          photos: body.photos || [],
+          attributes: body.attributes || {},
+          status: 'pending'
+        }
+      });
+      return NextResponse.json({ success: true, item: { _id: item.id, ...item, owner_id: item.ownerId, price_per_day: item.pricePerDay, price_per_month: item.pricePerMonth } });
     }
 
     // Публикация лота
@@ -468,35 +462,23 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-
-      const currentUser = await database.collection('users').findOne({ _id: userId });
+      const currentUser = await prisma.user.findUnique({ where: { id: userId } });
       if (!currentUser) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
       }
-
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: itemId });
+      const item = await prisma.item.findUnique({ where: { id: itemId } });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
-
-      // Проверка прав: владелец лота, модератор или админ
-      if (item.owner_id !== userId && currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
+      if (item.ownerId !== userId && currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-
-      // Если лот был отклонен, отправляем на модерацию
-      let newStatus = 'pending';
-      // Если пользователь - модератор или админ, можно сразу публиковать
-      if (currentUser.role === 'moderator' || currentUser.role === 'admin') {
-        newStatus = 'approved';
-      }
-
-      await database.collection('items').updateOne(
-        { _id: itemId },
-        { $set: { status: newStatus, updatedAt: new Date() } }
-      );
-
+      const newStatus = (currentUser.role === 'moderator' || currentUser.role === 'admin') ? 'approved' : 'pending';
+      await prisma.item.update({
+        where: { id: itemId },
+        data: { status: newStatus }
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -506,31 +488,22 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-
-      const currentUser = await database.collection('users').findOne({ _id: userId });
+      const currentUser = await prisma.user.findUnique({ where: { id: userId } });
       if (!currentUser) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
       }
-
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: itemId });
+      const item = await prisma.item.findUnique({ where: { id: itemId } });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
-
-      // Проверка прав: владелец лота, модератор или админ
-      if (item.owner_id !== userId && currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
+      if (item.ownerId !== userId && currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-
-      // Статус для снятого с публикации лота
-      const newStatus = 'draft';
-
-      await database.collection('items').updateOne(
-        { _id: itemId },
-        { $set: { status: newStatus, updatedAt: new Date() } }
-      );
-
+      await prisma.item.update({
+        where: { id: itemId },
+        data: { status: 'draft' }
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -540,62 +513,57 @@ export async function POST(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
-      const user = await database.collection('users').findOne({ _id: userId });
-      if (!user || !user.is_verified) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user || !user.isVerified) {
         return NextResponse.json({ error: 'Требуется верификация' }, { status: 403 });
       }
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: itemId });
+      const item = await prisma.item.findUnique({ where: { id: itemId } });
       if (!item) {
         return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
       }
       const { start_date, end_date, rental_type, is_insured } = body;
-      // Рассчитываем стоимость
       const start = new Date(start_date);
       const end = new Date(end_date);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
       let rentalPrice = 0;
       if (rental_type === 'day') {
-        rentalPrice = item.price_per_day * days;
+        rentalPrice = item.pricePerDay * days;
       } else if (rental_type === 'month') {
         const months = Math.ceil(days / 30);
-        rentalPrice = item.price_per_month * months;
+        rentalPrice = item.pricePerMonth * months;
       }
-      const deposit = Number(item.deposit);
+
+      const deposit = item.deposit;
       const commission = rentalPrice * 0.15;
       const insurance = is_insured ? rentalPrice * 0.10 : 0;
       const total = rentalPrice + deposit + commission + insurance;
-      const prepayment = rentalPrice * 0.30; // 30% предоплата
-      const bookingId = crypto.randomUUID();
-      const booking = {
-        _id: bookingId,
-        item_id: itemId,
-        renter_id: userId,
-        start_date: start,
-        end_date: end,
-        rental_type,
-        rental_price: rentalPrice,
-        deposit,
-        commission,
-        insurance,
-        total_price: total,
-        prepayment,
-        is_insured,
-        status: 'pending_payment',
-        deposit_status: 'held',
-        payment_id: `MOCK_${bookingId}`, // Мок-ID платежа
-        createdAt: new Date()
-      };
-      await database.collection('bookings').insertOne(booking as any);
-      // Мок: симулируем успешный платёж
-      console.log(`💳 Мок-платёж создан для бронирования ${bookingId}`);
-      console.log(`Сумма: ${total} ₽ (предоплата: ${prepayment} ₽, залог: ${deposit} ₽)`);
-      // Обновляем статус на "оплачено"
-      await database.collection('bookings').updateOne(
-        { _id: bookingId },
-        { $set: { status: 'paid', paid_at: new Date() } }
-      );
-      return NextResponse.json({ success: true, booking });
+      const prepayment = rentalPrice * 0.30;
+
+      const booking = await prisma.booking.create({
+        data: {
+          itemId,
+          renterId: userId,
+          startDate: start,
+          endDate: end,
+          rentalType: rental_type,
+          rentalPrice,
+          deposit,
+          commission,
+          insurance,
+          totalPrice: total,
+          prepayment,
+          isInsured: is_insured || false,
+          status: 'paid',
+          depositStatus: 'held',
+          paymentId: `MOCK_${crypto.randomUUID()}`,
+          paidAt: new Date()
+        }
+      });
+
+      console.log(`💳 Мок-платёж создан для бронирования ${booking.id}`);
+      return NextResponse.json({ success: true, booking: { _id: booking.id, ...booking, item_id: booking.itemId, renter_id: booking.renterId } });
     }
 
     // Добавление фото чек-листа
@@ -605,16 +573,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const bookingId = path.split('/')[2];
-      const { photos, type } = body; // type: 'handover' или 'return'
-      const booking = await database.collection('bookings').findOne({ _id: bookingId });
+      const { photos, type } = body;
+      const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
       if (!booking) {
         return NextResponse.json({ error: 'Бронирование не найдено' }, { status: 404 });
       }
-      const updateField = type === 'handover' ? 'handover_photos' : 'return_photos';
-      await database.collection('bookings').updateOne(
-        { _id: bookingId },
-        { $set: { [updateField]: photos, [`${type}_confirmed_at`]: new Date() } }
-      );
+      const updateData = type === 'handover'
+        ? { handoverPhotos: photos, handoverConfirmedAt: new Date() }
+        : { returnPhotos: photos, returnConfirmedAt: new Date() };
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: updateData
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -625,29 +595,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const bookingId = path.split('/')[2];
-      const booking = await database.collection('bookings').findOne({ _id: bookingId });
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: { item: true }
+      });
       if (!booking) {
         return NextResponse.json({ error: 'Бронирование не найдено' }, { status: 404 });
       }
-      // Проверяем, что пользователь - владелец лота
-      const item = await database.collection('items').findOne({ _id: booking.item_id });
-      if (!item || item.owner_id !== userId) {
+      if (!booking.item || booking.item.ownerId !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      // Обновляем статус
-      await database.collection('bookings').updateOne(
-        { _id: bookingId },
-        {
-          $set: {
-            status: 'completed',
-            deposit_status: 'returned',
-            completed_at: new Date()
-          }
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: 'completed',
+          depositStatus: 'returned',
+          completedAt: new Date()
         }
-      );
-      // Мок: возврат залога
+      });
       console.log(`💰 Залог ${booking.deposit} ₽ возвращён арендатору`);
-      console.log(`💰 Арендодатель получил ${booking.rental_price - booking.commission} ₽`);
       return NextResponse.json({ success: true });
     }
 
@@ -658,159 +624,133 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const { booking_id, item_id, rating, text, photos } = body;
-      // Проверяем, что бронирование завершено
-      const booking = await database.collection('bookings').findOne({ _id: booking_id });
+      const booking = await prisma.booking.findUnique({ where: { id: booking_id } });
       if (!booking || booking.status !== 'completed') {
         return NextResponse.json({ error: 'Можно оставить отзыв только после завершения аренды' }, { status: 400 });
       }
-      const reviewId = crypto.randomUUID();
-      const review = {
-        _id: reviewId,
-        booking_id,
-        item_id,
-        user_id: userId,
-        rating,
-        text,
-        photos: photos || [],
-        createdAt: new Date()
-      };
-      await database.collection('reviews').insertOne(review as any);
+      const review = await prisma.review.create({
+        data: {
+          bookingId: booking_id,
+          itemId: item_id,
+          userId,
+          rating,
+          text,
+          photos: photos || []
+        }
+      });
+
       // Обновляем рейтинг владельца
-      const item = await database.collection('items').findOne({ _id: item_id });
+      const item = await prisma.item.findUnique({ where: { id: item_id } });
       if (item) {
-        const allReviews = await database.collection('reviews').find({ item_id }).toArray();
+        const allReviews = await prisma.review.findMany({
+          where: { itemId: item_id },
+          select: { rating: true }
+        });
         const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-        await database.collection('users').updateOne(
-          { _id: item.owner_id },
-          { $set: { rating: avgRating } }
-        );
+        await prisma.user.update({
+          where: { id: item.ownerId },
+          data: { rating: avgRating }
+        });
       }
-      return NextResponse.json({ success: true, review });
+      return NextResponse.json({ success: true, review: { _id: review.id, ...review } });
     }
 
     // Модерация пользователя
     if (path.startsWith('/admin/users/') && path.endsWith('/verify')) {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       const targetUserId = path.split('/')[3];
-      const { action, reason } = body; // action: 'approve' или 'reject'
-      const updateData: Record<string, unknown> = {
-        verification_status: action === 'approve' ? 'verified' : 'rejected',
-        is_verified: action === 'approve',
-        verified_at: new Date(),
-        verified_by: userId
-      };
-      if (reason) {
-        updateData.rejection_reason = reason;
-      }
-      await database.collection('users').updateOne(
-        { _id: targetUserId },
-        { $set: updateData }
-      );
+      const { action, reason } = body;
+      await prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          verificationStatus: action === 'approve' ? 'verified' : 'rejected',
+          isVerified: action === 'approve',
+          verifiedAt: new Date(),
+          verifiedBy: userId,
+          rejectionReason: reason || null
+        }
+      });
       return NextResponse.json({ success: true });
     }
 
     // Модерация лота
     if (path.startsWith('/admin/items/') && path.endsWith('/moderate')) {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       const itemId = path.split('/')[3];
-      const { action, reason } = body; // action: 'approve' или 'reject'
-      const updateData: Record<string, unknown> = {
-        status: action === 'approve' ? 'approved' : 'rejected',
-        moderated_at: new Date(),
-        moderated_by: userId
-      };
-      if (reason) {
-        updateData.rejection_reason = reason;
-      }
-      await database.collection('items').updateOne(
-        { _id: itemId },
-        { $set: updateData }
-      );
+      const { action, reason } = body;
+      await prisma.item.update({
+        where: { id: itemId },
+        data: {
+          status: action === 'approve' ? 'approved' : 'rejected',
+          moderatedAt: new Date(),
+          moderatedBy: userId,
+          rejectionReason: reason || null
+        }
+      });
       return NextResponse.json({ success: true });
     }
 
     // Блокировка пользователя
     if (path.startsWith('/admin/users/') && path.endsWith('/block')) {
       const userId = request.headers.get('x-user-id');
-      const user = await database.collection('users').findOne({ _id: userId! });
+      const user = await prisma.user.findUnique({ where: { id: userId! } });
       if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
       const targetUserId = path.split('/')[3];
       const { reason } = body;
-      await database.collection('users').updateOne(
-        { _id: targetUserId },
-        {
-          $set: {
-            is_blocked: true,
-            blocked_at: new Date(),
-            blocked_by: userId,
-            block_reason: reason
-          }
+      await prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          isBlocked: true,
+          blockedAt: new Date(),
+          blockedBy: userId,
+          blockReason: reason
         }
-      );
+      });
       return NextResponse.json({ success: true });
     }
 
     // Создание пользователя (админ)
     if (path === '/admin/create-user') {
       const userId = request.headers.get('x-user-id');
-      const currentUser = await database.collection('users').findOne({ _id: userId! });
+      const currentUser = await prisma.user.findUnique({ where: { id: userId! } });
       if (!currentUser || currentUser.role !== 'admin') {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-
       const { name, phone, email, password, role } = body;
-
-      // Проверка обязательных полей
       if (!name || !phone || !email || !password) {
         return NextResponse.json({ error: 'Все поля обязательны' }, { status: 400 });
       }
-
-      // Проверка существования пользователя с таким телефоном или email
-      const existingUserByPhone = await database.collection('users').findOne({ phone });
-      const existingUserByEmail = await database.collection('users').findOne({ email });
-
-      if (existingUserByPhone) {
-        return NextResponse.json({ error: 'Пользователь с таким телефоном уже существует' }, { status: 400 });
+      const existingUser = await prisma.user.findFirst({
+        where: { OR: [{ phone }, { email }] }
+      });
+      if (existingUser) {
+        const field = existingUser.phone === phone ? 'телефоном' : 'email';
+        return NextResponse.json({ error: `Пользователь с таким ${field} уже существует` }, { status: 400 });
       }
-      if (existingUserByEmail) {
-        return NextResponse.json({ error: 'Пользователь с таким email уже существует' }, { status: 400 });
-      }
-
-      // Хеширование пароля
       const passwordHash = await bcrypt.hash(password, 10);
-
-      // Создание пользователя
-      const newUserId = crypto.randomUUID();
-      const newUser = {
-        _id: newUserId,
-        name,
-        phone,
-        email,
-        password_hash: passwordHash,
-        role: role || 'renter',
-        rating: 5.0,
-        verification_status: 'verified', // Принудительно верифицирован
-        is_verified: true,
-        createdAt: new Date()
-      };
-
-      await database.collection('users').insertOne(newUser as any);
-
-      // Безопасный ответ (без хеша пароля)
-      const safeUser: Record<string, unknown> = { ...newUser };
-      delete safeUser.password_hash;
-
-      return NextResponse.json({ success: true, user: safeUser });
+      const newUser = await prisma.user.create({
+        data: {
+          name,
+          phone,
+          email,
+          passwordHash,
+          role: role || 'renter',
+          verificationStatus: 'verified',
+          isVerified: true
+        }
+      });
+      const { passwordHash: _, ...safeUser } = newUser;
+      return NextResponse.json({ success: true, user: { _id: newUser.id, ...safeUser } });
     }
 
     return NextResponse.json({ error: 'Маршрут не найден' }, { status: 404 });
@@ -821,10 +761,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const database = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
   const body = await request.json();
+
   try {
     // Обновление профиля
     if (path === '/profile') {
@@ -833,13 +773,13 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const { name, role } = body;
-      const updateData: Record<string, unknown> = {};
+      const updateData: Prisma.UserUpdateInput = {};
       if (name) updateData.name = name;
       if (role) updateData.role = role;
-      await database.collection('users').updateOne(
-        { _id: userId },
-        { $set: updateData }
-      );
+      await prisma.user.update({
+        where: { id: userId },
+        data: updateData
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -850,14 +790,29 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: itemId });
-      if (!item || item.owner_id !== userId) {
+      const item = await prisma.item.findUnique({ where: { id: itemId } });
+      if (!item || item.ownerId !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      await database.collection('items').updateOne(
-        { _id: itemId },
-        { $set: { ...body, updatedAt: new Date() } }
-      );
+
+      const updateData: Prisma.ItemUpdateInput = {};
+      if (body.title) updateData.title = body.title;
+      if (body.description) updateData.description = body.description;
+      if (body.price_per_day !== undefined) updateData.pricePerDay = body.price_per_day;
+      if (body.pricePerDay !== undefined) updateData.pricePerDay = body.pricePerDay;
+      if (body.price_per_month !== undefined) updateData.pricePerMonth = body.price_per_month;
+      if (body.pricePerMonth !== undefined) updateData.pricePerMonth = body.pricePerMonth;
+      if (body.deposit !== undefined) updateData.deposit = body.deposit;
+      if (body.address) updateData.address = body.address;
+      if (body.photos) updateData.photos = body.photos;
+      if (body.category) updateData.category = body.category;
+      if (body.subcategory !== undefined) updateData.subcategory = body.subcategory;
+      if (body.attributes) updateData.attributes = body.attributes;
+
+      await prisma.item.update({
+        where: { id: itemId },
+        data: updateData
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -869,9 +824,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const database = await connectDB();
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
+
   try {
     // Удаление лота
     if (path.startsWith('/items/')) {
@@ -880,11 +835,11 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
       }
       const itemId = path.split('/')[2];
-      const item = await database.collection('items').findOne({ _id: itemId });
-      if (!item || item.owner_id !== userId) {
+      const item = await prisma.item.findUnique({ where: { id: itemId } });
+      if (!item || item.ownerId !== userId) {
         return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
       }
-      await database.collection('items').deleteOne({ _id: itemId });
+      await prisma.item.delete({ where: { id: itemId } });
       return NextResponse.json({ success: true });
     }
 

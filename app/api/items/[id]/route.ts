@@ -1,64 +1,57 @@
-import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
-
-const client = new MongoClient(process.env.MONGODB_URI!);
-let db: Db | null = null;
-
-async function connectDB(): Promise<Db> {
-  if (!db) {
-    await client.connect();
-    db = client.db('arendapro');
-  }
-  return db;
-}
+import { prisma } from '@/lib/prisma';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
-  const db = await connectDB();
   const { id } = await context.params;
 
   try {
-    const item = await db.collection('items').findOne({ _id: id });
+    const item = await prisma.item.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: { id: true, name: true, rating: true, phone: true, createdAt: true }
+        },
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: { select: { name: true, photo: true } },
+            reply: true
+          }
+        }
+      }
+    });
 
     if (!item) {
       return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
     }
 
-    const owner = await db.collection('users').findOne({ _id: item.owner_id });
-    if (owner) {
-      item.owner_name = owner.name;
-      item.owner_rating = owner.rating;
-      item.owner_phone = owner.phone;
-      item.owner_createdAt = owner.createdAt;
-    }
+    const transformedItem = {
+      _id: item.id,
+      ...item,
+      owner_id: item.ownerId,
+      owner_name: item.owner.name,
+      owner_rating: item.owner.rating,
+      owner_phone: item.owner.phone,
+      owner_createdAt: item.owner.createdAt,
+      price_per_day: item.pricePerDay,
+      price_per_month: item.pricePerMonth,
+      reviews: item.reviews.map(r => ({
+        _id: r.id,
+        ...r,
+        user_id: r.userId,
+        item_id: r.itemId,
+        booking_id: r.bookingId,
+        user_name: r.user.name,
+        user_photo: r.user.photo,
+        reply: r.reply
+      }))
+    };
 
-    const reviews = await db.collection('reviews')
-      .find({ item_id: id })
-      .sort({ createdAt: -1 })
-      .toArray();
-
-    for (const review of reviews) {
-      const user = await db.collection('users').findOne({ _id: review.user_id });
-      if (user) {
-        review.user_name = user.name;
-        review.user_photo = user.photo;
-      }
-
-      const replies = await db.collection('review_replies')
-        .find({ review_id: review._id })
-        .toArray();
-
-      if (replies.length > 0) {
-        review.reply = replies[0];
-      }
-    }
-
-    item.reviews = reviews;
-
-    return NextResponse.json({ item });
+    return NextResponse.json({ item: transformedItem });
   } catch (error) {
     console.error('Ошибка получения лота:', error);
     return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
@@ -66,7 +59,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const db = await connectDB();
   const { id } = await context.params;
   const body = await request.json();
   const userId = request.headers.get('x-user-id');
@@ -76,13 +68,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const item = await db.collection('items').findOne({ _id: id });
+    const item = await prisma.item.findUnique({ where: { id } });
 
     if (!item) {
       return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
     }
 
-    if (item.owner_id !== userId) {
+    if (item.ownerId !== userId) {
       return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
     }
 
@@ -99,24 +91,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       attributes
     } = body;
 
-    const updateData = {
-      category,
-      subcategory,
-      title,
-      description,
-      price_per_day: parseFloat(price_per_day),
-      price_per_month: parseFloat(price_per_month),
-      deposit: parseFloat(deposit),
-      address,
-      photos: photos || [],
-      attributes: attributes || {},
-      updatedAt: new Date()
-    };
-
-    await db.collection('items').updateOne(
-      { _id: id },
-      { $set: updateData }
-    );
+    await prisma.item.update({
+      where: { id },
+      data: {
+        category,
+        subcategory,
+        title,
+        description,
+        pricePerDay: parseFloat(price_per_day),
+        pricePerMonth: parseFloat(price_per_month),
+        deposit: parseFloat(deposit),
+        address,
+        photos: photos || [],
+        attributes: attributes || {}
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -126,7 +115,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  const db = await connectDB();
   const { id } = await context.params;
   const userId = request.headers.get('x-user-id');
 
@@ -135,17 +123,17 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const item = await db.collection('items').findOne({ _id: id });
+    const item = await prisma.item.findUnique({ where: { id } });
 
     if (!item) {
       return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
     }
 
-    if (item.owner_id !== userId) {
+    if (item.ownerId !== userId) {
       return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
     }
 
-    await db.collection('items').deleteOne({ _id: id });
+    await prisma.item.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

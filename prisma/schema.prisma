@@ -1,0 +1,220 @@
+// Prisma Schema for Supabase PostgreSQL
+// Supports both Development and Production environments
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  renter
+  owner
+  moderator
+  admin
+}
+
+enum VerificationStatus {
+  not_verified
+  pending
+  verified
+  rejected
+}
+
+enum ItemStatus {
+  draft
+  pending
+  approved
+  rejected
+}
+
+enum Category {
+  electronics
+  clothes
+  stream
+  tools
+  sports
+  other
+}
+
+enum BookingStatus {
+  pending_payment
+  paid
+  active
+  completed
+  cancelled
+}
+
+enum RentalType {
+  day
+  month
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id                  String             @id @default(uuid())
+  name                String
+  email               String?            @unique
+  phone               String             @unique
+  passwordHash        String?            @map("password_hash")
+  role                UserRole           @default(renter)
+  rating              Float              @default(5.0)
+  isVerified          Boolean            @default(false) @map("is_verified")
+  verificationStatus  VerificationStatus @default(not_verified) @map("verification_status")
+  isBlocked           Boolean            @default(false) @map("is_blocked")
+  blockReason         String?            @map("block_reason")
+  blockedAt           DateTime?          @map("blocked_at")
+  blockedBy           String?            @map("blocked_by")
+  photo               String?
+
+  // Document verification
+  documentPath        String?            @map("document_path")
+  documentType        String?            @map("document_type")
+  encryptedDocument   String?            @map("encrypted_document")
+  verificationSubmittedAt DateTime?      @map("verification_submitted_at")
+  verifiedAt          DateTime?          @map("verified_at")
+  verifiedBy          String?            @map("verified_by")
+  rejectionReason     String?            @map("rejection_reason")
+
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  items               Item[]             @relation("OwnerItems")
+  bookingsAsRenter    Booking[]          @relation("RenterBookings")
+  reviews             Review[]
+  reviewReplies       ReviewReply[]
+
+  @@map("users")
+}
+
+model Item {
+  id              String      @id @default(uuid())
+  ownerId         String      @map("owner_id")
+  category        Category
+  subcategory     String?
+  title           String
+  description     String
+  pricePerDay     Float       @map("price_per_day")
+  pricePerMonth   Float       @map("price_per_month")
+  deposit         Float
+  address         String
+  photos          String[]    @default([])
+  attributes      Json?       @default("{}")
+  status          ItemStatus  @default(pending)
+  rating          Float?
+
+  // Moderation
+  moderatedAt     DateTime?   @map("moderated_at")
+  moderatedBy     String?     @map("moderated_by")
+  rejectionReason String?     @map("rejection_reason")
+
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  owner           User        @relation("OwnerItems", fields: [ownerId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  reviews         Review[]
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt])
+  @@map("items")
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  itemId        String        @map("item_id")
+  renterId      String        @map("renter_id")
+  startDate     DateTime      @map("start_date")
+  endDate       DateTime      @map("end_date")
+  rentalType    RentalType    @map("rental_type")
+  rentalPrice   Float         @map("rental_price")
+  deposit       Float
+  commission    Float
+  insurance     Float         @default(0)
+  totalPrice    Float         @map("total_price")
+  prepayment    Float
+  isInsured     Boolean       @default(false) @map("is_insured")
+  status        BookingStatus @default(pending_payment)
+  depositStatus String?       @map("deposit_status")
+  paymentId     String?       @map("payment_id")
+
+  // Checklist photos
+  handoverPhotos     String[]  @default([]) @map("handover_photos")
+  returnPhotos       String[]  @default([]) @map("return_photos")
+  handoverConfirmedAt DateTime? @map("handover_confirmed_at")
+  returnConfirmedAt   DateTime? @map("return_confirmed_at")
+
+  paidAt        DateTime?     @map("paid_at")
+  completedAt   DateTime?     @map("completed_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  item          Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  renter        User          @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
+  review        Review?
+
+  @@index([itemId])
+  @@index([renterId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("bookings")
+}
+
+model Review {
+  id          String    @id @default(uuid())
+  bookingId   String    @unique @map("booking_id")
+  itemId      String    @map("item_id")
+  userId      String    @map("user_id")
+  rating      Int
+  text        String
+  photos      String[]  @default([])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reply       ReviewReply?
+
+  @@index([itemId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model ReviewReply {
+  id        String   @id @default(uuid())
+  reviewId  String   @unique @map("review_id")
+  ownerId   String   @map("owner_id")
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("review_replies")
+}
+
+model SmsCode {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  code      String
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  @@map("sms_codes")
+}

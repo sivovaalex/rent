@@ -1,21 +1,8 @@
-import { MongoClient, Db } from 'mongodb';
 import { NextResponse, NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-
-const client = new MongoClient(process.env.MONGODB_URI!);
-let db: Db | null = null;
-
-async function connectDB(): Promise<Db> {
-  if (!db) {
-    await client.connect();
-    db = client.db('arendapro');
-  }
-  return db;
-}
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
-  const database = await connectDB();
   const body = await request.json();
 
   try {
@@ -25,41 +12,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Все поля обязательны' }, { status: 400 });
     }
 
-    const existingUser = await database.collection('users').findOne({
-      $or: [{ email }, { phone }]
+    const existingUser = await prisma.user.findFirst({
+      where: { OR: [{ email }, { phone }] }
     });
 
     if (existingUser) {
       return NextResponse.json({ error: 'Пользователь с таким email или телефоном уже существует' }, { status: 400 });
     }
 
-    const userId = crypto.randomUUID();
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = {
-      _id: userId,
-      name,
-      email,
-      phone,
-      password_hash: passwordHash,
-      role: role || 'renter',
-      rating: 5.0,
-      verification_status: 'not_verified',
-      is_verified: false,
-      createdAt: new Date()
-    };
-
-    await database.collection('users').insertOne(user as any);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        phone,
+        passwordHash,
+        role: role || 'renter'
+      }
+    });
 
     const safeUser = {
-      _id: user._id,
+      _id: user.id,
       name: user.name,
       email: user.email,
       phone: user.phone,
       role: user.role,
       rating: user.rating,
-      is_verified: user.is_verified,
-      verification_status: user.verification_status,
+      is_verified: user.isVerified,
+      verification_status: user.verificationStatus,
       createdAt: user.createdAt
     };
 
