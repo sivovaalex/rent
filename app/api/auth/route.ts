@@ -1,26 +1,64 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { generateSMSCode, safeUser, errorResponse, successResponse } from '@/lib/api-utils';
+import { validateBody, sendSmsSchema, verifySmsSchema, loginSchema } from '@/lib/validations';
 
-function generateSMSCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+// POST /api/auth - Отправка SMS кода
+export async function POST(request: NextRequest) {
+  try {
+    const validation = await validateBody(request, sendSmsSchema);
+    if (!validation.success) return validation.error;
+
+    const { phone } = validation.data;
+    const code = generateSMSCode();
+
+    await prisma.smsCode.upsert({
+      where: { phone },
+      update: {
+        code,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      },
+      create: {
+        phone,
+        code,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      },
+    });
+
+    console.log(`📱 SMS код для ${phone}: ${code}`);
+
+    return successResponse({ success: true, message: 'Код отправлен' });
+  } catch (error) {
+    console.error('POST /auth Error:', error);
+    return errorResponse('Ошибка сервера', 500);
+  }
 }
 
 // PUT /api/auth - Верификация SMS кода и регистрация
 export async function PUT(request: NextRequest) {
-  const body = await request.json();
-
   try {
+    const body = await request.json();
     const { phone, code, name, email, password, role } = body;
 
-    if (!phone || !code || !name) {
-      return NextResponse.json({ error: 'Телефон, код и имя обязательны' }, { status: 400 });
+    if (!phone || !code) {
+      return errorResponse('Телефон и код обязательны', 400);
     }
 
     const smsRecord = await prisma.smsCode.findUnique({ where: { phone } });
 
-    if (!smsRecord || smsRecord.code !== code) {
-      return NextResponse.json({ error: 'Неверный код' }, { status: 400 });
+    if (!smsRecord) {
+      return errorResponse('Код не найден. Запросите новый код.', 400);
+    }
+
+    if (smsRecord.code !== code) {
+      return errorResponse('Неверный код', 400);
+    }
+
+    if (new Date() > smsRecord.expiresAt) {
+      await prisma.smsCode.delete({ where: { phone } });
+      return errorResponse('Код истёк. Запросите новый код.', 400);
     }
 
     let user = await prisma.user.findUnique({ where: { phone } });
@@ -29,108 +67,51 @@ export async function PUT(request: NextRequest) {
       user = await prisma.user.create({
         data: {
           phone,
-          name,
+          name: name || 'Пользователь',
           email: email || null,
           passwordHash: password ? await bcrypt.hash(password, 10) : null,
-          role: role || 'renter'
-        }
+          role: role || 'renter',
+        },
       });
-    } else {
-      if (!user.passwordHash && password) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { passwordHash: await bcrypt.hash(password, 10) }
-        });
-      }
+    } else if (!user.passwordHash && password) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await bcrypt.hash(password, 10) },
+      });
     }
 
     await prisma.smsCode.delete({ where: { phone } });
 
-    const safeUser = {
-      _id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      rating: user.rating,
-      is_verified: user.isVerified,
-      verification_status: user.verificationStatus,
-      createdAt: user.createdAt
-    };
-
-    return NextResponse.json({ success: true, user: safeUser });
+    return successResponse({ success: true, user: safeUser(user) });
   } catch (error) {
-    console.error('Ошибка верификации SMS:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    console.error('PUT /auth Error:', error);
+    return errorResponse('Ошибка сервера', 500);
   }
 }
 
 // PATCH /api/auth - Вход по email и паролю
 export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-
   try {
-    const { email, password } = body;
+    const validation = await validateBody(request, loginSchema);
+    if (!validation.success) return validation.error;
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email и пароль обязательны' }, { status: 400 });
-    }
+    const { email, password } = validation.data;
 
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || !user.passwordHash) {
-      return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
+      return errorResponse('Неверные данные', 401);
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {
-      return NextResponse.json({ error: 'Неверные данные' }, { status: 401 });
+      return errorResponse('Неверные данные', 401);
     }
 
-    const safeUser = {
-      _id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      rating: user.rating,
-      is_verified: user.isVerified,
-      verification_status: user.verificationStatus,
-      createdAt: user.createdAt
-    };
-
-    return NextResponse.json({ success: true, user: safeUser });
+    return successResponse({ success: true, user: safeUser(user) });
   } catch (error) {
-    console.error('Ошибка входа:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
-  }
-}
-
-// POST /api/auth - Отправка SMS кода
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-
-  try {
-    const { phone } = body;
-
-    if (!phone) {
-      return NextResponse.json({ error: 'Телефон обязателен' }, { status: 400 });
-    }
-
-    const code = generateSMSCode();
-
-    await prisma.smsCode.upsert({
-      where: { phone },
-      update: { code, createdAt: new Date(), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
-      create: { phone, code, expiresAt: new Date(Date.now() + 5 * 60 * 1000) }
-    });
-
-    console.log(`📱 SMS код для ${phone}: ${code}`);
-
-    return NextResponse.json({ success: true, message: 'Код отправлен' });
-  } catch (error) {
-    console.error('Ошибка отправки SMS:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    console.error('PATCH /auth Error:', error);
+    return errorResponse('Ошибка сервера', 500);
   }
 }

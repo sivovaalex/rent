@@ -1,23 +1,26 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { safeUser, errorResponse, successResponse } from '@/lib/api-utils';
+import { validateBody, registerSchema } from '@/lib/validations';
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-
   try {
-    const { name, email, password, phone, role } = body;
+    const validation = await validateBody(request, registerSchema);
+    if (!validation.success) return validation.error;
 
-    if (!name || !email || !password || !phone) {
-      return NextResponse.json({ error: 'Все поля обязательны' }, { status: 400 });
-    }
+    const { name, email, phone, password, role } = validation.data;
 
+    // Check for existing user
     const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { phone }] }
+      where: { OR: [{ email }, { phone }] },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'Пользователь с таким email или телефоном уже существует' }, { status: 400 });
+      if (existingUser.email === email) {
+        return errorResponse('Пользователь с таким email уже существует', 400);
+      }
+      return errorResponse('Пользователь с таким телефоном уже существует', 400);
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -28,25 +31,13 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         passwordHash,
-        role: role || 'renter'
-      }
+        role,
+      },
     });
 
-    const safeUser = {
-      _id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      rating: user.rating,
-      is_verified: user.isVerified,
-      verification_status: user.verificationStatus,
-      createdAt: user.createdAt
-    };
-
-    return NextResponse.json({ success: true, user: safeUser });
+    return successResponse({ success: true, user: safeUser(user) });
   } catch (error) {
-    console.error('Ошибка регистрации:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    console.error('POST /auth/register Error:', error);
+    return errorResponse('Ошибка сервера', 500);
   }
 }

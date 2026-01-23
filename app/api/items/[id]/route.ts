@@ -1,5 +1,7 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, transformItem, errorResponse, successResponse } from '@/lib/api-utils';
+import { validateBody, updateItemSchema } from '@/lib/validations';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -13,33 +15,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
       where: { id },
       include: {
         owner: {
-          select: { id: true, name: true, rating: true, phone: true, createdAt: true }
+          select: { id: true, name: true, rating: true, phone: true, createdAt: true },
         },
         reviews: {
           orderBy: { createdAt: 'desc' },
           include: {
             user: { select: { name: true, photo: true } },
-            reply: true
-          }
-        }
-      }
+            reply: true,
+          },
+        },
+      },
     });
 
     if (!item) {
-      return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
+      return errorResponse('Лот не найден', 404);
     }
 
     const transformedItem = {
-      _id: item.id,
-      ...item,
-      owner_id: item.ownerId,
-      owner_name: item.owner.name,
-      owner_rating: item.owner.rating,
-      owner_phone: item.owner.phone,
+      ...transformItem(item),
       owner_createdAt: item.owner.createdAt,
-      price_per_day: item.pricePerDay,
-      price_per_month: item.pricePerMonth,
-      reviews: item.reviews.map(r => ({
+      reviews: item.reviews.map((r) => ({
         _id: r.id,
         ...r,
         user_id: r.userId,
@@ -47,97 +42,89 @@ export async function GET(request: NextRequest, context: RouteContext) {
         booking_id: r.bookingId,
         user_name: r.user.name,
         user_photo: r.user.photo,
-        reply: r.reply
-      }))
+        reply: r.reply,
+      })),
     };
 
-    return NextResponse.json({ item: transformedItem });
+    return successResponse({ item: transformedItem });
   } catch (error) {
-    console.error('Ошибка получения лота:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    console.error('GET /items/[id] Error:', error);
+    return errorResponse('Ошибка сервера', 500);
   }
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
-  const body = await request.json();
-  const userId = request.headers.get('x-user-id');
 
   try {
-    if (!userId) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
-    }
+    const authResult = await requireAuth(request);
+    if ('error' in authResult) return authResult.error;
 
     const item = await prisma.item.findUnique({ where: { id } });
 
     if (!item) {
-      return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
+      return errorResponse('Лот не найден', 404);
     }
 
-    if (item.ownerId !== userId) {
-      return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
+    if (item.ownerId !== authResult.userId) {
+      return errorResponse('Доступ запрещён', 403);
     }
 
-    const {
-      category,
-      subcategory,
-      title,
-      description,
-      price_per_day,
-      price_per_month,
-      deposit,
-      address,
-      photos,
-      attributes
-    } = body;
+    const validation = await validateBody(request, updateItemSchema);
+    if (!validation.success) return validation.error;
+
+    const data = validation.data;
+    const updateData: any = {};
+
+    if (data.title) updateData.title = data.title;
+    if (data.description) updateData.description = data.description;
+    if (data.category) updateData.category = data.category;
+    if (data.subcategory !== undefined) updateData.subcategory = data.subcategory;
+    if (data.address) updateData.address = data.address;
+    if (data.photos) updateData.photos = data.photos;
+    if (data.attributes) updateData.attributes = data.attributes;
+
+    // Handle price fields (support both snake_case and camelCase)
+    if (data.price_per_day !== undefined) updateData.pricePerDay = data.price_per_day;
+    if (data.pricePerDay !== undefined) updateData.pricePerDay = data.pricePerDay;
+    if (data.price_per_month !== undefined) updateData.pricePerMonth = data.price_per_month;
+    if (data.pricePerMonth !== undefined) updateData.pricePerMonth = data.pricePerMonth;
+    if (data.deposit !== undefined) updateData.deposit = data.deposit;
 
     await prisma.item.update({
       where: { id },
-      data: {
-        category,
-        subcategory,
-        title,
-        description,
-        pricePerDay: parseFloat(price_per_day),
-        pricePerMonth: parseFloat(price_per_month),
-        deposit: parseFloat(deposit),
-        address,
-        photos: photos || [],
-        attributes: attributes || {}
-      }
+      data: updateData,
     });
 
-    return NextResponse.json({ success: true });
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Ошибка обновления лота:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    console.error('PATCH /items/[id] Error:', error);
+    return errorResponse('Ошибка сервера', 500);
   }
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
-  const userId = request.headers.get('x-user-id');
 
   try {
-    if (!userId) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
-    }
+    const authResult = await requireAuth(request);
+    if ('error' in authResult) return authResult.error;
 
     const item = await prisma.item.findUnique({ where: { id } });
 
     if (!item) {
-      return NextResponse.json({ error: 'Лот не найден' }, { status: 404 });
+      return errorResponse('Лот не найден', 404);
     }
 
-    if (item.ownerId !== userId) {
-      return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
+    if (item.ownerId !== authResult.userId) {
+      return errorResponse('Доступ запрещён', 403);
     }
 
     await prisma.item.delete({ where: { id } });
 
-    return NextResponse.json({ success: true });
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Ошибка удаления лота:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    console.error('DELETE /items/[id] Error:', error);
+    return errorResponse('Ошибка сервера', 500);
   }
 }

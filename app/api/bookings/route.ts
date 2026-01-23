@@ -1,0 +1,48 @@
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { requireAuth, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
+
+export async function GET(request: NextRequest) {
+  try {
+    const authResult = await requireAuth(request);
+    if ('error' in authResult) return authResult.error;
+
+    const url = new URL(request.url);
+    const userType = url.searchParams.get('type');
+
+    let where: Prisma.BookingWhereInput = {};
+
+    if (userType === 'renter') {
+      where.renterId = authResult.userId;
+    } else if (userType === 'owner') {
+      where.item = { ownerId: authResult.userId };
+    } else {
+      where.OR = [
+        { renterId: authResult.userId },
+        { item: { ownerId: authResult.userId } },
+      ];
+    }
+
+    const bookings = await prisma.booking.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        item: {
+          include: {
+            owner: { select: { id: true, name: true, phone: true } },
+          },
+        },
+        renter: { select: { id: true, name: true, phone: true, email: true } },
+        review: true,
+      },
+    });
+
+    const transformedBookings = bookings.map(transformBooking);
+
+    return successResponse({ bookings: transformedBookings });
+  } catch (error) {
+    console.error('GET /bookings Error:', error);
+    return errorResponse('Ошибка сервера', 500);
+  }
+}
