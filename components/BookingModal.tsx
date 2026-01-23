@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import type { Item, BookingForm, RentalType } from '@/types';
+import { withCommission, formatPrice } from '@/lib/constants';
 
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
@@ -136,7 +137,7 @@ export default function BookingModal({
       totalPrice += totalPrice * 0.1;
     }
 
-    return Math.round(totalPrice * 1.15);
+    return Math.round(withCommission(totalPrice));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -229,7 +230,7 @@ export default function BookingModal({
                 >
                   <span className="font-medium">Почасовая/Посуточная</span>
                   <span className="text-sm text-gray-500 mt-1">
-                    {item.price_per_day * 1.15} ₽/день
+                    {formatPrice(withCommission(item.price_per_day))} ₽/день
                   </span>
                 </Button>
                 <Button
@@ -240,7 +241,7 @@ export default function BookingModal({
                 >
                   <span className="font-medium">Долгосрочная</span>
                   <span className="text-sm text-gray-500 mt-1">
-                    {item.price_per_month * 1.15} ₽/месяц
+                    {formatPrice(withCommission(item.price_per_month))} ₽/месяц
                   </span>
                 </Button>
               </div>

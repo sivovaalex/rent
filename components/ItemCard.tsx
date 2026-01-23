@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Star, Eye, EyeOff } from 'lucide-react';
 import type { Item, User, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
+import { withCommission, formatPrice } from '@/lib/constants';
 
 interface ItemCardProps {
   item: Item;
@@ -78,13 +79,13 @@ export default function ItemCard({
           {item.price_per_day && (
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">За день:</span>
-              <span className="font-semibold">{item.price_per_day * 1.15} ₽</span>
+              <span className="font-semibold">{formatPrice(withCommission(item.price_per_day))} ₽</span>
             </div>
           )}
           {item.price_per_month && (
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">За месяц:</span>
-              <span className="font-semibold">{item.price_per_month * 1.15} ₽</span>
+              <span className="font-semibold">{formatPrice(withCommission(item.price_per_month))} ₽</span>
             </div>
           )}
           <div className="flex justify-between text-sm">

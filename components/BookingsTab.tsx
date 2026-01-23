@@ -57,14 +57,20 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     }
   };
 
+  const canLeaveReview = (booking: BookingWithReview): boolean => {
+    if (!currentUser || booking.renter_id !== currentUser._id) return false;
+    if (booking.review) return false;
+    if (booking.status === 'pending' || booking.status === 'cancelled') return false;
+    // Можно оставить отзыв после окончания периода аренды
+    const endDate = new Date(booking.end_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return endDate < today || booking.status === 'completed';
+  };
+
   const handleOpenReviewModal = (booking: BookingWithReview) => {
     if (!currentUser) {
       showAlert('Пожалуйста, войдите в систему, чтобы оставить отзыв', 'error');
-      return;
-    }
-
-    if (booking.status !== 'completed') {
-      showAlert('Отзыв можно оставить только после завершения аренды', 'error');
       return;
     }
 
@@ -96,7 +102,8 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                   </CardDescription>
                 </div>
                 <Badge variant={booking.status === 'completed' ? 'secondary' : 'default'}>
-                  {booking.status === 'confirmed' && 'Оплачено'}
+                  {booking.status === 'paid' && 'Оплачено'}
+                  {booking.status === 'confirmed' && 'Подтверждено'}
                   {booking.status === 'completed' && 'Завершено'}
                   {booking.status === 'pending' && 'Ожидает оплаты'}
                 </Badge>
@@ -125,26 +132,26 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
               </div>
             </CardContent>
             <CardFooter className="flex gap-2">
-              {booking.status === 'confirmed' && booking.item?.owner_id === currentUser?._id && (
+              {(booking.status === 'confirmed' || booking.status === 'paid') && booking.item?.owner_id === currentUser?._id && (
                 <Button onClick={() => confirmReturn(booking._id)} className="flex-1">
                   Подтвердить возврат
                 </Button>
               )}
-              {booking.status === 'completed' && booking.renter_id === currentUser?._id && (
+              {booking.renter_id === currentUser?._id && (
                 booking.review ? (
                   <div className="flex items-center gap-1 text-yellow-500 flex-1 justify-center">
                     <Star className="w-4 h-4 fill-current" />
                     <span>{booking.review.rating}/5</span>
                     <span className="text-gray-500 text-sm">(отзыв оставлен)</span>
                   </div>
-                ) : (
+                ) : canLeaveReview(booking) ? (
                   <Button
                     onClick={() => handleOpenReviewModal(booking)}
                     className="flex-1"
                   >
                     Оставить отзыв
                   </Button>
-                )
+                ) : null
               )}
             </CardFooter>
           </Card>

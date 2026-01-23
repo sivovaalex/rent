@@ -47,7 +47,7 @@ export interface Item {
 }
 
 // Типы бронирования
-export type BookingStatus = 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+export type BookingStatus = 'pending' | 'paid' | 'confirmed' | 'active' | 'completed' | 'cancelled';
 export type RentalType = 'day' | 'month';
 
 export interface Booking {

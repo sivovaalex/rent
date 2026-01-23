@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { COMMISSION_RATE } from '@/lib/constants';
 
 // Утилиты
 function generateSMSCode(): string {
@@ -536,7 +537,7 @@ export async function POST(request: NextRequest) {
       }
 
       const deposit = item.deposit;
-      const commission = rentalPrice * 0.15;
+      const commission = Math.round(rentalPrice * COMMISSION_RATE * 100) / 100;
       const insurance = is_insured ? rentalPrice * 0.10 : 0;
       const total = rentalPrice + deposit + commission + insurance;
       const prepayment = rentalPrice * 0.30;
