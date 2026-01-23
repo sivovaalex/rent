@@ -10,7 +10,11 @@
       "Bash(grep:*)",
       "Bash(npx tsc:*)",
       "Bash(find:*)",
-      "Bash(yarn add:*)"
+      "Bash(yarn add:*)",
+      "Bash(npx next:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

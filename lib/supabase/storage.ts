@@ -4,7 +4,8 @@ import { createAdminClient } from './server';
 export const BUCKETS = {
   ITEMS: process.env.STORAGE_BUCKET_ITEMS || 'items',
   DOCUMENTS: process.env.STORAGE_BUCKET_DOCUMENTS || 'documents',
-  AVATARS: process.env.STORAGE_BUCKET_AVATARS || 'avatars',
+  AVATARS: process.env.STORAGE_BUCKET_AVATARS || 'photos',
+  REVIEWS: process.env.STORAGE_BUCKET_REVIEWS || 'reviews',
 } as const;
 
 export type BucketName = typeof BUCKETS[keyof typeof BUCKETS];

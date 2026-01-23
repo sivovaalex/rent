@@ -234,7 +234,7 @@ export default function Catalog({
         <Button onClick={loadItems}>Поиск</Button>
       </div>
 
-      {currentUser?.is_verified && catalogView === 'mine' && (
+      {currentUser?.is_verified && (currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
         <Button onClick={() => setShowItemModal(true)} className="w-full lg:w-auto">
           <Upload className="w-4 h-4 mr-2" />
           Разместить лот

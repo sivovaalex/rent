@@ -1,7 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import { uploadBase64File, deleteFile, BUCKETS, generateFilePath } from '@/lib/supabase/storage';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -13,42 +11,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Недостаточно данных для загрузки' }, { status: 400 });
     }
 
-    let uploadDir = '';
-    let fileName = '';
+    let bucket: string;
+    let filePath: string;
 
     switch (type) {
       case 'item_photos':
-        uploadDir = path.join(process.cwd(), 'public', 'uploads', 'items', itemId || crypto.randomUUID());
-        fileName = `${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+        bucket = BUCKETS.ITEMS;
+        filePath = generateFilePath(itemId || 'new', userId);
         break;
       case 'review_photos':
-        uploadDir = path.join(process.cwd(), 'public', 'uploads', 'reviews', userId);
-        fileName = `${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+        bucket = BUCKETS.REVIEWS;
+        filePath = generateFilePath(userId, userId);
         break;
       case 'profile_photo':
-        uploadDir = path.join(process.cwd(), 'public', 'uploads', 'profiles', userId);
-        fileName = `${Date.now()}.jpg`;
+        bucket = BUCKETS.AVATARS;
+        filePath = generateFilePath('', userId);
         break;
       default:
         return NextResponse.json({ error: 'Неподдерживаемый тип загрузки' }, { status: 400 });
     }
 
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Determine content type from base64 data
+    let contentType = 'image/jpeg';
+    if (data.includes('data:image/png')) {
+      contentType = 'image/png';
+    } else if (data.includes('data:image/webp')) {
+      contentType = 'image/webp';
+    } else if (data.includes('data:image/gif')) {
+      contentType = 'image/gif';
     }
 
-    const filePath = path.join(uploadDir, fileName);
-    const base64Data = data.split(',')[1];
+    const result = await uploadBase64File(bucket, filePath, data, contentType);
 
-    if (!base64Data) {
-      return NextResponse.json({ error: 'Неверный формат данных' }, { status: 400 });
+    if (!result.success) {
+      return NextResponse.json({ error: result.error || 'Ошибка загрузки' }, { status: 500 });
     }
 
-    fs.writeFileSync(filePath, base64Data, 'base64');
-
-    const relativePath = `/uploads/${type === 'item_photos' ? `items/${itemId || 'new'}` : (type === 'review_photos' ? 'reviews' : 'profiles')}/${fileName}`;
-
-    return NextResponse.json({ success: true, path: relativePath });
+    return NextResponse.json({
+      success: true,
+      path: result.url,
+      storagePath: result.path
+    });
   } catch (error) {
     console.error('Ошибка загрузки файла:', error);
     return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
@@ -59,20 +62,29 @@ export async function DELETE(request: NextRequest) {
   const body = await request.json();
 
   try {
-    const { path: filePath, userId } = body;
+    const { path: filePath, userId, storagePath } = body;
 
-    if (!filePath || !userId) {
+    if (!userId) {
       return NextResponse.json({ error: 'Недостаточно данных для удаления' }, { status: 400 });
     }
 
-    if (!filePath.includes(userId) && !filePath.includes('/items/')) {
-      return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 });
-    }
+    // If storagePath is provided, use it directly
+    // Otherwise, try to extract from the URL
+    let pathToDelete = storagePath;
 
-    const fullPath = path.join(process.cwd(), 'public', filePath);
+    if (!pathToDelete && filePath) {
+      // Extract path from Supabase URL
+      // URL format: https://xxx.supabase.co/storage/v1/object/public/bucket/path
+      const match = filePath.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+      if (match) {
+        const [, bucket, path] = match;
+        pathToDelete = path;
 
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
+        const result = await deleteFile(bucket as typeof BUCKETS.ITEMS, pathToDelete);
+        if (!result.success) {
+          return NextResponse.json({ error: result.error }, { status: 500 });
+        }
+      }
     }
 
     return NextResponse.json({ success: true });

@@ -444,9 +444,9 @@ export async function POST(request: NextRequest) {
           subcategory: body.subcategory || null,
           title: body.title,
           description: body.description,
-          pricePerDay: body.price_per_day || body.pricePerDay,
-          pricePerMonth: body.price_per_month || body.pricePerMonth,
-          deposit: body.deposit,
+          pricePerDay: parseFloat(body.price_per_day || body.pricePerDay),
+          pricePerMonth: parseFloat(body.price_per_month || body.pricePerMonth),
+          deposit: parseFloat(body.deposit),
           address: body.address,
           photos: body.photos || [],
           attributes: body.attributes || {},
@@ -798,11 +798,11 @@ export async function PATCH(request: NextRequest) {
       const updateData: Prisma.ItemUpdateInput = {};
       if (body.title) updateData.title = body.title;
       if (body.description) updateData.description = body.description;
-      if (body.price_per_day !== undefined) updateData.pricePerDay = body.price_per_day;
-      if (body.pricePerDay !== undefined) updateData.pricePerDay = body.pricePerDay;
-      if (body.price_per_month !== undefined) updateData.pricePerMonth = body.price_per_month;
-      if (body.pricePerMonth !== undefined) updateData.pricePerMonth = body.pricePerMonth;
-      if (body.deposit !== undefined) updateData.deposit = body.deposit;
+      if (body.price_per_day !== undefined) updateData.pricePerDay = parseFloat(body.price_per_day);
+      if (body.pricePerDay !== undefined) updateData.pricePerDay = parseFloat(body.pricePerDay);
+      if (body.price_per_month !== undefined) updateData.pricePerMonth = parseFloat(body.price_per_month);
+      if (body.pricePerMonth !== undefined) updateData.pricePerMonth = parseFloat(body.pricePerMonth);
+      if (body.deposit !== undefined) updateData.deposit = parseFloat(body.deposit);
       if (body.address) updateData.address = body.address;
       if (body.photos) updateData.photos = body.photos;
       if (body.category) updateData.category = body.category;
