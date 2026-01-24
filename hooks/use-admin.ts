@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import type { User, Item } from '@/types';
+import { getAuthHeaders } from './use-auth';
 
 interface AdminStats {
   totalUsers: number;
@@ -36,19 +37,13 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
 
     setIsLoading(true);
     try {
+      const headers = getAuthHeaders();
+
       const [usersRes, itemsRes, statsRes, allUsersRes] = await Promise.all([
-        fetch('/api/admin/users?status=pending', {
-          headers: { 'x-user-id': currentUser._id },
-        }),
-        fetch('/api/admin/items?status=pending', {
-          headers: { 'x-user-id': currentUser._id },
-        }),
-        fetch('/api/admin/stats', {
-          headers: { 'x-user-id': currentUser._id },
-        }),
-        fetch('/api/admin/users/all', {
-          headers: { 'x-user-id': currentUser._id },
-        }),
+        fetch('/api/admin/users?status=pending', { headers }),
+        fetch('/api/admin/items?status=pending', { headers }),
+        fetch('/api/admin/stats', { headers }),
+        fetch('/api/admin/users/all', { headers }),
       ]);
 
       const usersData = await usersRes.json();
@@ -76,10 +71,7 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
     try {
       const res = await fetch(`/api/admin/users/${userId}/verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ action, reason }),
       });
 
@@ -104,10 +96,7 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
     try {
       const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ action, reason }),
       });
 
@@ -132,10 +121,7 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
     try {
       const res = await fetch(`/api/admin/users/${userId}/block`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ is_blocked: isBlocked }),
       });
 

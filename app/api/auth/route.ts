@@ -2,10 +2,19 @@ import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { generateSMSCode, safeUser, errorResponse, successResponse } from '@/lib/api-utils';
-import { validateBody, sendSmsSchema, verifySmsSchema, loginSchema } from '@/lib/validations';
+import { signToken } from '@/lib/jwt';
+import { validateBody, sendSmsSchema, loginSchema } from '@/lib/validations';
+import { authRateLimiter, rateLimitResponse, getClientIP } from '@/lib/rate-limit';
 
 // POST /api/auth - Отправка SMS кода
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const ip = getClientIP(request);
+  const rateLimitResult = authRateLimiter.check(`sms:${ip}`);
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult.resetTime);
+  }
+
   try {
     const validation = await validateBody(request, sendSmsSchema);
     if (!validation.success) return validation.error;
@@ -82,7 +91,18 @@ export async function PUT(request: NextRequest) {
 
     await prisma.smsCode.delete({ where: { phone } });
 
-    return successResponse({ success: true, user: safeUser(user) });
+    // Generate JWT token
+    const token = await signToken({
+      userId: user.id,
+      email: user.email || '',
+      role: user.role,
+    });
+
+    return successResponse({
+      success: true,
+      user: safeUser(user),
+      token,
+    });
   } catch (error) {
     console.error('PUT /auth Error:', error);
     return errorResponse('Ошибка сервера', 500);
@@ -91,6 +111,13 @@ export async function PUT(request: NextRequest) {
 
 // PATCH /api/auth - Вход по email и паролю
 export async function PATCH(request: NextRequest) {
+  // Rate limiting
+  const ip = getClientIP(request);
+  const rateLimitResult = authRateLimiter.check(`login:${ip}`);
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult.resetTime);
+  }
+
   try {
     const validation = await validateBody(request, loginSchema);
     if (!validation.success) return validation.error;
@@ -103,13 +130,28 @@ export async function PATCH(request: NextRequest) {
       return errorResponse('Неверные данные', 401);
     }
 
+    if (user.isBlocked) {
+      return errorResponse('Аккаунт заблокирован', 403);
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {
       return errorResponse('Неверные данные', 401);
     }
 
-    return successResponse({ success: true, user: safeUser(user) });
+    // Generate JWT token
+    const token = await signToken({
+      userId: user.id,
+      email: user.email || '',
+      role: user.role,
+    });
+
+    return successResponse({
+      success: true,
+      user: safeUser(user),
+      token,
+    });
   } catch (error) {
     console.error('PATCH /auth Error:', error);
     return errorResponse('Ошибка сервера', 500);

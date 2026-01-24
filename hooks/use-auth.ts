@@ -3,8 +3,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User, AlertState, RegisterData, UserRole } from '@/types';
 
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'user';
+
 interface UseAuthOptions {
   onShowAlert?: (message: string, type?: 'success' | 'error') => void;
+}
+
+// Helper to get auth headers
+export function getAuthHeaders(): HeadersInit {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 export function useAuth(options: UseAuthOptions = {}) {
@@ -18,16 +33,31 @@ export function useAuth(options: UseAuthOptions = {}) {
 
   // Initialize user from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const storedUser = localStorage.getItem(USER_KEY);
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+
+    if (storedUser && storedToken) {
       try {
         const user = JSON.parse(storedUser) as User;
         setCurrentUser(user);
       } catch {
-        localStorage.removeItem('user');
+        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(TOKEN_KEY);
       }
     }
     setIsLoading(false);
+  }, []);
+
+  const saveAuth = useCallback((user: User, token: string) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.setItem(TOKEN_KEY, token);
+    setCurrentUser(user);
+  }, []);
+
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    setCurrentUser(null);
   }, []);
 
   const handleLogin = useCallback(async (email: string, password: string): Promise<boolean> => {
@@ -40,9 +70,8 @@ export function useAuth(options: UseAuthOptions = {}) {
 
       const data = await res.json();
 
-      if (res.ok) {
-        setCurrentUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
+      if (res.ok && data.token) {
+        saveAuth(data.user, data.token);
         setAuthAlert(null);
         return true;
       } else {
@@ -53,7 +82,7 @@ export function useAuth(options: UseAuthOptions = {}) {
       setAuthAlert({ message: 'Ошибка сервера при входе', type: 'error' });
       return false;
     }
-  }, []);
+  }, [saveAuth]);
 
   const handleRegister = useCallback(async (userData: RegisterData): Promise<boolean> => {
     try {
@@ -65,25 +94,10 @@ export function useAuth(options: UseAuthOptions = {}) {
 
       const data = await res.json();
 
-      if (res.ok) {
-        // Auto-login after registration
-        const loginRes = await fetch('/api/auth', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: userData.email, password: userData.password }),
-        });
-
-        const loginData = await loginRes.json();
-
-        if (loginRes.ok) {
-          setCurrentUser(loginData.user);
-          localStorage.setItem('user', JSON.stringify(loginData.user));
-          setAuthAlert(null);
-          return true;
-        } else {
-          setAuthAlert({ message: 'Ошибка при входе после регистрации', type: 'error' });
-          return false;
-        }
+      if (res.ok && data.token) {
+        saveAuth(data.user, data.token);
+        setAuthAlert(null);
+        return true;
       } else {
         setAuthAlert({ message: data.error || 'Ошибка регистрации', type: 'error' });
         return false;
@@ -92,14 +106,13 @@ export function useAuth(options: UseAuthOptions = {}) {
       setAuthAlert({ message: 'Ошибка сервера при регистрации', type: 'error' });
       return false;
     }
-  }, []);
+  }, [saveAuth]);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('user');
-    setCurrentUser(null);
+    clearAuth();
     setShowAuth(false);
     router.push('/');
-  }, [router]);
+  }, [router, clearAuth]);
 
   const handleRoleChange = useCallback(async (newRole: UserRole): Promise<boolean> => {
     if (!currentUser) return false;
@@ -107,17 +120,14 @@ export function useAuth(options: UseAuthOptions = {}) {
     try {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ role: newRole }),
       });
 
       if (res.ok) {
         const updatedUser = { ...currentUser, role: newRole };
         setCurrentUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
         onShowAlert?.('Роль успешно изменена!');
         return true;
       } else {
@@ -142,7 +152,7 @@ export function useAuth(options: UseAuthOptions = {}) {
 
   const updateUser = useCallback((user: User) => {
     setCurrentUser(user);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
   }, []);
 
   return {

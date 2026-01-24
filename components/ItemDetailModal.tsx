@@ -192,12 +192,11 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                       {item.owner_name?.charAt(0)}
                     </div>
                     <div>
-                      <p className="font-medium">{item.owner_name}</p>
+                      <p className="font-medium">{item.ownerName ?? item.owner_name}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="text-sm">{item.owner_rating?.toFixed(1) || '5.0'}</span>
+                        <span className="text-sm">{(item.ownerRating ?? item.owner_rating)?.toFixed(1) || '5.0'}</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">Зарегистрирован: {item.owner_createdAt ? new Date(item.owner_createdAt).toLocaleDateString() : 'Неизвестно'}</p>
                     </div>
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { safeUser, errorResponse, successResponse } from '@/lib/api-utils';
+import { signToken } from '@/lib/jwt';
 import { validateBody, loginSchema } from '@/lib/validations';
 
 export async function POST(request: NextRequest) {
@@ -17,13 +18,24 @@ export async function POST(request: NextRequest) {
       return errorResponse('Неверные данные', 401);
     }
 
+    if (user.isBlocked) {
+      return errorResponse('Аккаунт заблокирован', 403);
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {
       return errorResponse('Неверные данные', 401);
     }
 
-    return successResponse({ success: true, user: safeUser(user) });
+    // Generate JWT token
+    const token = await signToken({
+      userId: user.id,
+      email: user.email || '',
+      role: user.role,
+    });
+
+    return successResponse({ success: true, user: safeUser(user), token });
   } catch (error) {
     console.error('POST /auth/login Error:', error);
     return errorResponse('Ошибка сервера', 500);

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import type { Item, User, BookingForm } from '@/types';
+import { getAuthHeaders } from './use-auth';
 
 interface UseItemsOptions {
   currentUser: User | null;
@@ -90,10 +91,7 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     try {
       const res = await fetch(`/api/items/${selectedItem._id}/book`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(bookingForm),
       });
 

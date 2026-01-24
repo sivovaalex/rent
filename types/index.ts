@@ -1,7 +1,33 @@
-// Типы пользователя
-export type UserRole = 'renter' | 'owner' | 'moderator' | 'admin';
-export type VerificationStatus = 'not_verified' | 'pending' | 'verified';
+import type {
+  User as PrismaUser,
+  Item as PrismaItem,
+  Booking as PrismaBooking,
+  Review as PrismaReview,
+  ReviewReply as PrismaReviewReply,
+  UserRole as PrismaUserRole,
+  VerificationStatus as PrismaVerificationStatus,
+  ItemStatus as PrismaItemStatus,
+  BookingStatus as PrismaBookingStatus,
+  Category as PrismaCategory,
+  RentalType as PrismaRentalType,
+} from '@prisma/client';
 
+// Re-export Prisma enums for type safety
+export type UserRole = PrismaUserRole;
+export type VerificationStatus = PrismaVerificationStatus;
+export type ItemStatus = PrismaItemStatus;
+export type BookingStatus = PrismaBookingStatus;
+export type Category = PrismaCategory;
+export type RentalType = PrismaRentalType;
+
+// ==================== CLIENT TYPES ====================
+// These types are used on the client side with camelCase naming
+// and _id for backward compatibility with existing components
+
+/**
+ * User type for client-side usage
+ * Uses _id for compatibility with existing components
+ */
 export interface User {
   _id: string;
   name: string;
@@ -9,32 +35,31 @@ export interface User {
   phone: string;
   role: UserRole;
   rating: number;
-  is_verified: boolean;
-  verification_status: VerificationStatus;
-  createdAt: Date;
+  isVerified: boolean;
+  verificationStatus: VerificationStatus;
+  isBlocked?: boolean;
   photo?: string;
+  createdAt: Date | string;
+  // Legacy snake_case aliases (deprecated, use camelCase)
+  is_verified?: boolean;
+  verification_status?: VerificationStatus;
 }
 
-// Типы категорий
-export type Category = 'electronics' | 'clothes' | 'stream' | 'tools' | 'sports' | 'other';
-
-// Типы статуса лота
-export type ItemStatus = 'draft' | 'pending' | 'approved' | 'rejected';
-
-// Типы лота
+/**
+ * Item type for client-side usage
+ */
 export interface Item {
   _id: string;
-  owner_id: string;
-  owner_name?: string;
-  owner_rating?: number;
-  owner_phone?: string;
-  owner_createdAt?: Date;
+  ownerId: string;
+  ownerName?: string;
+  ownerRating?: number;
+  ownerPhone?: string;
   category: Category;
   subcategory?: string;
   title: string;
   description: string;
-  price_per_day: number;
-  price_per_month: number;
+  pricePerDay: number;
+  pricePerMonth: number;
   deposit: number;
   address: string;
   photos: string[];
@@ -42,31 +67,60 @@ export interface Item {
   status: ItemStatus;
   rating?: number;
   reviews?: Review[];
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+  // Legacy snake_case aliases (deprecated)
+  owner_id?: string;
+  owner_name?: string;
+  owner_rating?: number;
+  owner_phone?: string;
+  price_per_day?: number;
+  price_per_month?: number;
 }
 
-// Типы бронирования
-export type BookingStatus = 'pending' | 'paid' | 'confirmed' | 'active' | 'completed' | 'cancelled';
-export type RentalType = 'day' | 'month';
-
+/**
+ * Booking type for client-side usage
+ */
 export interface Booking {
   _id: string;
-  item_id: string;
+  itemId: string;
   item?: Item;
-  renter_id: string;
+  renterId: string;
   renter?: User;
-  owner_id: string;
-  start_date: string;
-  end_date: string;
-  rental_type: RentalType;
-  is_insured: boolean;
-  total_price: number;
+  startDate: string | Date;
+  endDate: string | Date;
+  rentalType: RentalType;
+  rentalPrice: number;
   deposit: number;
+  commission: number;
+  insurance: number;
+  totalPrice: number;
+  prepayment: number;
+  isInsured: boolean;
   status: BookingStatus;
-  createdAt: Date;
+  depositStatus?: string;
+  handoverPhotos?: string[];
+  returnPhotos?: string[];
+  review?: Review;
+  paidAt?: Date | string;
+  createdAt: Date | string;
+  // Legacy snake_case aliases (deprecated)
+  item_id?: string;
+  renter_id?: string;
+  start_date?: string;
+  end_date?: string;
+  rental_type?: RentalType;
+  rental_price?: number;
+  total_price?: number;
+  is_insured?: boolean;
+  deposit_status?: string;
+  handover_photos?: string[];
+  return_photos?: string[];
 }
 
+/**
+ * BookingForm for creating new bookings
+ */
 export interface BookingForm {
   start_date: string;
   end_date: string;
@@ -74,28 +128,44 @@ export interface BookingForm {
   is_insured: boolean;
 }
 
-// Типы отзывов
+/**
+ * Review type for client-side usage
+ */
 export interface Review {
   _id: string;
-  item_id: string;
-  user_id: string;
-  user_name?: string;
-  user_photo?: string;
+  bookingId: string;
+  itemId: string;
+  userId: string;
+  userName?: string;
+  userPhoto?: string;
   rating: number;
   text: string;
+  photos?: string[];
   reply?: ReviewReply;
-  createdAt: Date;
+  createdAt: Date | string;
+  // Legacy snake_case aliases (deprecated)
+  item_id?: string;
+  user_id?: string;
+  user_name?: string;
+  user_photo?: string;
 }
 
+/**
+ * ReviewReply type for client-side usage
+ */
 export interface ReviewReply {
   _id: string;
-  review_id: string;
-  owner_id: string;
+  reviewId: string;
+  ownerId: string;
   text: string;
-  createdAt: Date;
+  createdAt: Date | string;
+  // Legacy snake_case aliases (deprecated)
+  review_id?: string;
+  owner_id?: string;
 }
 
-// Типы для алертов
+// ==================== UI TYPES ====================
+
 export type AlertType = 'success' | 'error';
 
 export interface AlertState {
@@ -103,36 +173,49 @@ export interface AlertState {
   type: AlertType;
 }
 
-// Типы для статистики админки
+// ==================== ADMIN TYPES ====================
+
 export interface AdminStats {
   totalUsers: number;
   totalItems: number;
   totalBookings: number;
-  pendingUsers: number;
+  pendingVerifications: number;
   pendingItems: number;
-  revenue: number;
+  totalRevenue: number;
 }
 
-// Типы для API ответов
+// ==================== API TYPES ====================
+
 export interface ApiResponse<T = unknown> {
   success?: boolean;
   error?: string;
-  [key: string]: T | boolean | string | undefined;
+  data?: T;
 }
 
-export interface ItemsResponse extends ApiResponse {
+export interface ItemsResponse {
   items: Item[];
+  total?: number;
+  page?: number;
+  limit?: number;
 }
 
-export interface BookingsResponse extends ApiResponse {
+export interface BookingsResponse {
   bookings: Booking[];
 }
 
-export interface UsersResponse extends ApiResponse {
+export interface UsersResponse {
   users: User[];
 }
 
-// Типы для регистрации
+export interface AuthResponse {
+  success: boolean;
+  user?: User;
+  token?: string;
+  error?: string;
+}
+
+// ==================== FORM TYPES ====================
+
 export interface RegisterData {
   name: string;
   email: string;
@@ -140,3 +223,47 @@ export interface RegisterData {
   phone: string;
   role: UserRole;
 }
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+// ==================== PRISMA HELPERS ====================
+
+/**
+ * Type for Prisma User with relations
+ */
+export type UserWithRelations = PrismaUser & {
+  items?: PrismaItem[];
+  bookingsAsRenter?: PrismaBooking[];
+  reviews?: PrismaReview[];
+};
+
+/**
+ * Type for Prisma Item with relations
+ */
+export type ItemWithRelations = PrismaItem & {
+  owner?: PrismaUser;
+  bookings?: PrismaBooking[];
+  reviews?: PrismaReview[];
+};
+
+/**
+ * Type for Prisma Booking with relations
+ */
+export type BookingWithRelations = PrismaBooking & {
+  item?: ItemWithRelations;
+  renter?: PrismaUser;
+  review?: PrismaReview;
+};
+
+/**
+ * Type for Prisma Review with relations
+ */
+export type ReviewWithRelations = PrismaReview & {
+  booking?: PrismaBooking;
+  item?: PrismaItem;
+  user?: PrismaUser;
+  reply?: PrismaReviewReply;
+};

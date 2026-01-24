@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Star } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import type { User, Booking, AlertType } from '@/types';
+import { getAuthHeaders } from '@/hooks/use-auth';
 
 interface BookingsTabProps {
   currentUser: User | null;
@@ -14,18 +15,9 @@ interface BookingsTabProps {
   bookings: Booking[];
 }
 
-interface BookingWithReview extends Booking {
-  review?: {
-    rating: number;
-  };
-  rental_price?: number;
-  commission?: number;
-  insurance?: number;
-}
-
 export default function BookingsTab({ currentUser, showAlert, loadBookings, bookings }: BookingsTabProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<BookingWithReview | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -39,10 +31,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     try {
       const res = await fetch(`/api/bookings/${bookingId}/confirm-return`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({}),
       });
       const data = await res.json();
@@ -57,18 +46,21 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     }
   };
 
-  const canLeaveReview = (booking: BookingWithReview): boolean => {
-    if (!currentUser || booking.renter_id !== currentUser._id) return false;
+  const canLeaveReview = (booking: Booking): boolean => {
+    const renterId = booking.renterId ?? booking.renter_id;
+    if (!currentUser || renterId !== currentUser._id) return false;
     if (booking.review) return false;
-    if (booking.status === 'pending' || booking.status === 'cancelled') return false;
+    if (booking.status === 'pending_payment' || booking.status === 'cancelled') return false;
     // Можно оставить отзыв после окончания периода аренды
-    const endDate = new Date(booking.end_date);
+    const endDateStr = booking.endDate ?? booking.end_date;
+    if (!endDateStr) return false;
+    const endDate = new Date(endDateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return endDate < today || booking.status === 'completed';
   };
 
-  const handleOpenReviewModal = (booking: BookingWithReview) => {
+  const handleOpenReviewModal = (booking: Booking) => {
     if (!currentUser) {
       showAlert('Пожалуйста, войдите в систему, чтобы оставить отзыв', 'error');
       return;
@@ -88,74 +80,91 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     loadBookings();
   };
 
+  const getStatusLabel = (status: Booking['status']) => {
+    switch (status) {
+      case 'pending_payment': return 'Ожидает оплаты';
+      case 'paid': return 'Оплачено';
+      case 'active': return 'Активно';
+      case 'completed': return 'Завершено';
+      case 'cancelled': return 'Отменено';
+      default: return status;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4">
-        {(bookings as BookingWithReview[]).map((booking) => (
-          <Card key={booking._id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{booking.item?.title}</CardTitle>
-                  <CardDescription>
-                    {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
-                  </CardDescription>
+        {bookings.map((booking) => {
+          const startDate = booking.startDate ?? booking.start_date;
+          const endDate = booking.endDate ?? booking.end_date;
+          const rentalPrice = booking.rentalPrice ?? booking.rental_price ?? 0;
+          const totalPrice = booking.totalPrice ?? booking.total_price ?? 0;
+          const renterId = booking.renterId ?? booking.renter_id;
+          const ownerId = booking.item?.ownerId ?? booking.item?.owner_id;
+
+          return (
+            <Card key={booking._id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{booking.item?.title}</CardTitle>
+                    <CardDescription>
+                      {startDate && new Date(startDate).toLocaleDateString()} - {endDate && new Date(endDate).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={booking.status === 'completed' ? 'secondary' : 'default'}>
+                    {getStatusLabel(booking.status)}
+                  </Badge>
                 </div>
-                <Badge variant={booking.status === 'completed' ? 'secondary' : 'default'}>
-                  {booking.status === 'paid' && 'Оплачено'}
-                  {booking.status === 'confirmed' && 'Подтверждено'}
-                  {booking.status === 'completed' && 'Завершено'}
-                  {booking.status === 'pending' && 'Ожидает оплаты'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Аренда:</span>
-                  <span>{(booking.rental_price || 0) + (booking.commission || 0)} ₽</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Залог:</span>
-                  <span>{booking.deposit} ₽</span>
-                </div>
-                {(booking.insurance || 0) > 0 && (
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Страховка:</span>
-                    <span>{booking.insurance} ₽</span>
+                    <span className="text-gray-600">Аренда:</span>
+                    <span>{rentalPrice + (booking.commission || 0)} ₽</span>
                   </div>
-                )}
-                <div className="flex justify-between font-semibold pt-2 border-t">
-                  <span>Итого:</span>
-                  <span>{booking.total_price} ₽</span>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Залог:</span>
+                    <span>{booking.deposit} ₽</span>
+                  </div>
+                  {(booking.insurance || 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Страховка:</span>
+                      <span>{booking.insurance} ₽</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold pt-2 border-t">
+                    <span>Итого:</span>
+                    <span>{totalPrice} ₽</span>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex gap-2">
-              {(booking.status === 'confirmed' || booking.status === 'paid') && booking.item?.owner_id === currentUser?._id && (
-                <Button onClick={() => confirmReturn(booking._id)} className="flex-1">
-                  Подтвердить возврат
-                </Button>
-              )}
-              {booking.renter_id === currentUser?._id && (
-                booking.review ? (
-                  <div className="flex items-center gap-1 text-yellow-500 flex-1 justify-center">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span>{booking.review.rating}/5</span>
-                    <span className="text-gray-500 text-sm">(отзыв оставлен)</span>
-                  </div>
-                ) : canLeaveReview(booking) ? (
-                  <Button
-                    onClick={() => handleOpenReviewModal(booking)}
-                    className="flex-1"
-                  >
-                    Оставить отзыв
+              </CardContent>
+              <CardFooter className="flex gap-2">
+                {(booking.status === 'active' || booking.status === 'paid') && ownerId === currentUser?._id && (
+                  <Button onClick={() => confirmReturn(booking._id)} className="flex-1">
+                    Подтвердить возврат
                   </Button>
-                ) : null
-              )}
-            </CardFooter>
-          </Card>
-        ))}
+                )}
+                {renterId === currentUser?._id && (
+                  booking.review ? (
+                    <div className="flex items-center gap-1 text-yellow-500 flex-1 justify-center">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span>{booking.review.rating}/5</span>
+                      <span className="text-gray-500 text-sm">(отзыв оставлен)</span>
+                    </div>
+                  ) : canLeaveReview(booking) ? (
+                    <Button
+                      onClick={() => handleOpenReviewModal(booking)}
+                      className="flex-1"
+                    >
+                      Оставить отзыв
+                    </Button>
+                  ) : null
+                )}
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
 
       {bookings.length === 0 && (

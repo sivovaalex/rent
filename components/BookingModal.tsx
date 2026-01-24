@@ -24,6 +24,15 @@ interface BookingModalProps {
   onSubmit: () => void;
 }
 
+// Helper to get item price with camelCase priority
+const getItemPrice = (item: Item | null, type: 'day' | 'month'): number => {
+  if (!item) return 0;
+  if (type === 'day') {
+    return item.pricePerDay ?? getItemPrice(item, 'day') ?? 0;
+  }
+  return item.pricePerMonth ?? getItemPrice(item, 'month') ?? 0;
+};
+
 export default function BookingModal({
   isOpen,
   onClose,
@@ -126,11 +135,11 @@ export default function BookingModal({
     let totalPrice = 0;
 
     if (bookingForm.rental_type === 'day') {
-      totalPrice = diffDays * item.price_per_day;
+      totalPrice = diffDays * getItemPrice(item, 'day');
     } else if (bookingForm.rental_type === 'month') {
       const months = Math.floor(diffDays / 30);
       const remainingDays = diffDays % 30;
-      totalPrice = months * item.price_per_month + remainingDays * item.price_per_day;
+      totalPrice = months * getItemPrice(item, 'month') + remainingDays * getItemPrice(item, 'day');
     }
 
     if (hasInsurance) {
@@ -230,7 +239,7 @@ export default function BookingModal({
                 >
                   <span className="font-medium">Почасовая/Посуточная</span>
                   <span className="text-sm text-gray-500 mt-1">
-                    {formatPrice(withCommission(item.price_per_day))} ₽/день
+                    {formatPrice(withCommission(getItemPrice(item, 'day')))} ₽/день
                   </span>
                 </Button>
                 <Button
@@ -241,7 +250,7 @@ export default function BookingModal({
                 >
                   <span className="font-medium">Долгосрочная</span>
                   <span className="text-sm text-gray-500 mt-1">
-                    {formatPrice(withCommission(item.price_per_month))} ₽/месяц
+                    {formatPrice(withCommission(getItemPrice(item, 'month')))} ₽/месяц
                   </span>
                 </Button>
               </div>
