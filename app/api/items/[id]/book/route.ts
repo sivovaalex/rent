@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireVerified, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, createBookingSchema } from '@/lib/validations';
 import { COMMISSION_RATE } from '@/lib/constants';
+import { logError, logBooking } from '@/lib/logger';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -96,14 +97,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
     });
 
-    console.log(`💳 Мок-платёж создан для бронирования ${booking.id}`);
+    logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
 
     return successResponse({
       success: true,
       booking: transformBooking(booking),
     });
   } catch (error) {
-    console.error('POST /items/[id]/book Error:', error);
+    logError(error as Error, { path: '/api/items/[id]/book', method: 'POST', itemId });
     return errorResponse('Ошибка сервера', 500);
   }
 }

@@ -5,6 +5,7 @@ import { generateSMSCode, safeUser, errorResponse, successResponse } from '@/lib
 import { signToken } from '@/lib/jwt';
 import { validateBody, sendSmsSchema, loginSchema } from '@/lib/validations';
 import { authRateLimiter, rateLimitResponse, getClientIP } from '@/lib/rate-limit';
+import { authLogger, logError, logAuth } from '@/lib/logger';
 
 // POST /api/auth - Отправка SMS кода
 export async function POST(request: NextRequest) {
@@ -36,11 +37,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`📱 SMS код для ${phone}: ${code}`);
+    authLogger.info({ phone }, 'SMS code sent');
+    // В продакшене код отправляется через SMS-шлюз
+    if (process.env.NODE_ENV === 'development') {
+      authLogger.debug({ phone, code }, 'SMS code (dev only)');
+    }
 
     return successResponse({ success: true, message: 'Код отправлен' });
   } catch (error) {
-    console.error('POST /auth Error:', error);
+    logError(error as Error, { path: '/api/auth', method: 'POST' });
     return errorResponse('Ошибка сервера', 500);
   }
 }
@@ -104,7 +109,7 @@ export async function PUT(request: NextRequest) {
       token,
     });
   } catch (error) {
-    console.error('PUT /auth Error:', error);
+    logError(error as Error, { path: '/api/auth', method: 'PUT' });
     return errorResponse('Ошибка сервера', 500);
   }
 }
@@ -153,7 +158,8 @@ export async function PATCH(request: NextRequest) {
       token,
     });
   } catch (error) {
-    console.error('PATCH /auth Error:', error);
+    logAuth('login', false, { error: (error as Error).message });
+    logError(error as Error, { path: '/api/auth', method: 'PATCH' });
     return errorResponse('Ошибка сервера', 500);
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { requireAuth, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
+import { logError } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse({ bookings: transformedBookings });
   } catch (error) {
-    console.error('GET /bookings Error:', error);
+    logError(error as Error, { path: '/api/bookings', method: 'GET' });
     return errorResponse('Ошибка сервера', 500);
   }
 }

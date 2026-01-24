@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { requireVerified, transformItem, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, createItemSchema } from '@/lib/validations';
+import { logError, apiLogger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse({ items: transformedItems });
   } catch (error) {
-    console.error('GET /items Error:', error);
+    logError(error as Error, { path: '/api/items', method: 'GET' });
     return errorResponse('Ошибка сервера', 500);
   }
 }
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       item: transformItem(item),
     });
   } catch (error) {
-    console.error('POST /items Error:', error);
+    logError(error as Error, { path: '/api/items', method: 'POST' });
     return errorResponse('Ошибка сервера', 500);
   }
 }
