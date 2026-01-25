@@ -1,12 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import type { AlertState, RegisterData, UserRole } from '@/types';
+import { REGISTRATION_CONSENT_LINKS, LEGAL_LINKS } from '@/lib/constants/legal-links';
 
 interface AuthModalProps {
   showAuth: boolean;
@@ -42,6 +45,11 @@ export default function AuthModal({
   const [registerPhone, setRegisterPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Согласия для регистрации
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptDataProcessing, setAcceptDataProcessing] = useState(false);
+
   useEffect(() => {
     if (!showAuth) {
       setRegisterMode(false);
@@ -50,6 +58,9 @@ export default function AuthModal({
       setRegisterPassword('');
       setRegisterConfirmPassword('');
       setRegisterPhone('');
+      setAcceptTerms(false);
+      setAcceptPrivacy(false);
+      setAcceptDataProcessing(false);
       setAuthAlert(null);
     }
   }, [showAuth, setAuthAlert]);
@@ -81,6 +92,11 @@ export default function AuthModal({
 
     if (registerPassword !== registerConfirmPassword) {
       setAuthAlert({ message: 'Пароли не совпадают', type: 'error' });
+      return;
+    }
+
+    if (!acceptTerms || !acceptPrivacy || !acceptDataProcessing) {
+      setAuthAlert({ message: 'Необходимо принять все обязательные соглашения', type: 'error' });
       return;
     }
 
@@ -246,7 +262,64 @@ export default function AuthModal({
                 </p>
               </div>
 
-              <Button onClick={handleRegister} className="w-full" disabled={isLoading}>
+              {/* Обязательные согласия */}
+              <div className="space-y-3 pt-2 border-t">
+                <p className="text-sm font-medium text-gray-700">Обязательные согласия:</p>
+
+                {/* Пользовательское соглашение и оферта */}
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="accept-terms"
+                    checked={acceptTerms}
+                    onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="accept-terms" className="text-sm text-gray-600 leading-tight cursor-pointer">
+                    Принимаю{' '}
+                    <Link href={REGISTRATION_CONSENT_LINKS.termsAndOffer[0].href} target="_blank" className="text-indigo-600 hover:underline">
+                      {REGISTRATION_CONSENT_LINKS.termsAndOffer[0].shortLabel}
+                    </Link>
+                    {' '}и{' '}
+                    <Link href={REGISTRATION_CONSENT_LINKS.termsAndOffer[1].href} target="_blank" className="text-indigo-600 hover:underline">
+                      {REGISTRATION_CONSENT_LINKS.termsAndOffer[1].shortLabel}
+                    </Link>
+                  </label>
+                </div>
+
+                {/* Политика конфиденциальности */}
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="accept-privacy"
+                    checked={acceptPrivacy}
+                    onCheckedChange={(checked) => setAcceptPrivacy(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="accept-privacy" className="text-sm text-gray-600 leading-tight cursor-pointer">
+                    Ознакомлен(а) с{' '}
+                    <Link href={REGISTRATION_CONSENT_LINKS.privacy.href} target="_blank" className="text-indigo-600 hover:underline">
+                      {REGISTRATION_CONSENT_LINKS.privacy.shortLabel}
+                    </Link>
+                  </label>
+                </div>
+
+                {/* Согласие на обработку ПД */}
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="accept-data-processing"
+                    checked={acceptDataProcessing}
+                    onCheckedChange={(checked) => setAcceptDataProcessing(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="accept-data-processing" className="text-sm text-gray-600 leading-tight cursor-pointer">
+                    Даю{' '}
+                    <Link href={REGISTRATION_CONSENT_LINKS.consent.href} target="_blank" className="text-indigo-600 hover:underline">
+                      {REGISTRATION_CONSENT_LINKS.consent.shortLabel}
+                    </Link>
+                  </label>
+                </div>
+              </div>
+
+              <Button onClick={handleRegister} className="w-full" disabled={isLoading || !acceptTerms || !acceptPrivacy || !acceptDataProcessing}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isLoading ? 'Регистрация...' : 'Зарегистрироваться'}
               </Button>

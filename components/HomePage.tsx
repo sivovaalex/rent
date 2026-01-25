@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Package, Zap, Users, Star, Shield, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
+import Footer from '@/components/Footer';
 
 interface HomePageProps {
   onOpenAuth: (mode?: string) => void;
@@ -250,54 +251,7 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <div className="flex items-center mb-4">
-              <Package className="w-8 h-8 text-indigo-400" />
-              <span className="ml-2 text-2xl font-bold">Аренда PRO</span>
-            </div>
-            <p className="text-gray-400">
-              Лучшая платформа для аренды и сдачи вещей в вашем городе
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Категории</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li>Стрим-оборудование</li>
-              <li>Электроника</li>
-              <li>Одежда</li>
-              <li>Спорт</li>
-              <li>Инструменты</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Помощь</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li>Как арендовать</li>
-              <li>Как сдать в аренду</li>
-              <li>Безопасность</li>
-              <li>Поддержка</li>
-              <li>Вопросы и ответы</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Контакты</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li>support@arendapro.ru</li>
-              <li>+7 (495) 123-45-67</li>
-              <li>г. Москва, ул. Тверская, 1</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500 text-sm">
-          © 2026 Аренда PRO. Все права защищены.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
+import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import type { Item, BookingForm, RentalType } from '@/types';
 import { withCommission, formatPrice } from '@/lib/constants';
+import { BOOKING_CONSENT_LINKS } from '@/lib/constants/legal-links';
 
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
@@ -48,6 +50,7 @@ export default function BookingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [minDate, setMinDate] = useState(new Date());
   const [maxDate, setMaxDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+  const [acceptRentalRules, setAcceptRentalRules] = useState(false);
 
   useEffect(() => {
     if (isOpen && item) {
@@ -55,6 +58,7 @@ export default function BookingModal({
       setMaxDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
       setSelectedDates([]);
       setDateError('');
+      setAcceptRentalRules(false);
 
       if (bookingForm.start_date && bookingForm.end_date) {
         const startDate = new Date(bookingForm.start_date);
@@ -172,6 +176,11 @@ export default function BookingModal({
 
     if (hasBlockedDates) {
       setDateError('В выбранном периоде есть даты, которые уже забронированы');
+      return;
+    }
+
+    if (!acceptRentalRules) {
+      setDateError('Необходимо принять правила аренды');
       return;
     }
 
@@ -307,11 +316,31 @@ export default function BookingModal({
             </div>
           </div>
 
+          {/* Согласие с правилами аренды */}
+          <div className="flex items-start space-x-2 pt-2 border-t">
+            <Checkbox
+              id="accept-rental-rules"
+              checked={acceptRentalRules}
+              onCheckedChange={(checked) => setAcceptRentalRules(checked === true)}
+              className="mt-0.5"
+            />
+            <label htmlFor="accept-rental-rules" className="text-sm text-gray-600 leading-tight cursor-pointer">
+              Ознакомлен(а) и согласен(на) с{' '}
+              <Link
+                href={BOOKING_CONSENT_LINKS.rentalRules.href}
+                target="_blank"
+                className="text-indigo-600 hover:underline"
+              >
+                {BOOKING_CONSENT_LINKS.rentalRules.shortLabel}
+              </Link>
+            </label>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Отмена
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !acceptRentalRules}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSubmitting ? 'Бронирование...' : 'Подтвердить бронирование'}
             </Button>
