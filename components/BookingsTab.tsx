@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Star } from 'lucide-react';
 import ReviewModal from './ReviewModal';
+import { SkeletonList } from '@/components/ui/spinner';
 import type { User, Booking, AlertType } from '@/types';
 import { getAuthHeaders } from '@/hooks/use-auth';
 
@@ -13,9 +14,10 @@ interface BookingsTabProps {
   showAlert: (message: string, type?: AlertType) => void;
   loadBookings: () => Promise<void>;
   bookings: Booking[];
+  isLoading?: boolean;
 }
 
-export default function BookingsTab({ currentUser, showAlert, loadBookings, bookings }: BookingsTabProps) {
+export default function BookingsTab({ currentUser, showAlert, loadBookings, bookings, isLoading }: BookingsTabProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
@@ -90,6 +92,14 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       default: return status;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonList count={3} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

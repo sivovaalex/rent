@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -21,7 +21,7 @@ interface BookingModalProps {
   bookingForm: BookingForm;
   setBookingForm: React.Dispatch<React.SetStateAction<BookingForm>>;
   blockedBookingDates: string[];
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
 }
 
 // Helper to get item price with camelCase priority
@@ -45,6 +45,7 @@ export default function BookingModal({
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [dateError, setDateError] = useState('');
   const [hasInsurance, setHasInsurance] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [minDate, setMinDate] = useState(new Date());
   const [maxDate, setMaxDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 
@@ -149,7 +150,7 @@ export default function BookingModal({
     return Math.round(withCommission(totalPrice));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!bookingForm.start_date || !bookingForm.end_date) {
@@ -174,7 +175,12 @@ export default function BookingModal({
       return;
     }
 
-    onSubmit();
+    setIsSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen || !item) return null;
@@ -302,11 +308,12 @@ export default function BookingModal({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Отмена
             </Button>
-            <Button type="submit">
-              Подтвердить бронирование
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? 'Бронирование...' : 'Подтвердить бронирование'}
             </Button>
           </div>
         </form>

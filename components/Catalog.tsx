@@ -10,6 +10,7 @@ import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer } from 'lucide-re
 import ItemCard from './ItemCard';
 import ItemDetailModal from './ItemDetailModal';
 import BookingModal from './BookingModal';
+import { SkeletonCard } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category, BookingForm, AlertType } from '@/types';
 
 type CategoryKey = 'stream' | 'electronics' | 'clothing' | 'sports' | 'tools';
@@ -17,6 +18,7 @@ type CategoryKey = 'stream' | 'electronics' | 'clothing' | 'sports' | 'tools';
 interface CatalogProps {
   currentUser: User | null;
   items: Item[];
+  isLoading?: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   categoryFilter: string;
@@ -59,6 +61,7 @@ interface NewItemData {
 export default function Catalog({
   currentUser,
   items,
+  isLoading,
   searchQuery,
   setSearchQuery,
   categoryFilter,
@@ -242,89 +245,95 @@ export default function Catalog({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {items.map((item) => (
-          <ItemCard
-            key={item._id}
-            item={item}
-            currentUser={currentUser}
-            getStatusBadge={getStatusBadge}
-            getCategoryIcon={getCategoryIcon}
-            getCategoryName={getCategoryName}
-            onEdit={() => {
-              setSelectedItem(item);
-              setShowItemModal(true);
-            }}
-            onDelete={async () => {
-              if (!currentUser) return;
-              if (confirm('Вы уверены, что хотите удалить этот лот?')) {
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))
+        ) : (
+          items.map((item) => (
+            <ItemCard
+              key={item._id}
+              item={item}
+              currentUser={currentUser}
+              getStatusBadge={getStatusBadge}
+              getCategoryIcon={getCategoryIcon}
+              getCategoryName={getCategoryName}
+              onEdit={() => {
+                setSelectedItem(item);
+                setShowItemModal(true);
+              }}
+              onDelete={async () => {
+                if (!currentUser) return;
+                if (confirm('Вы уверены, что хотите удалить этот лот?')) {
+                  try {
+                    const res = await fetch(`/api/items/${item._id}`, {
+                      method: 'DELETE',
+                      headers: { 'x-user-id': currentUser._id }
+                    });
+                    if (res.ok) {
+                      showAlert('Лот удален');
+                      loadItems();
+                    } else {
+                      const data = await res.json();
+                      showAlert(data.error, 'error');
+                    }
+                  } catch {
+                    showAlert('Ошибка удаления лота', 'error');
+                  }
+                }
+              }}
+              onPublish={async () => {
+                if (!currentUser) return;
                 try {
-                  const res = await fetch(`/api/items/${item._id}`, {
-                    method: 'DELETE',
+                  await fetch(`/api/items/${item._id}/publish`, {
+                    method: 'POST',
                     headers: { 'x-user-id': currentUser._id }
                   });
-                  if (res.ok) {
-                    showAlert('Лот удален');
-                    loadItems();
-                  } else {
-                    const data = await res.json();
-                    showAlert(data.error, 'error');
-                  }
+                  showAlert('Лот опубликован');
+                  loadItems();
                 } catch {
-                  showAlert('Ошибка удаления лота', 'error');
+                  showAlert('Ошибка публикации лота', 'error');
                 }
-              }
-            }}
-            onPublish={async () => {
-              if (!currentUser) return;
-              try {
-                await fetch(`/api/items/${item._id}/publish`, {
-                  method: 'POST',
-                  headers: { 'x-user-id': currentUser._id }
-                });
-                showAlert('Лот опубликован');
-                loadItems();
-              } catch {
-                showAlert('Ошибка публикации лота', 'error');
-              }
-            }}
-            onUnpublish={async () => {
-              if (!currentUser) return;
-              try {
-                await fetch(`/api/items/${item._id}/unpublish`, {
-                  method: 'POST',
-                  headers: { 'x-user-id': currentUser._id }
-                });
-                showAlert('Лот снят с публикации');
-                loadItems();
-              } catch {
-                showAlert('Ошибка снятия с публикации', 'error');
-              }
-            }}
-            onViewDetails={() => {
-              setSelectedItemId(item._id);
-              setShowItemDetailModal(true);
-            }}
-            onBook={() => {
-              if (!currentUser?.is_verified) {
-                showAlert('Требуется верификация', 'error');
-                return;
-              }
-              setSelectedItem(item);
-              setShowBookingModal(true);
-              setBlockedBookingDates([]);
-              fetch(`/api/items/${item._id}/blocked-booking-dates`)
-                .then(res => res.json())
-                .then(data => {
-                  if (data.dates) {
-                    setBlockedBookingDates(data.dates);
-                  }
-                });
-            }}
-          />
-        ))}
+              }}
+              onUnpublish={async () => {
+                if (!currentUser) return;
+                try {
+                  await fetch(`/api/items/${item._id}/unpublish`, {
+                    method: 'POST',
+                    headers: { 'x-user-id': currentUser._id }
+                  });
+                  showAlert('Лот снят с публикации');
+                  loadItems();
+                } catch {
+                  showAlert('Ошибка снятия с публикации', 'error');
+                }
+              }}
+              onViewDetails={() => {
+                setSelectedItemId(item._id);
+                setShowItemDetailModal(true);
+              }}
+              onBook={() => {
+                if (!currentUser?.is_verified) {
+                  showAlert('Требуется верификация', 'error');
+                  return;
+                }
+                setSelectedItem(item);
+                setShowBookingModal(true);
+                setBlockedBookingDates([]);
+                fetch(`/api/items/${item._id}/blocked-booking-dates`)
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.dates) {
+                      setBlockedBookingDates(data.dates);
+                    }
+                  });
+              }}
+            />
+          ))
+        )}
       </div>
 
-      {items.length === 0 && (
+      {!isLoading && items.length === 0 && (
         <div className="text-center py-12">
           <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500">

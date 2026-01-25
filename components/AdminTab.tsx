@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle } from 'lucide-react';
+import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2 } from 'lucide-react';
+import { SkeletonTable, Loader } from '@/components/ui/spinner';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
 interface AdminStats {
@@ -41,11 +42,13 @@ interface AdminTabProps {
   pendingItems: PendingItem[];
   stats: AdminStats | null;
   allUsers: User[];
+  isLoading?: boolean;
 }
 
-export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers }: AdminTabProps) {
+export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, isLoading }: AdminTabProps) {
   const [adminSubTab, setAdminSubTab] = useState('stats');
   const [showAdminUserModal, setShowAdminUserModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newAdminUser, setNewAdminUser] = useState<NewAdminUser>({
     name: '',
     phone: '',
@@ -120,6 +123,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const createUser = async () => {
     if (!currentUser) return;
 
+    setIsCreating(true);
     try {
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -146,6 +150,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
       }
     } catch {
       showAlert('Ошибка создания пользователя', 'error');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -170,7 +176,11 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
         </TabsList>
 
         <TabsContent value="stats">
-          {currentUser?.role === 'admin' && stats && (
+          {isLoading ? (
+            <div className="py-12">
+              <Loader size="lg" text="Загрузка статистики..." />
+            </div>
+          ) : currentUser?.role === 'admin' && stats ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader>
@@ -200,7 +210,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                 </CardContent>
               </Card>
             </div>
-          )}
+          ) : null}
         </TabsContent>
 
         <TabsContent value="verification">
@@ -289,52 +299,58 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
               </div>
               <Card>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Имя</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Телефон</TableHead>
-                          <TableHead>Роль</TableHead>
-                          <TableHead>Рейтинг</TableHead>
-                          <TableHead>Статус</TableHead>
-                          <TableHead>Зарегистрирован</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {allUsers.map((user) => (
-                          <TableRow key={user._id}>
-                            <TableCell className="font-medium">{user.name}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>{user.phone}</TableCell>
-                            <TableCell>{getRoleBadge(user.role)}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                <span>{user.rating?.toFixed(1)}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {user.is_verified ? (
-                                <Badge variant="secondary">Верифицирован</Badge>
-                              ) : (
-                                <Badge variant="outline">Не верифицирован</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {allUsers.length === 0 && (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 mx-auto text-gray-400" />
-                      <p className="text-gray-500 mt-2">Пользователи не найдены</p>
-                    </div>
+                  {isLoading ? (
+                    <SkeletonTable rows={5} />
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Имя</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Телефон</TableHead>
+                              <TableHead>Роль</TableHead>
+                              <TableHead>Рейтинг</TableHead>
+                              <TableHead>Статус</TableHead>
+                              <TableHead>Зарегистрирован</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {allUsers.map((user) => (
+                              <TableRow key={user._id}>
+                                <TableCell className="font-medium">{user.name}</TableCell>
+                                <TableCell>{user.email}</TableCell>
+                                <TableCell>{user.phone}</TableCell>
+                                <TableCell>{getRoleBadge(user.role)}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                    <span>{user.rating?.toFixed(1)}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {user.is_verified ? (
+                                    <Badge variant="secondary">Верифицирован</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Не верифицирован</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {new Date(user.createdAt).toLocaleDateString()}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      {allUsers.length === 0 && (
+                        <div className="text-center py-8">
+                          <Users className="w-12 h-12 mx-auto text-gray-400" />
+                          <p className="text-gray-500 mt-2">Пользователи не найдены</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -404,10 +420,13 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                     </div>
 
                     <div className="mt-8 flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => setShowAdminUserModal(false)}>
+                      <Button variant="outline" onClick={() => setShowAdminUserModal(false)} disabled={isCreating}>
                         Отмена
                       </Button>
-                      <Button onClick={createUser}>Создать пользователя</Button>
+                      <Button onClick={createUser} disabled={isCreating}>
+                        {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isCreating ? 'Создание...' : 'Создать пользователя'}
+                      </Button>
                     </div>
                   </div>
                 </div>

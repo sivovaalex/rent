@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import type { AlertState, RegisterData, UserRole } from '@/types';
 
 interface AuthModalProps {
@@ -40,6 +40,7 @@ export default function AuthModal({
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
   const [registerRole, setRegisterRole] = useState<UserRole>('renter');
   const [registerPhone, setRegisterPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!showAuth) {
@@ -59,6 +60,7 @@ export default function AuthModal({
       return;
     }
 
+    setIsLoading(true);
     try {
       const success = await onLogin(loginEmail, loginPassword);
       if (success) {
@@ -66,6 +68,8 @@ export default function AuthModal({
       }
     } catch {
       setAuthAlert({ message: 'Ошибка при входе', type: 'error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,6 +84,7 @@ export default function AuthModal({
       return;
     }
 
+    setIsLoading(true);
     try {
       const success = await onRegister({
         name: registerName,
@@ -94,6 +99,8 @@ export default function AuthModal({
       }
     } catch {
       setAuthAlert({ message: 'Ошибка при регистрации', type: 'error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -151,8 +158,9 @@ export default function AuthModal({
                 />
               </div>
 
-              <Button onClick={handleLogin} className="w-full">
-                Войти
+              <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? 'Вход...' : 'Войти'}
               </Button>
 
               <div className="text-center mt-4">
@@ -238,8 +246,9 @@ export default function AuthModal({
                 </p>
               </div>
 
-              <Button onClick={handleRegister} className="w-full">
-                Зарегистрироваться
+              <Button onClick={handleRegister} className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? 'Регистрация...' : 'Зарегистрироваться'}
               </Button>
 
               <div className="text-center mt-4">

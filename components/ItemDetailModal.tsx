@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer } from 'lucide-react';
 import ReviewList from './ReviewList';
+import { Loader } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
 
@@ -94,9 +95,8 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
         </DialogHeader>
 
         {loading && (
-          <div className="py-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-500">Загрузка информации о лоте...</p>
+          <div className="py-12">
+            <Loader size="lg" text="Загрузка информации о лоте..." />
           </div>
         )}
 

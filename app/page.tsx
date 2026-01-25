@@ -37,6 +37,7 @@ export default function App() {
 
   const {
     items,
+    isLoading: itemsLoading,
     loadItems,
     searchQuery,
     setSearchQuery,
@@ -62,9 +63,9 @@ export default function App() {
     loadBlockedBookingDates,
   } = useItems({ currentUser, onShowAlert: showAlert });
 
-  const { bookings, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
+  const { bookings, isLoading: bookingsLoading, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
 
-  const { pendingUsers, pendingItems, allUsers, stats, loadAdminData } = useAdmin({
+  const { pendingUsers, pendingItems, allUsers, stats, isLoading: adminLoading, loadAdminData } = useAdmin({
     currentUser,
     onShowAlert: showAlert,
   });
@@ -171,6 +172,7 @@ export default function App() {
               <Catalog
                 currentUser={currentUser}
                 items={items}
+                isLoading={itemsLoading}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 categoryFilter={categoryFilter}
@@ -205,6 +207,7 @@ export default function App() {
                   showAlert={showAlert}
                   loadBookings={loadBookings}
                   bookings={bookings}
+                  isLoading={bookingsLoading}
                 />
               ) : (
                 <div className="text-center py-12">
@@ -240,6 +243,7 @@ export default function App() {
                   pendingItems={pendingItems}
                   stats={stats}
                   allUsers={allUsers}
+                  isLoading={adminLoading}
                 />
               </TabsContent>
             )}
