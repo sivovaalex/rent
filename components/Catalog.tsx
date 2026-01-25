@@ -131,19 +131,19 @@ export default function Catalog({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row gap-4 mb-6">
-        <div className="flex gap-2 border-b border-gray-200">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex gap-1 sm:gap-2 border-b border-gray-200 overflow-x-auto">
           <button
             onClick={() => setCatalogView('all')}
-            className={`px-4 py-2 font-medium ${catalogView === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+            className={`px-3 sm:px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap ${catalogView === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
           >
             Все лоты
           </button>
           {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
             <button
               onClick={() => setCatalogView('mine')}
-              className={`px-4 py-2 font-medium ${catalogView === 'mine' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+              className={`px-3 sm:px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap ${catalogView === 'mine' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
             >
               Мои лоты
             </button>
@@ -156,85 +156,87 @@ export default function Catalog({
               checked={showAllStatuses}
               onCheckedChange={(checked) => setShowAllStatuses(checked as boolean)}
             />
-            <Label htmlFor="showAllStatuses" className="text-sm">Показать все статусы</Label>
+            <Label htmlFor="showAllStatuses" className="text-xs sm:text-sm">Показать все статусы</Label>
           </div>
         )}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col gap-2 sm:gap-4">
         <Input
-          placeholder="Поиск по названию или описанию..."
+          placeholder="Поиск..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyUp={(e) => e.key === 'Enter' && loadItems()}
-          className="flex-1"
+          className="w-full text-sm sm:text-base"
         />
-        <Select value={categoryFilter} onValueChange={(value) => {
-          setCategoryFilter(value);
-          setSubCategoryFilter('all');
-        }}>
-          <SelectTrigger className="w-full lg:w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все категории</SelectItem>
-            <SelectItem value="stream">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                Стрим-оборудование
-              </div>
-            </SelectItem>
-            <SelectItem value="electronics">
-              <div className="flex items-center gap-2">
-                <Camera className="w-4 h-4" />
-                Электроника
-              </div>
-            </SelectItem>
-            <SelectItem value="clothing">
-              <div className="flex items-center gap-2">
-                <Shirt className="w-4 h-4" />
-                Одежда
-              </div>
-            </SelectItem>
-            <SelectItem value="sports">
-              <div className="flex items-center gap-2">
-                <Dumbbell className="w-4 h-4" />
-                Спорт
-              </div>
-            </SelectItem>
-            <SelectItem value="tools">
-              <div className="flex items-center gap-2">
-                <Hammer className="w-4 h-4" />
-                Инструменты
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        {categoryFilter !== 'all' && (
-          <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
-            <SelectTrigger className="w-full lg:w-[200px]">
-              <SelectValue placeholder="Подкатегория" />
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4">
+          <Select value={categoryFilter} onValueChange={(value) => {
+            setCategoryFilter(value);
+            setSubCategoryFilter('all');
+          }}>
+            <SelectTrigger className="w-full sm:w-[180px] text-xs sm:text-sm">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Все подкатегории</SelectItem>
-              {categorySubcategories[categoryFilter as CategoryKey]?.map((subcat) => (
-                <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
-              ))}
+              <SelectItem value="all">Все категории</SelectItem>
+              <SelectItem value="stream">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  <span className="hidden sm:inline">Стрим-</span>оборудование
+                </div>
+              </SelectItem>
+              <SelectItem value="electronics">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  Электроника
+                </div>
+              </SelectItem>
+              <SelectItem value="clothing">
+                <div className="flex items-center gap-2">
+                  <Shirt className="w-4 h-4" />
+                  Одежда
+                </div>
+              </SelectItem>
+              <SelectItem value="sports">
+                <div className="flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4" />
+                  Спорт
+                </div>
+              </SelectItem>
+              <SelectItem value="tools">
+                <div className="flex items-center gap-2">
+                  <Hammer className="w-4 h-4" />
+                  Инструменты
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
-        )}
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full lg:w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Новые</SelectItem>
-            <SelectItem value="price_asc">Цена ↑</SelectItem>
-            <SelectItem value="price_desc">Цена ↓</SelectItem>
-            <SelectItem value="rating">Рейтинг</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={loadItems}>Поиск</Button>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-[140px] text-xs sm:text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Новые</SelectItem>
+              <SelectItem value="price_asc">Цена ↑</SelectItem>
+              <SelectItem value="price_desc">Цена ↓</SelectItem>
+              <SelectItem value="rating">Рейтинг</SelectItem>
+            </SelectContent>
+          </Select>
+          {categoryFilter !== 'all' && (
+            <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
+              <SelectTrigger className="w-full col-span-2 sm:w-[180px] text-xs sm:text-sm">
+                <SelectValue placeholder="Подкатегория" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все подкатегории</SelectItem>
+                {categorySubcategories[categoryFilter as CategoryKey]?.map((subcat) => (
+                  <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button onClick={loadItems} className="col-span-2 sm:col-span-1 text-sm">Поиск</Button>
+        </div>
       </div>
 
       {currentUser?.is_verified && (currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
@@ -244,7 +246,7 @@ export default function Catalog({
         </Button>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
@@ -577,12 +579,12 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-6">{item ? 'Редактировать лот' : 'Создать лот'}</h2>
+        <div className="p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{item ? 'Редактировать лот' : 'Создать лот'}</h2>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <Label>Категория</Label>
               <Select
@@ -642,9 +644,9 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label>Цена за день (₽)</Label>
+                <Label className="text-sm">Цена за день (₽)</Label>
                 <Input
                   type="number"
                   value={newItem.price_per_day}
@@ -652,7 +654,7 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 />
               </div>
               <div>
-                <Label>Цена за месяц (₽)</Label>
+                <Label className="text-sm">Цена за месяц (₽)</Label>
                 <Input
                   type="number"
                   value={newItem.price_per_month}
@@ -712,12 +714,12 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end gap-3">
-            <Button variant="outline" onClick={onClose}>
+          <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Отмена
             </Button>
-            <Button onClick={() => onSubmit(newItem)} disabled={uploading}>
-              {item ? 'Сохранить изменения' : 'Создать лот'}
+            <Button onClick={() => onSubmit(newItem)} disabled={uploading} className="w-full sm:w-auto">
+              {item ? 'Сохранить' : 'Создать'}
             </Button>
           </div>
         </div>

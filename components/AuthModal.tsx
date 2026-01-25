@@ -123,10 +123,10 @@ export default function AuthModal({
   if (!showAuth) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-indigo-600">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <CardHeader className="pb-2 sm:pb-6">
+          <CardTitle className="text-2xl sm:text-3xl font-bold text-indigo-600">
             {registerMode ? 'Регистрация' : 'Вход'}
           </CardTitle>
           <CardDescription>
@@ -149,7 +149,7 @@ export default function AuthModal({
           )}
 
           {!registerMode ? (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -190,8 +190,8 @@ export default function AuthModal({
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="space-y-2 sm:space-y-4">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="name">Имя</Label>
                 <Input
                   id="name"
@@ -202,7 +202,7 @@ export default function AuthModal({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="register-email">Email</Label>
                 <Input
                   id="register-email"
@@ -213,7 +213,7 @@ export default function AuthModal({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="register-password">Пароль</Label>
                 <Input
                   id="register-password"
@@ -224,7 +224,7 @@ export default function AuthModal({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="confirm-password">Подтверждение пароля</Label>
                 <Input
                   id="confirm-password"
@@ -235,7 +235,7 @@ export default function AuthModal({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="phone">Телефон</Label>
                 <Input
                   id="phone"
@@ -246,7 +246,7 @@ export default function AuthModal({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="role">Роль</Label>
                 <select
                   id="role"
@@ -263,8 +263,8 @@ export default function AuthModal({
               </div>
 
               {/* Обязательные согласия */}
-              <div className="space-y-3 pt-2 border-t">
-                <p className="text-sm font-medium text-gray-700">Обязательные согласия:</p>
+              <div className="space-y-2 sm:space-y-3 pt-2 border-t">
+                <p className="text-xs sm:text-sm font-medium text-gray-700">Обязательные согласия:</p>
 
                 {/* Пользовательское соглашение и оферта */}
                 <div className="flex items-start space-x-2">
@@ -274,7 +274,7 @@ export default function AuthModal({
                     onCheckedChange={(checked) => setAcceptTerms(checked === true)}
                     className="mt-0.5"
                   />
-                  <label htmlFor="accept-terms" className="text-sm text-gray-600 leading-tight cursor-pointer">
+                  <label htmlFor="accept-terms" className="text-xs sm:text-sm text-gray-600 leading-tight cursor-pointer">
                     Принимаю{' '}
                     <Link href={REGISTRATION_CONSENT_LINKS.termsAndOffer[0].href} target="_blank" className="text-indigo-600 hover:underline">
                       {REGISTRATION_CONSENT_LINKS.termsAndOffer[0].shortLabel}
@@ -294,7 +294,7 @@ export default function AuthModal({
                     onCheckedChange={(checked) => setAcceptPrivacy(checked === true)}
                     className="mt-0.5"
                   />
-                  <label htmlFor="accept-privacy" className="text-sm text-gray-600 leading-tight cursor-pointer">
+                  <label htmlFor="accept-privacy" className="text-xs sm:text-sm text-gray-600 leading-tight cursor-pointer">
                     Ознакомлен(а) с{' '}
                     <Link href={REGISTRATION_CONSENT_LINKS.privacy.href} target="_blank" className="text-indigo-600 hover:underline">
                       {REGISTRATION_CONSENT_LINKS.privacy.shortLabel}
@@ -310,7 +310,7 @@ export default function AuthModal({
                     onCheckedChange={(checked) => setAcceptDataProcessing(checked === true)}
                     className="mt-0.5"
                   />
-                  <label htmlFor="accept-data-processing" className="text-sm text-gray-600 leading-tight cursor-pointer">
+                  <label htmlFor="accept-data-processing" className="text-xs sm:text-sm text-gray-600 leading-tight cursor-pointer">
                     Даю{' '}
                     <Link href={REGISTRATION_CONSENT_LINKS.consent.href} target="_blank" className="text-indigo-600 hover:underline">
                       {REGISTRATION_CONSENT_LINKS.consent.shortLabel}
@@ -336,13 +336,13 @@ export default function AuthModal({
             </div>
           )}
 
-          <div className="mt-6 text-center pt-4 border-t">
+          <div className="mt-4 sm:mt-6 text-center pt-3 sm:pt-4 border-t">
             <Button
               variant="link"
               onClick={onClose}
-              className="text-gray-600 hover:text-gray-800 p-0 h-auto font-medium"
+              className="text-gray-600 hover:text-gray-800 p-0 h-auto font-medium text-sm sm:text-base"
             >
-              Вернуться на главную страницу
+              Вернуться на главную
             </Button>
           </div>
         </CardContent>

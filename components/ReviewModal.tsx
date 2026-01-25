@@ -175,11 +175,11 @@ export default function ReviewModal({ isOpen, onClose, booking, currentUser, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md w-[calc(100%-1rem)] sm:w-full">
         <DialogHeader>
-          <DialogTitle>Оставить отзыв</DialogTitle>
-          <DialogDescription>
-            Поделитесь вашим опытом аренды: {booking?.item?.title}
+          <DialogTitle className="pr-6">Оставить отзыв</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
+            Поделитесь опытом аренды: {booking?.item?.title}
           </DialogDescription>
         </DialogHeader>
 

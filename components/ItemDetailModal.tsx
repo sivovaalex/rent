@@ -78,12 +78,12 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl w-[calc(100%-1rem)] sm:w-full">
         <DialogHeader>
-          <DialogTitle>{item?.title || 'Загрузка...'}</DialogTitle>
+          <DialogTitle className="pr-6 text-base sm:text-lg">{item?.title || 'Загрузка...'}</DialogTitle>
           <DialogDescription>
             {item && (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
                 {getCategoryIcon(item.category)}
                 <span>{getCategoryName(item.category)}</span>
                 {item.subcategory && <span>· {item.subcategory}</span>}
@@ -110,30 +110,32 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
 
         {item && !loading && !error && (
           <div className="space-y-6">
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {item.photos && item.photos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                   <div className="md:col-span-1">
                     <img
                       src={item.photos[0]}
                       alt={item.title}
-                      className="w-full h-80 object-cover rounded-lg"
+                      className="w-full h-48 sm:h-80 object-cover rounded-lg"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {item.photos.slice(1).map((photo, index) => (
-                      <img
-                        key={index}
-                        src={photo}
-                        alt={`${item.title} ${index + 2}`}
-                        className="w-full h-40 object-cover rounded"
-                      />
-                    ))}
-                  </div>
+                  {item.photos.length > 1 && (
+                    <div className="grid grid-cols-3 md:grid-cols-2 gap-1 sm:gap-2">
+                      {item.photos.slice(1).map((photo, index) => (
+                        <img
+                          key={index}
+                          src={photo}
+                          alt={`${item.title} ${index + 2}`}
+                          className="w-full h-20 sm:h-40 object-cover rounded"
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="h-80 bg-gray-100 border-2 border-dashed rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400">Нет фотографий</span>
+                <div className="h-48 sm:h-80 bg-gray-100 border-2 border-dashed rounded-lg flex items-center justify-center">
+                  <span className="text-gray-400 text-sm">Нет фотографий</span>
                 </div>
               )}
             </div>

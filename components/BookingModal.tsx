@@ -196,21 +196,21 @@ export default function BookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl w-[calc(100%-1rem)] sm:w-full">
         <DialogHeader>
-          <DialogTitle>Забронировать {item.title}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm:text-xl pr-6">Забронировать {item.title}</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Выберите период аренды и условия
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <Label>Период аренды</Label>
-              <div className="mt-2 flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-500">
+              <Label className="text-sm sm:text-base">Период аренды</Label>
+              <div className="mt-1 sm:mt-2 flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-500 text-xs sm:text-sm">
                   {bookingForm.start_date && bookingForm.end_date
                     ? `${format(new Date(bookingForm.start_date), 'dd.MM.yyyy')} - ${format(new Date(bookingForm.end_date), 'dd.MM.yyyy')}`
                     : 'Выберите даты в календаре'}
@@ -218,7 +218,7 @@ export default function BookingModal({
               </div>
             </div>
 
-            <div className="border rounded-lg p-4">
+            <div className="border rounded-lg p-2 sm:p-4 overflow-x-auto">
               <Calendar
                 selectRange={true}
                 value={selectedDates.length > 0 ? [selectedDates[0], selectedDates[selectedDates.length - 1]] : undefined}
@@ -242,18 +242,18 @@ export default function BookingModal({
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <Label>Тип аренды</Label>
-              <div className="mt-2 grid grid-cols-2 gap-4">
+              <Label className="text-sm sm:text-base">Тип аренды</Label>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:gap-4">
                 <Button
                   type="button"
                   variant={bookingForm.rental_type === 'day' ? 'default' : 'outline'}
                   onClick={() => setBookingForm({ ...bookingForm, rental_type: 'day' as RentalType })}
-                  className="flex flex-col items-center justify-center h-24 p-3"
+                  className="flex flex-col items-center justify-center h-16 sm:h-24 p-2 sm:p-3"
                 >
-                  <span className="font-medium">Почасовая/Посуточная</span>
-                  <span className="text-sm text-gray-500 mt-1">
+                  <span className="font-medium text-xs sm:text-sm">Посуточная</span>
+                  <span className="text-xs sm:text-sm text-gray-500 mt-1">
                     {formatPrice(withCommission(getItemPrice(item, 'day')))} ₽/день
                   </span>
                 </Button>
@@ -261,11 +261,11 @@ export default function BookingModal({
                   type="button"
                   variant={bookingForm.rental_type === 'month' ? 'default' : 'outline'}
                   onClick={() => setBookingForm({ ...bookingForm, rental_type: 'month' as RentalType })}
-                  className="flex flex-col items-center justify-center h-24 p-3"
+                  className="flex flex-col items-center justify-center h-16 sm:h-24 p-2 sm:p-3"
                 >
-                  <span className="font-medium">Долгосрочная</span>
-                  <span className="text-sm text-gray-500 mt-1">
-                    {formatPrice(withCommission(getItemPrice(item, 'month')))} ₽/месяц
+                  <span className="font-medium text-xs sm:text-sm">Долгосрочная</span>
+                  <span className="text-xs sm:text-sm text-gray-500 mt-1">
+                    {formatPrice(withCommission(getItemPrice(item, 'month')))} ₽/мес
                   </span>
                 </Button>
               </div>
@@ -278,41 +278,41 @@ export default function BookingModal({
                 id="insurance"
                 checked={hasInsurance}
                 onCheckedChange={(checked) => setHasInsurance(checked as boolean)}
+                className="mt-0.5"
               />
-              <div className="grid gap-1.5 leading-none">
-                <Label htmlFor="insurance" className="text-sm font-medium">
+              <div className="grid gap-1 leading-none">
+                <Label htmlFor="insurance" className="text-xs sm:text-sm font-medium cursor-pointer">
                   Страховка от повреждений
                 </Label>
-                <p className="text-sm text-gray-500">
-                  Страховка покрывает 90% стоимости предмета в случае повреждения. Стоимость страховки - 10% от общей суммы аренды.
+                <p className="text-xs text-gray-500">
+                  Покрывает 90% стоимости при повреждении. Стоимость - 10% от суммы аренды.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+          <div className="space-y-2 sm:space-y-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Залог:</span>
-              <span className="font-bold text-lg">{item.deposit} ₽</span>
+              <span className="text-gray-600 text-sm">Залог:</span>
+              <span className="font-bold text-base sm:text-lg">{item.deposit} ₽</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Сумма аренды:</span>
-              <span className="font-bold text-xl">
+              <span className="text-gray-600 text-sm">Сумма аренды:</span>
+              <span className="font-bold text-lg sm:text-xl">
                 {calculateTotalPrice()} ₽
               </span>
             </div>
 
             <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-gray-600">Итоговая сумма:</span>
-              <span className="font-bold text-xl text-indigo-600">
+              <span className="text-gray-600 text-sm">Итого:</span>
+              <span className="font-bold text-lg sm:text-xl text-indigo-600">
                 {+item.deposit + calculateTotalPrice()} ₽
               </span>
             </div>
 
-            <div className="text-xs text-gray-500">
-              <p>Залог возвращается после возврата предмета в том же состоянии.</p>
-              <p>Страховка действует только при возврате предмета в течение 24 часов после истечения срока аренды.</p>
+            <div className="text-[10px] sm:text-xs text-gray-500">
+              <p>Залог возвращается после возврата предмета.</p>
             </div>
           </div>
 
@@ -324,8 +324,8 @@ export default function BookingModal({
               onCheckedChange={(checked) => setAcceptRentalRules(checked === true)}
               className="mt-0.5"
             />
-            <label htmlFor="accept-rental-rules" className="text-sm text-gray-600 leading-tight cursor-pointer">
-              Ознакомлен(а) и согласен(на) с{' '}
+            <label htmlFor="accept-rental-rules" className="text-xs sm:text-sm text-gray-600 leading-tight cursor-pointer">
+              Ознакомлен(а) с{' '}
               <Link
                 href={BOOKING_CONSENT_LINKS.rentalRules.href}
                 target="_blank"
@@ -336,13 +336,13 @@ export default function BookingModal({
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
               Отмена
             </Button>
-            <Button type="submit" disabled={isSubmitting || !acceptRentalRules}>
+            <Button type="submit" disabled={isSubmitting || !acceptRentalRules} className="w-full sm:w-auto">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Бронирование...' : 'Подтвердить бронирование'}
+              {isSubmitting ? 'Бронирование...' : 'Забронировать'}
             </Button>
           </div>
         </form>

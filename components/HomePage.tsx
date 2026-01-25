@@ -97,30 +97,30 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section className="py-12 sm:py-20 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <Package className="w-16 h-16 text-indigo-600" />
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Package className="w-12 h-12 sm:w-16 sm:h-16 text-indigo-600" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-4 sm:mb-6">
             Аренда PRO
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+          <p className="text-base sm:text-xl text-gray-600 max-w-2xl mx-auto mb-6 sm:mb-10 px-2">
             Единая платформа для аренды и сдачи в аренду вещей. Надежно, удобно, выгодно.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-2">
             <Button
               size="lg"
-              className="px-8 py-6 text-lg font-medium bg-indigo-600 hover:bg-indigo-700"
+              className="px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium bg-indigo-600 hover:bg-indigo-700"
               onClick={() => onOpenAuth('login')}
             >
               Начать арендовать
-              <ChevronRight className="ml-2 h-5 w-5" />
+              <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="px-8 py-6 text-lg font-medium border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+              className="px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium border-indigo-600 text-indigo-600 hover:bg-indigo-50"
               onClick={() => onOpenAuth('register')}
             >
               Стать арендодателем
@@ -130,26 +130,28 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-10 sm:py-16 px-3 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Почему выбирают нас</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Мы создали максимально удобную и безопасную платформу для аренды вещей
+          <div className="text-center mb-8 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Почему выбирают нас</h2>
+            <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto px-2">
+              Мы создали удобную и безопасную платформу для аренды вещей
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="border-2 border-gray-100 hover:border-indigo-200 transition-all duration-300">
-                <CardContent className="p-6 flex flex-col items-center text-center">
-                  <div className="mb-4 p-3 bg-indigo-100 rounded-full">
-                    {feature.icon}
+                <CardContent className="p-3 sm:p-6 flex flex-col items-center text-center">
+                  <div className="mb-2 sm:mb-4 p-2 sm:p-3 bg-indigo-100 rounded-full">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 [&>svg]:w-full [&>svg]:h-full">
+                      {feature.icon}
+                    </div>
                   </div>
                   {feature.title && (
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
+                    <h3 className="text-sm sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{feature.title}</h3>
                   )}
-                  <p className="text-gray-600">{feature.description}</p>
+                  <p className="text-xs sm:text-base text-gray-600">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -158,16 +160,16 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-indigo-50">
+      <section className="py-10 sm:py-16 px-3 sm:px-6 lg:px-8 bg-indigo-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Популярные категории</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-8 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Популярные категории</h2>
+            <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto px-2">
               Выберите категорию и найдите именно то, что вам нужно
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-6 max-w-5xl mx-auto">
             {categories.map((category, index) => (
               <Card
                 key={index}
@@ -176,11 +178,11 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
                   router.push('/');
                 }}
               >
-                <CardContent className="p-6 flex flex-col items-center text-center">
-                  <div className="mb-4 p-3 bg-indigo-100 rounded-full">
+                <CardContent className="p-3 sm:p-6 flex flex-col items-center text-center">
+                  <div className="mb-2 sm:mb-4 p-2 sm:p-3 bg-indigo-100 rounded-full">
                     {category.icon}
                   </div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-1">{category.name}</h3>
+                  <h3 className="font-bold text-xs sm:text-lg text-gray-900">{category.name}</h3>
                 </CardContent>
               </Card>
             ))}
@@ -189,31 +191,31 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-10 sm:py-16 px-3 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Отзывы пользователей</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-8 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Отзывы пользователей</h2>
+            <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto px-2">
               Реальные отзывы от наших пользователей
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
             {testimonials.map((testimonial, index) => (
               <Card key={index} className="border-2 border-gray-100">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center mb-3 sm:mb-4">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-5 h-5 ${i < testimonial.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                        className={`w-4 h-4 sm:w-5 sm:h-5 ${i < testimonial.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                       />
                     ))}
                   </div>
-                  <p className="text-gray-600 italic mb-6">&quot;{testimonial.text}&quot;</p>
+                  <p className="text-sm sm:text-base text-gray-600 italic mb-4 sm:mb-6">&quot;{testimonial.text}&quot;</p>
                   <div>
-                    <p className="font-bold text-lg text-gray-900">{testimonial.name}</p>
-                    <p className="text-sm text-indigo-600">{testimonial.role}</p>
+                    <p className="font-bold text-base sm:text-lg text-gray-900">{testimonial.name}</p>
+                    <p className="text-xs sm:text-sm text-indigo-600">{testimonial.role}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -223,25 +225,25 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-indigo-600 to-purple-700">
+      <section className="py-12 sm:py-20 px-3 sm:px-6 lg:px-8 bg-gradient-to-r from-indigo-600 to-purple-700">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6 px-2">
             Готовы начать арендовать или сдавать вещи?
           </h2>
-          <p className="text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">
-            Присоединяйтесь к тысячам довольных пользователей нашей платформы уже сегодня
+          <p className="text-base sm:text-xl text-indigo-100 mb-6 sm:mb-10 max-w-2xl mx-auto px-2">
+            Присоединяйтесь к тысячам довольных пользователей нашей платформы
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-2">
             <Button
               size="lg"
-              className="px-8 py-6 text-lg font-medium bg-white text-indigo-600 hover:bg-indigo-50"
+              className="px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium bg-white text-indigo-600 hover:bg-indigo-50"
               onClick={() => onOpenAuth('login')}
             >
               Войти в аккаунт
             </Button>
             <Button
               size="lg"
-              className="px-8 py-6 text-lg font-medium border-white text-white hover:bg-white/10"
+              className="px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium border-white text-white hover:bg-white/10"
               onClick={() => onOpenAuth('register')}
             >
               Зарегистрироваться
