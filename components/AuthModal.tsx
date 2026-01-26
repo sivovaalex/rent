@@ -37,6 +37,9 @@ export default function AuthModal({
   setAuthAlert
 }: AuthModalProps) {
   const [registerMode, setRegisterMode] = useState(false);
+  const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotEmailSent, setForgotEmailSent] = useState(false);
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -53,6 +56,9 @@ export default function AuthModal({
   useEffect(() => {
     if (!showAuth) {
       setRegisterMode(false);
+      setForgotPasswordMode(false);
+      setForgotEmail('');
+      setForgotEmailSent(false);
       setRegisterName('');
       setRegisterEmail('');
       setRegisterPassword('');
@@ -79,6 +85,44 @@ export default function AuthModal({
       }
     } catch {
       setAuthAlert({ message: 'Ошибка при входе', type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail) {
+      setAuthAlert({ message: 'Пожалуйста, введите email', type: 'error' });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(forgotEmail)) {
+      setAuthAlert({ message: 'Введите корректный email', type: 'error' });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setForgotEmailSent(true);
+        setAuthAlert({
+          message: 'Если указанный email зарегистрирован, на него отправлена ссылка для сброса пароля',
+          type: 'success'
+        });
+      } else {
+        setAuthAlert({ message: data.error || 'Ошибка при отправке', type: 'error' });
+      }
+    } catch {
+      setAuthAlert({ message: 'Ошибка при отправке запроса', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -127,12 +171,14 @@ export default function AuthModal({
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
         <CardHeader className="pb-2 sm:pb-6">
           <CardTitle className="text-2xl sm:text-3xl font-bold text-indigo-600">
-            {registerMode ? 'Регистрация' : 'Вход'}
+            {forgotPasswordMode ? 'Восстановление пароля' : registerMode ? 'Регистрация' : 'Вход'}
           </CardTitle>
           <CardDescription>
-            {registerMode
-              ? 'Создайте аккаунт для доступа к платформе'
-              : 'Введите ваши учетные данные для входа'}
+            {forgotPasswordMode
+              ? 'Введите email для получения ссылки сброса пароля'
+              : registerMode
+                ? 'Создайте аккаунт для доступа к платформе'
+                : 'Введите ваши учетные данные для входа'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,7 +194,68 @@ export default function AuthModal({
             </Alert>
           )}
 
-          {!registerMode ? (
+          {forgotPasswordMode ? (
+            <div className="space-y-3 sm:space-y-4">
+              {forgotEmailSent ? (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  <p className="text-gray-600 mb-4">
+                    Если email зарегистрирован в системе, на него отправлена ссылка для сброса пароля.
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Проверьте папку &quot;Спам&quot;, если письмо не пришло.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setForgotPasswordMode(false);
+                      setForgotEmailSent(false);
+                      setForgotEmail('');
+                      setAuthAlert(null);
+                    }}
+                    className="w-full"
+                  >
+                    Вернуться к входу
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="example@mail.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      onKeyUp={(e) => e.key === 'Enter' && handleForgotPassword()}
+                    />
+                  </div>
+
+                  <Button onClick={handleForgotPassword} className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading ? 'Отправка...' : 'Отправить ссылку'}
+                  </Button>
+
+                  <div className="text-center mt-4">
+                    <Button
+                      variant="link"
+                      onClick={() => {
+                        setForgotPasswordMode(false);
+                        setForgotEmail('');
+                        setAuthAlert(null);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 p-0 h-auto font-medium"
+                    >
+                      Вернуться к входу
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : !registerMode ? (
             <div className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -163,7 +270,20 @@ export default function AuthModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Пароль</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="password">Пароль</Label>
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      setForgotPasswordMode(true);
+                      setForgotEmail(loginEmail);
+                      setAuthAlert(null);
+                    }}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 p-0 h-auto"
+                  >
+                    Забыли пароль?
+                  </Button>
+                </div>
                 <Input
                   id="password"
                   type="password"
