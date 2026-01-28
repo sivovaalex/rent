@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody } from '@/lib/validations';
+import { notifyVerification } from '@/lib/notifications';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         rejectionReason: action === 'reject' ? reason : null,
       },
     });
+
+    // Send notification to user
+    notifyVerification(
+      targetUserId,
+      action === 'approve',
+      reason
+    ).catch((err) => console.error('Failed to send verification notification:', err));
 
     return successResponse({ success: true });
   } catch (error) {

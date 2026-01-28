@@ -6,6 +6,7 @@ const nextConfig = {
   experimental: {
     // Remove if not using Server Components
     serverComponentsExternalPackages: ['mongodb', 'bson'],
+    instrumentationHook: true,
   },
   webpack(config, { dev, isServer }) {
     if (dev) {

@@ -268,6 +268,46 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.ru
 
 В режиме разработки (без SMTP_USER) письма выводятся в консоль.
 
+### Уведомления (Telegram, VK)
+
+Система уведомлений отправляет сообщения о модерации, верификации и бронированиях через Email, Telegram и VK.
+
+**Настройка Telegram бота:**
+```env
+TELEGRAM_BOT_TOKEN=123456789:ABC-DEF...
+TELEGRAM_WEBHOOK_SECRET=random-secret-string
+NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=YourBotName
+```
+
+Установка webhook:
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://your-domain.ru/api/webhooks/telegram&secret_token=<SECRET>"
+```
+
+**Настройка VK бота:**
+```env
+VK_BOT_TOKEN=vk1.a.xxx...
+VK_GROUP_ID=123456789
+VK_CONFIRMATION_CODE=abc123
+VK_SECRET_KEY=random-secret-string
+NEXT_PUBLIC_VK_BOT_URL=https://vk.com/im?sel=-123456789
+```
+
+В настройках сообщества VK:
+1. Управление → Callback API
+2. URL: `https://your-domain.ru/api/webhooks/vk`
+3. Включить событие `message_new`
+
+**API Endpoints уведомлений:**
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/notifications/settings` | Получение настроек уведомлений |
+| PATCH | `/api/notifications/settings` | Обновление настроек |
+| POST | `/api/notifications/link` | Привязка мессенджера по коду |
+| POST | `/api/notifications/unlink` | Отвязка мессенджера |
+| POST | `/api/webhooks/telegram` | Webhook для Telegram бота |
+| POST | `/api/webhooks/vk` | Callback API для VK бота |
+
 ## История изменений
 
 ### Этап 1: Модуляризация API
@@ -292,6 +332,27 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.ru
 - Добавление Vitest + Testing Library
 - Структурированное логирование (Pino)
 - Error Boundary для обработки ошибок
+
+### Этап 6: Правовое соответствие
+- Добавление страниц правовой информации (7 страниц)
+- Чекбоксы согласия при регистрации
+- Ссылки в футере на правовые документы
+
+### Этап 7: Адаптивная вёрстка
+- Исправление модальных окон (max 90% высоты/ширины)
+- Мобильная адаптация всех компонентов (от 320px)
+- Улучшение отзывчивости форм и таблиц
+
+### Этап 8: Сброс пароля
+- Email-сервис через nodemailer
+- API восстановления пароля
+- Страница ввода нового пароля
+
+### Этап 9: Уведомления
+- Система уведомлений (Email, Telegram, VK)
+- Webhooks для ботов мессенджеров
+- UI настроек уведомлений в профиле
+- Интеграция в модерацию, верификацию, бронирования
 
 ## Лицензия
 

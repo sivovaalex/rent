@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Star, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { NotificationSettings } from '@/components/NotificationSettings';
 import type { User, UserRole, AlertType } from '@/types';
 
 interface ProfileProps {
@@ -50,6 +51,7 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Профиль пользователя</CardTitle>
@@ -152,5 +154,11 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
         )}
       </CardContent>
     </Card>
+
+    {/* Настройки уведомлений */}
+    <div className="mt-6">
+      <NotificationSettings />
+    </div>
+  </>
   );
 }

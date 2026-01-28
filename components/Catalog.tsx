@@ -382,49 +382,56 @@ export default function Catalog({
         }}
         item={selectedItem}
         currentUser={currentUser}
-        onSubmit={(itemData) => {
-          if (!currentUser) return;
-          if (selectedItem) {
-            fetch(`/api/items/${selectedItem._id}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-user-id': currentUser._id
-              },
-              body: JSON.stringify(itemData)
-            })
-              .then(res => res.json())
-              .then(data => {
-                if (data.success) {
-                  showAlert('Лот обновлен');
-                  setShowItemModal(false);
-                  setSelectedItem(null);
-                  loadItems();
-                } else {
-                  showAlert(data.error || 'Ошибка обновления лота', 'error');
-                }
-              })
-              .catch(() => showAlert('Ошибка обновления лота', 'error'));
-          } else {
-            fetch('/api/items', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-user-id': currentUser._id
-              },
-              body: JSON.stringify(itemData)
-            })
-              .then(res => res.json())
-              .then(data => {
-                if (data.success) {
-                  showAlert('Лот создан и отправлен на модерацию');
-                  setShowItemModal(false);
-                  loadItems();
-                } else {
-                  showAlert(data.error || 'Ошибка создания лота', 'error');
-                }
-              })
-              .catch(() => showAlert('Ошибка создания лота', 'error'));
+        onSubmit={async (itemData) => {
+          if (!currentUser) return null;
+          try {
+            if (selectedItem) {
+              const res = await fetch(`/api/items/${selectedItem._id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': currentUser._id
+                },
+                body: JSON.stringify(itemData)
+              });
+              const data = await res.json();
+              if (data.success) {
+                showAlert('Лот обновлен');
+                setShowItemModal(false);
+                setSelectedItem(null);
+                loadItems();
+                return null;
+              } else if (data.details && Array.isArray(data.details)) {
+                return data.details;
+              } else {
+                showAlert(data.error || 'Ошибка обновления лота', 'error');
+                return null;
+              }
+            } else {
+              const res = await fetch('/api/items', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': currentUser._id
+                },
+                body: JSON.stringify(itemData)
+              });
+              const data = await res.json();
+              if (data.success) {
+                showAlert('Лот создан и отправлен на модерацию');
+                setShowItemModal(false);
+                loadItems();
+                return null;
+              } else if (data.details && Array.isArray(data.details)) {
+                return data.details;
+              } else {
+                showAlert(data.error || 'Ошибка создания лота', 'error');
+                return null;
+              }
+            }
+          } catch {
+            showAlert('Ошибка сохранения лота', 'error');
+            return null;
           }
         }}
       />
@@ -432,12 +439,17 @@ export default function Catalog({
   );
 }
 
+interface FieldError {
+  field: string;
+  message: string;
+}
+
 interface NewItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: Item | null;
   currentUser: User | null;
-  onSubmit: (itemData: NewItemData) => void;
+  onSubmit: (itemData: NewItemData) => Promise<FieldError[] | null>;
 }
 
 interface PhotoPreview {
@@ -461,8 +473,30 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
 
   const [photoPreviews, setPhotoPreviews] = useState<PhotoPreview[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const getFieldError = (field: string) => fieldErrors[field];
+
+  const handleSubmit = async () => {
+    setFieldErrors({});
+    setSubmitting(true);
+    try {
+      const errors = await onSubmit(newItem);
+      if (errors && errors.length > 0) {
+        const errorsMap: Record<string, string> = {};
+        errors.forEach(err => {
+          errorsMap[err.field] = err.message;
+        });
+        setFieldErrors(errorsMap);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
+    setFieldErrors({});
     if (item) {
       setNewItem({
         category: (item.category as CategoryKey) || 'stream',
@@ -613,7 +647,7 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                   value={newItem.subcategory || ''}
                   onValueChange={(value) => setNewItem({ ...newItem, subcategory: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={getFieldError('subcategory') ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Выберите подкатегорию" />
                   </SelectTrigger>
                   <SelectContent>
@@ -622,6 +656,9 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                     ))}
                   </SelectContent>
                 </Select>
+                {getFieldError('subcategory') && (
+                  <p className="text-red-500 text-sm mt-1">{getFieldError('subcategory')}</p>
+                )}
               </div>
             )}
 
@@ -631,7 +668,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 value={newItem.title}
                 onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
                 placeholder="Например: Микрофон Blue Yeti"
+                className={getFieldError('title') ? 'border-red-500' : ''}
               />
+              {getFieldError('title') && (
+                <p className="text-red-500 text-sm mt-1">{getFieldError('title')}</p>
+              )}
             </div>
 
             <div>
@@ -640,8 +681,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 value={newItem.description}
                 onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                 placeholder="Подробное описание состояния и характеристик"
-                className="w-full p-2 border rounded-md min-h-[100px]"
+                className={`w-full p-2 border rounded-md min-h-[100px] ${getFieldError('description') ? 'border-red-500' : ''}`}
               />
+              {getFieldError('description') && (
+                <p className="text-red-500 text-sm mt-1">{getFieldError('description')}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -651,7 +695,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                   type="number"
                   value={newItem.price_per_day}
                   onChange={(e) => setNewItem({ ...newItem, price_per_day: e.target.value })}
+                  className={getFieldError('price_per_day') ? 'border-red-500' : ''}
                 />
+                {getFieldError('price_per_day') && (
+                  <p className="text-red-500 text-sm mt-1">{getFieldError('price_per_day')}</p>
+                )}
               </div>
               <div>
                 <Label className="text-sm">Цена за месяц (₽)</Label>
@@ -659,7 +707,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                   type="number"
                   value={newItem.price_per_month}
                   onChange={(e) => setNewItem({ ...newItem, price_per_month: e.target.value })}
+                  className={getFieldError('price_per_month') ? 'border-red-500' : ''}
                 />
+                {getFieldError('price_per_month') && (
+                  <p className="text-red-500 text-sm mt-1">{getFieldError('price_per_month')}</p>
+                )}
               </div>
             </div>
 
@@ -669,7 +721,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 type="number"
                 value={newItem.deposit}
                 onChange={(e) => setNewItem({ ...newItem, deposit: e.target.value })}
+                className={getFieldError('deposit') ? 'border-red-500' : ''}
               />
+              {getFieldError('deposit') && (
+                <p className="text-red-500 text-sm mt-1">{getFieldError('deposit')}</p>
+              )}
             </div>
 
             <div>
@@ -678,11 +734,18 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 value={newItem.address}
                 onChange={(e) => setNewItem({ ...newItem, address: e.target.value })}
                 placeholder="Москва, ул. Примерная, д. 1"
+                className={getFieldError('address') ? 'border-red-500' : ''}
               />
+              {getFieldError('address') && (
+                <p className="text-red-500 text-sm mt-1">{getFieldError('address')}</p>
+              )}
             </div>
 
             <div>
               <Label>Фотографии (максимум 5)</Label>
+              {getFieldError('photos') && (
+                <p className="text-red-500 text-sm mt-1">{getFieldError('photos')}</p>
+              )}
               <div className="mt-2">
                 <input
                   type="file"
@@ -715,11 +778,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
           </div>
 
           <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
-            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={onClose} disabled={submitting} className="w-full sm:w-auto">
               Отмена
             </Button>
-            <Button onClick={() => onSubmit(newItem)} disabled={uploading} className="w-full sm:w-auto">
-              {item ? 'Сохранить' : 'Создать'}
+            <Button onClick={handleSubmit} disabled={uploading || submitting} className="w-full sm:w-auto">
+              {submitting ? 'Сохранение...' : (item ? 'Сохранить' : 'Создать')}
             </Button>
           </div>
         </div>

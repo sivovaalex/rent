@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
+import { notifyBookingCompleted } from '@/lib/notifications';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     console.log(`💰 Залог ${booking.deposit} ₽ возвращён арендатору`);
+
+    // Send notification to renter about booking completion
+    notifyBookingCompleted(booking.renterId, {
+      itemTitle: booking.item.title,
+    }).catch((err) => console.error('Failed to send booking completion notification:', err));
 
     return successResponse({ success: true });
   } catch (error) {

@@ -84,7 +84,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     }
   };
 
-  const moderateItem = async (itemId: string, action: 'approve' | 'reject') => {
+  const moderateItem = async (itemId: string, status: 'approved' | 'rejected', rejection_reason?: string) => {
     if (!currentUser) return;
 
     try {
@@ -94,10 +94,10 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
           'Content-Type': 'application/json',
           'x-user-id': currentUser._id
         },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ status, rejection_reason })
       });
       if (res.ok) {
-        showAlert(`Лот ${action === 'approve' ? 'одобрен' : 'отклонён'}`);
+        showAlert(`Лот ${status === 'approved' ? 'одобрен' : 'отклонён'}`);
         loadAdminData();
       }
     } catch {
@@ -267,11 +267,11 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         </div>
                       </div>
                       <div className="flex gap-2 ml-4">
-                        <Button size="sm" onClick={() => moderateItem(item._id, 'approve')}>
+                        <Button size="sm" onClick={() => moderateItem(item._id, 'approved')}>
                           <Package className="w-4 h-4 mr-1" />
                           Одобрить
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => moderateItem(item._id, 'reject')}>
+                        <Button size="sm" variant="destructive" onClick={() => moderateItem(item._id, 'rejected')}>
                           <AlertTriangle className="w-4 h-4 mr-1" />
                           Отклонить
                         </Button>

@@ -5,6 +5,7 @@ import { requireVerified, transformBooking, errorResponse, successResponse } fro
 import { validateBody, createBookingSchema } from '@/lib/validations';
 import { COMMISSION_RATE } from '@/lib/constants';
 import { logError, logBooking } from '@/lib/logger';
+import { notifyNewBooking } from '@/lib/notifications';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -98,6 +99,22 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
+
+    // Get renter name for notification
+    const renter = await prisma.user.findUnique({
+      where: { id: authResult.userId },
+      select: { name: true },
+    });
+
+    // Send notification to item owner about new booking
+    notifyNewBooking(item.ownerId, {
+      itemId: item.id,
+      itemTitle: item.title,
+      renterName: renter?.name || 'Пользователь',
+      startDate: start.toLocaleDateString('ru-RU'),
+      endDate: end.toLocaleDateString('ru-RU'),
+      totalPrice: total,
+    }).catch((err) => console.error('Failed to send new booking notification:', err));
 
     return successResponse({
       success: true,

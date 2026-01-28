@@ -83,6 +83,13 @@ model User {
   verifiedBy          String?            @map("verified_by")
   rejectionReason     String?            @map("rejection_reason")
 
+  // Notification settings
+  notifyEmail         Boolean            @default(true) @map("notify_email")
+  notifyVk            Boolean            @default(false) @map("notify_vk")
+  notifyTelegram      Boolean            @default(false) @map("notify_telegram")
+  vkId                String?            @map("vk_id")
+  telegramChatId      String?            @map("telegram_chat_id")
+
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
 
@@ -230,4 +237,19 @@ model PasswordResetToken {
   @@index([email])
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+model MessengerLinkCode {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  type      String    // "vk" | "telegram"
+  userId    String?   @map("user_id")
+  chatId    String    @map("chat_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  @@index([code])
+  @@index([chatId, type])
+  @@map("messenger_link_codes")
 }
