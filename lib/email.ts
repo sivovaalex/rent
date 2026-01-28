@@ -4,7 +4,16 @@
  */
 
 import nodemailer from 'nodemailer';
-import logger from './logger';
+
+// Simple logger to avoid pino worker thread issues in Next.js dev mode
+const emailLogger = {
+  info: (msg: string | object, msg2?: string) => {
+    const text = typeof msg === 'string' ? msg : msg2 || JSON.stringify(msg);
+    console.log(`[EMAIL] ${text}`);
+  },
+  warn: (msg: string) => console.warn(`[EMAIL WARN] ${msg}`),
+  error: (data: object, msg: string) => console.error(`[EMAIL ERROR] ${msg}`, data),
+};
 
 // Email configuration from environment
 const EMAIL_CONFIG = {
@@ -22,7 +31,7 @@ const EMAIL_CONFIG = {
 const createTransporter = () => {
   // In development, log emails to console instead of sending
   if (process.env.NODE_ENV === 'development' && !process.env.SMTP_USER) {
-    logger.info('Email service running in development mode - emails will be logged to console');
+    emailLogger.info('Email service running in development mode - emails will be logged to console');
     return null;
   }
 
@@ -49,12 +58,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
   // Development mode - just log
   if (process.env.NODE_ENV === 'development' && !process.env.SMTP_USER) {
-    logger.info('=== EMAIL (Development Mode) ===');
-    logger.info(`To: ${to}`);
-    logger.info(`Subject: ${subject}`);
-    logger.info(`Text: ${text || '(no text)'}`);
-    logger.info(`HTML: ${html ? '(html content)' : '(no html)'}`);
-    logger.info('================================');
+    emailLogger.info('=== EMAIL (Development Mode) ===');
+    emailLogger.info(`To: ${to}`);
+    emailLogger.info(`Subject: ${subject}`);
+    emailLogger.info(`Text: ${text || '(no text)'}`);
+    emailLogger.info(`HTML: ${html ? '(html content)' : '(no html)'}`);
+    emailLogger.info('================================');
     console.log('\n📧 EMAIL (Development Mode):');
     console.log(`   To: ${to}`);
     console.log(`   Subject: ${subject}`);
@@ -66,7 +75,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
     const transporter = createTransporter();
     if (!transporter) {
-      logger.warn('Email transporter not configured');
+      emailLogger.warn('Email transporter not configured');
       return false;
     }
 
@@ -78,10 +87,10 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       html,
     });
 
-    logger.info({ messageId: info.messageId, to, subject }, 'Email sent successfully');
+    emailLogger.info({ messageId: info.messageId, to, subject }, 'Email sent successfully');
     return true;
   } catch (error) {
-    logger.error({ error, to, subject }, 'Failed to send email');
+    emailLogger.error({ error, to, subject }, 'Failed to send email');
     return false;
   }
 }
