@@ -3,6 +3,7 @@ import pino from 'pino';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Configure pino logger
+// Note: pino-pretty transport disabled due to worker thread issues in Next.js dev mode
 const logger = pino({
   level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
 
@@ -25,17 +26,10 @@ const logger = pino({
     censor: '[REDACTED]',
   },
 
-  // Formatting for development
-  ...(isDevelopment && {
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'HH:MM:ss',
-        ignore: 'pid,hostname',
-      },
-    },
-  }),
+  // Browser-safe config for Next.js (avoids worker threads)
+  browser: {
+    asObject: true,
+  },
 });
 
 // Create child loggers for different modules

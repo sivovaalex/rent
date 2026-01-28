@@ -188,6 +188,8 @@ rent/
 | PUT | `/api/auth` | Верификация SMS и регистрация |
 | PATCH | `/api/auth` | Вход по email/password |
 | GET | `/api/auth/me` | Текущий пользователь |
+| POST | `/api/auth/forgot-password` | Запрос сброса пароля |
+| POST | `/api/auth/reset-password` | Установка нового пароля |
 | GET | `/api/items` | Список лотов |
 | POST | `/api/items` | Создание лота |
 | GET | `/api/items/[id]` | Детали лота |
@@ -236,6 +238,35 @@ logAuth('login', true, { userId: user.id });
 // Логирование бронирований
 logBooking('create', booking.id, { itemId, totalPrice });
 ```
+
+**Куда идут логи:**
+
+| Окружение | Назначение | Уровень |
+|-----------|------------|---------|
+| Development | `console` (stdout терминала) | debug |
+| Production | `stdout` (доступно через логи хостинга: Vercel, Railway и т.д.) | info |
+
+Уровень логирования можно изменить через переменную окружения `LOG_LEVEL` (debug, info, warn, error).
+
+### Email (SMTP)
+
+Для отправки email (восстановление пароля, уведомления) настройте SMTP:
+
+```env
+SMTP_HOST=smtp.mail.ru
+SMTP_PORT=465
+SMTP_USER=your@email.ru
+SMTP_PASSWORD=your-password
+SMTP_FROM=your@email.ru
+NEXT_PUBLIC_BASE_URL=https://your-domain.ru
+```
+
+**Поддерживаемые провайдеры:**
+- Mail.ru / Internet.ru — `smtp.mail.ru:465`
+- Yandex — `smtp.yandex.ru:465`
+- Gmail — `smtp.gmail.com:587` (требуется App Password)
+
+В режиме разработки (без SMTP_USER) письма выводятся в консоль.
 
 ## История изменений
 
