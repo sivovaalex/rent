@@ -49,6 +49,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const [adminSubTab, setAdminSubTab] = useState('stats');
   const [showAdminUserModal, setShowAdminUserModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
+  const [moderatingItemId, setModeratingItemId] = useState<string | null>(null);
   const [newAdminUser, setNewAdminUser] = useState<NewAdminUser>({
     name: '',
     phone: '',
@@ -64,8 +66,9 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   }, [currentUser, loadAdminData]);
 
   const verifyUser = async (userId: string, action: 'approve' | 'reject') => {
-    if (!currentUser) return;
+    if (!currentUser || verifyingUserId) return;
 
+    setVerifyingUserId(userId);
     try {
       const res = await fetch(`/api/admin/users/${userId}/verify`, {
         method: 'POST',
@@ -78,15 +81,20 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
       if (res.ok) {
         showAlert(`Пользователь ${action === 'approve' ? 'верифицирован' : 'отклонён'}`);
         loadAdminData();
+      } else {
+        showAlert('Ошибка модерации', 'error');
       }
     } catch {
       showAlert('Ошибка модерации', 'error');
+    } finally {
+      setVerifyingUserId(null);
     }
   };
 
   const moderateItem = async (itemId: string, status: 'approved' | 'rejected', rejection_reason?: string) => {
-    if (!currentUser) return;
+    if (!currentUser || moderatingItemId) return;
 
+    setModeratingItemId(itemId);
     try {
       const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
         method: 'POST',
@@ -99,9 +107,13 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
       if (res.ok) {
         showAlert(`Лот ${status === 'approved' ? 'одобрен' : 'отклонён'}`);
         loadAdminData();
+      } else {
+        showAlert('Ошибка модерации', 'error');
       }
     } catch {
       showAlert('Ошибка модерации', 'error');
+    } finally {
+      setModeratingItemId(null);
     }
   };
 
@@ -214,6 +226,11 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
         </TabsContent>
 
         <TabsContent value="verification">
+          {isLoading ? (
+            <div className="py-12">
+              <Loader size="lg" text="Загрузка данных..." />
+            </div>
+          ) : (
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -231,12 +248,29 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => verifyUser(user._id, 'approve')}>
-                          <UserCheck className="w-4 h-4 mr-1" />
+                        <Button
+                          size="sm"
+                          onClick={() => verifyUser(user._id, 'approve')}
+                          disabled={verifyingUserId === user._id}
+                        >
+                          {verifyingUserId === user._id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <UserCheck className="w-4 h-4 mr-1" />
+                          )}
                           Одобрить
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => verifyUser(user._id, 'reject')}>
-                          <UserX className="w-4 h-4 mr-1" />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => verifyUser(user._id, 'reject')}
+                          disabled={verifyingUserId === user._id}
+                        >
+                          {verifyingUserId === user._id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <UserX className="w-4 h-4 mr-1" />
+                          )}
                           Отклонить
                         </Button>
                       </div>
@@ -267,12 +301,29 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         </div>
                       </div>
                       <div className="flex gap-2 ml-4">
-                        <Button size="sm" onClick={() => moderateItem(item._id, 'approved')}>
-                          <Package className="w-4 h-4 mr-1" />
+                        <Button
+                          size="sm"
+                          onClick={() => moderateItem(item._id, 'approved')}
+                          disabled={moderatingItemId === item._id}
+                        >
+                          {moderatingItemId === item._id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Package className="w-4 h-4 mr-1" />
+                          )}
                           Одобрить
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => moderateItem(item._id, 'rejected')}>
-                          <AlertTriangle className="w-4 h-4 mr-1" />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => moderateItem(item._id, 'rejected')}
+                          disabled={moderatingItemId === item._id}
+                        >
+                          {moderatingItemId === item._id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 mr-1" />
+                          )}
                           Отклонить
                         </Button>
                       </div>
@@ -285,6 +336,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         {currentUser?.role === 'admin' && (
