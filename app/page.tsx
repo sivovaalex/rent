@@ -6,11 +6,12 @@ import Catalog from '@/components/Catalog';
 import Profile from '@/components/Profile';
 import BookingsTab from '@/components/BookingsTab';
 import ChatTab from '@/components/ChatTab';
+import AnalyticsTab from '@/components/AnalyticsTab';
 import AdminTab from '@/components/AdminTab';
 import HomePage from '@/components/HomePage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
-import { CheckCircle, AlertCircle, Package, Calendar, Settings, BarChart, MessageCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Package, Calendar, Settings, BarChart, BarChart3, MessageCircle } from 'lucide-react';
 import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat, useFavorites } from '@/hooks';
 
 export default function App() {
@@ -187,7 +188,12 @@ export default function App() {
           <HomePage onOpenAuth={openAuth} />
         ) : (
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 md:grid-cols-5">
+            <TabsList className={`grid w-full ${
+              (currentUser?.role === 'admin') ? 'grid-cols-4 md:grid-cols-6' :
+              (currentUser?.role === 'moderator') ? 'grid-cols-4 md:grid-cols-5' :
+              (currentUser?.role === 'owner') ? 'grid-cols-4 md:grid-cols-5' :
+              'grid-cols-4'
+            }`}>
               <TabsTrigger value="catalog">
                 <Package className="w-4 h-4 mr-2" />
                 Каталог
@@ -205,6 +211,12 @@ export default function App() {
                   </span>
                 )}
               </TabsTrigger>
+              {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
+                <TabsTrigger value="analytics">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Аналитика
+                </TabsTrigger>
+              )}
               <TabsTrigger value="profile">
                 <Settings className="w-4 h-4 mr-2" />
                 Профиль
@@ -296,6 +308,14 @@ export default function App() {
                 </div>
               )}
             </TabsContent>
+
+            {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
+              <TabsContent value="analytics">
+                {currentUser && (
+                  <AnalyticsTab currentUser={currentUser} showAlert={showAlert} />
+                )}
+              </TabsContent>
+            )}
 
             <TabsContent value="profile">
               {currentUser ? (
