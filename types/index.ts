@@ -40,6 +40,13 @@ export interface User {
   isBlocked?: boolean;
   photo?: string;
   createdAt: Date | string;
+  // Trust metrics
+  trustScore?: number;
+  completedDeals?: number;
+  cancelledDeals?: number;
+  confirmationRate?: number;
+  avgResponseMinutes?: number | null;
+  trustBadges?: string[];
   // Legacy snake_case aliases (deprecated, use camelCase)
   is_verified?: boolean;
   verification_status?: VerificationStatus;
@@ -54,6 +61,8 @@ export interface Item {
   ownerName?: string;
   ownerRating?: number;
   ownerPhone?: string;
+  ownerTrustBadges?: string[];
+  ownerTrustScore?: number;
   category: Category;
   subcategory?: string;
   title: string;

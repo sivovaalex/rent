@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       take: 50,
       include: {
         owner: {
-          select: { id: true, name: true, rating: true, phone: true },
+          select: { id: true, name: true, rating: true, phone: true, trustBadges: true, trustScore: true },
         },
       },
     });

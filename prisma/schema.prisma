@@ -83,6 +83,15 @@ model User {
   verifiedBy          String?            @map("verified_by")
   rejectionReason     String?            @map("rejection_reason")
 
+  // Trust metrics (cached, recalculated on events)
+  trustScore          Float              @default(0) @map("trust_score")
+  completedDeals      Int                @default(0) @map("completed_deals")
+  cancelledDeals      Int                @default(0) @map("cancelled_deals")
+  confirmationRate    Float              @default(0) @map("confirmation_rate")
+  avgResponseMinutes  Float?             @map("avg_response_minutes")
+  trustBadges         String[]           @default([]) @map("trust_badges")
+  trustUpdatedAt      DateTime?          @map("trust_updated_at")
+
   // Notification settings
   notifyEmail         Boolean            @default(true) @map("notify_email")
   notifyVk            Boolean            @default(false) @map("notify_vk")

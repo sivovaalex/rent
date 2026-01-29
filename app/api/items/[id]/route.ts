@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       where: { id },
       include: {
         owner: {
-          select: { id: true, name: true, rating: true, phone: true, createdAt: true },
+          select: { id: true, name: true, rating: true, phone: true, createdAt: true, trustBadges: true, trustScore: true },
         },
         reviews: {
           orderBy: { createdAt: 'desc' },

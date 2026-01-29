@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart } from 'lucide-react';
 import ReviewList from './ReviewList';
+import TrustBadges from './TrustBadges';
 import { Loader } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
@@ -212,6 +213,11 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
                         <span className="text-sm">{(item.ownerRating ?? item.owner_rating)?.toFixed(1) || '5.0'}</span>
                       </div>
+                      {item.ownerTrustBadges && item.ownerTrustBadges.length > 0 && (
+                        <div className="mt-2">
+                          <TrustBadges badges={item.ownerTrustBadges} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

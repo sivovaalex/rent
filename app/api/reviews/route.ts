@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, createReviewSchema } from '@/lib/validations';
+import { recalculateTrust } from '@/lib/trust';
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,6 +86,8 @@ export async function POST(request: NextRequest) {
           }),
         ]);
       }
+      // Recalculate trust after rating update
+      recalculateTrust(item.ownerId).catch(console.error);
     } catch (ratingError) {
       console.error('Ошибка обновления рейтинга:', ratingError);
     }

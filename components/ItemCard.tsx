@@ -5,6 +5,7 @@ import { Star, Eye, EyeOff, Heart } from 'lucide-react';
 import type { Item, User, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
 import { withCommission, formatPrice } from '@/lib/constants';
+import TrustBadges from './TrustBadges';
 
 interface ItemCardProps {
   item: Item;
@@ -110,8 +111,11 @@ export default function ItemCard({
             <span className="text-gray-600">Залог:</span>
             <span className="font-medium">{item.deposit} ₽</span>
           </div>
-          <div className="text-xs text-gray-500 mt-2">
-            Владелец: {item.owner_name}
+          <div className="text-xs text-gray-500 mt-2 space-y-1">
+            <div>Владелец: {item.owner_name}</div>
+            {item.ownerTrustBadges && item.ownerTrustBadges.length > 0 && (
+              <TrustBadges badges={item.ownerTrustBadges} compact />
+            )}
           </div>
         </div>
       </CardContent>

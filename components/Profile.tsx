@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Star, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import TrustBadges, { TrustScore } from './TrustBadges';
 import type { User, UserRole, AlertType } from '@/types';
 
 interface ProfileProps {
@@ -112,6 +113,24 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
             <div className="flex items-center gap-2 mt-1">
               <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
               <span className="text-2xl font-bold">{currentUser?.rating?.toFixed(2) || '5.00'}</span>
+            </div>
+          </div>
+
+          <div>
+            <Label>Индекс доверия</Label>
+            <div className="mt-1 space-y-2">
+              <TrustScore score={currentUser?.trustScore} size="md" />
+              <TrustBadges badges={currentUser?.trustBadges} />
+              <div className="text-xs text-gray-500 space-y-0.5">
+                <p>Успешных сделок: {currentUser?.completedDeals ?? 0}</p>
+                <p>Подтверждение: {currentUser?.confirmationRate ?? 0}%</p>
+                {currentUser?.avgResponseMinutes != null && (
+                  <p>Ср. время ответа: {currentUser.avgResponseMinutes < 60
+                    ? `${Math.round(currentUser.avgResponseMinutes)} мин`
+                    : `${Math.round(currentUser.avgResponseMinutes / 60)} ч`
+                  }</p>
+                )}
+              </div>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
 import { notifyBookingCompleted } from '@/lib/notifications';
+import { recalculateTrust } from '@/lib/trust';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -42,6 +43,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     console.log(`💰 Залог ${booking.deposit} ₽ возвращён арендатору`);
+
+    // Recalculate trust for both owner and renter
+    recalculateTrust(booking.item.ownerId).catch(console.error);
+    recalculateTrust(booking.renterId).catch(console.error);
 
     // Send notification to renter about booking completion
     notifyBookingCompleted(booking.renterId, {

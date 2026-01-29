@@ -131,6 +131,8 @@ interface PartialOwner {
   email?: string | null;
   rating?: number;
   createdAt?: Date;
+  trustBadges?: string[];
+  trustScore?: number;
 }
 
 /** Transform user for response (remove sensitive data) */
@@ -148,6 +150,13 @@ export function safeUser(user: User): ClientUser {
     isVerified: user.isVerified,
     verificationStatus: user.verificationStatus,
     isBlocked: user.isBlocked,
+    // Trust metrics
+    trustScore: user.trustScore,
+    completedDeals: user.completedDeals,
+    cancelledDeals: user.cancelledDeals,
+    confirmationRate: user.confirmationRate,
+    avgResponseMinutes: user.avgResponseMinutes,
+    trustBadges: user.trustBadges,
     // snake_case (legacy, deprecated)
     is_verified: user.isVerified,
     verification_status: user.verificationStatus,
@@ -179,6 +188,8 @@ export function transformItem(item: ItemWithOwner): ClientItem {
     ownerName: item.owner?.name,
     ownerRating: item.owner?.rating,
     ownerPhone: item.owner?.phone,
+    ownerTrustBadges: item.owner?.trustBadges,
+    ownerTrustScore: item.owner?.trustScore,
     pricePerDay: item.pricePerDay,
     pricePerMonth: item.pricePerMonth,
     // snake_case (legacy, deprecated)
