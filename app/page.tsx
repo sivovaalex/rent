@@ -15,12 +15,26 @@ import { CheckCircle, AlertCircle, Package, Calendar, Settings, BarChart, BarCha
 import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat, useFavorites } from '@/hooks';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState('catalog');
+  const VALID_TABS = ['catalog', 'bookings', 'chat', 'analytics', 'profile', 'admin'];
+
+  const [currentTab, setCurrentTabState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (VALID_TABS.includes(hash)) return hash;
+    }
+    return 'catalog';
+  });
   const [currentPage, setCurrentPage] = useState<'home' | 'app'>('home');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [chatInitialBookingId, setChatInitialBookingId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Sync tab ↔ hash
+  const setCurrentTab = (tab: string) => {
+    setCurrentTabState(tab);
+    window.location.hash = tab;
+  };
 
   // Custom hooks
   const { alert, showAlert } = useAlert();
@@ -90,6 +104,19 @@ export default function App() {
   } = useChat({ currentUserId: currentUser?._id, onShowAlert: showAlert });
 
   const { favoriteIds, isFavorite, toggleFavorite } = useFavorites({ currentUserId: currentUser?._id });
+
+  // Sync tab ↔ hash
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (VALID_TABS.includes(hash)) {
+        setCurrentTabState(hash);
+        if (currentPage === 'home' && currentUser) setCurrentPage('app');
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [currentPage, currentUser]);
 
   // Загрузка непрочитанных при входе
   useEffect(() => {

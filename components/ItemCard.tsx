@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, Eye, EyeOff, Heart } from 'lucide-react';
+import { Star, Eye, EyeOff, Heart, Link2 } from 'lucide-react';
 import type { Item, User, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
 import { withCommission, formatPrice } from '@/lib/constants';
@@ -78,18 +78,31 @@ export default function ItemCard({
               <span className="text-gray-400">Нет фото</span>
             </div>
           )}
-          {onToggleFavorite && currentUser && (
+          <div className="absolute top-2 right-2 flex gap-1">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onToggleFavorite();
+                navigator.clipboard.writeText(`${window.location.origin}/item/${item._id}`);
               }}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 hover:bg-white shadow transition-colors"
-              aria-label={isFavorite ? 'Убрать из избранного' : 'В избранное'}
+              className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow transition-colors"
+              aria-label="Скопировать ссылку"
+              title="Скопировать ссылку"
             >
-              <Heart className={`w-5 h-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-400'}`} />
+              <Link2 className="w-4 h-4 text-gray-400 hover:text-indigo-500" />
             </button>
-          )}
+            {onToggleFavorite && currentUser && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite();
+                }}
+                className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow transition-colors"
+                aria-label={isFavorite ? 'Убрать из избранного' : 'В избранное'}
+              >
+                <Heart className={`w-5 h-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-400'}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>

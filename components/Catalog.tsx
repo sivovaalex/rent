@@ -98,9 +98,45 @@ export default function Catalog({
   favoriteIds,
 }: CatalogProps) {
   const [showItemModal, setShowItemModal] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [showItemDetailModal, setShowItemDetailModal] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.startsWith('#item/')) return hash.replace('#item/', '');
+    }
+    return null;
+  });
+  const [showItemDetailModal, setShowItemDetailModal] = useState(() => {
+    if (typeof window !== 'undefined') return window.location.hash.startsWith('#item/');
+    return false;
+  });
   const [attributeFilters, setAttributeFilters] = useState<Record<string, string>>({});
+
+  // Sync item modal ↔ hash
+  const openItemDetail = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setShowItemDetailModal(true);
+    window.location.hash = `item/${itemId}`;
+  };
+
+  const closeItemDetail = () => {
+    setShowItemDetailModal(false);
+    window.location.hash = 'catalog';
+  };
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#item/')) {
+        const id = hash.replace('#item/', '');
+        setSelectedItemId(id);
+        setShowItemDetailModal(true);
+      } else if (showItemDetailModal) {
+        setShowItemDetailModal(false);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [showItemDetailModal]);
 
   const categorySubcategories: Record<CategoryKey, string[]> = {
     stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
@@ -399,10 +435,7 @@ export default function Catalog({
               }}
               isFavorite={isFavorite?.(item._id)}
               onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(item._id) : undefined}
-              onViewDetails={() => {
-                setSelectedItemId(item._id);
-                setShowItemDetailModal(true);
-              }}
+              onViewDetails={() => openItemDetail(item._id)}
               onBook={() => {
                 if (!currentUser?.is_verified) {
                   showAlert('Требуется верификация', 'error');
@@ -435,7 +468,7 @@ export default function Catalog({
 
       <ItemDetailModal
         isOpen={showItemDetailModal}
-        onClose={() => setShowItemDetailModal(false)}
+        onClose={closeItemDetail}
         itemId={selectedItemId}
         currentUser={currentUser}
         isFavorite={selectedItemId ? isFavorite?.(selectedItemId) : false}
