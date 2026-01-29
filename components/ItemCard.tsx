@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, Eye, EyeOff } from 'lucide-react';
+import { Star, Eye, EyeOff, Heart } from 'lucide-react';
 import type { Item, User, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
 import { withCommission, formatPrice } from '@/lib/constants';
@@ -18,6 +18,8 @@ interface ItemCardProps {
   onUnpublish: () => void;
   onViewDetails: () => void;
   onBook: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export default function ItemCard({
@@ -31,7 +33,9 @@ export default function ItemCard({
   onPublish,
   onUnpublish,
   onViewDetails,
-  onBook
+  onBook,
+  isFavorite = false,
+  onToggleFavorite,
 }: ItemCardProps) {
   const isOwner = currentUser?.role === 'owner' && item.owner_id === currentUser._id;
   const isAdminOrModerator = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
@@ -59,19 +63,33 @@ export default function ItemCard({
         </div>
       </CardHeader>
       <CardContent>
-        {item.photos && item.photos.length > 0 ? (
-          <div className="mb-4 h-48 overflow-hidden rounded-lg">
-            <img
-              src={item.photos[0]}
-              alt={item.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="mb-4 h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-            <span className="text-gray-400">Нет фото</span>
-          </div>
-        )}
+        <div className="relative mb-4">
+          {item.photos && item.photos.length > 0 ? (
+            <div className="h-48 overflow-hidden rounded-lg">
+              <img
+                src={item.photos[0]}
+                alt={item.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+              <span className="text-gray-400">Нет фото</span>
+            </div>
+          )}
+          {onToggleFavorite && currentUser && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
+              className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 hover:bg-white shadow transition-colors"
+              aria-label={isFavorite ? 'Убрать из избранного' : 'В избранное'}
+            >
+              <Heart className={`w-5 h-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-400'}`} />
+            </button>
+          )}
+        </div>
 
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
 

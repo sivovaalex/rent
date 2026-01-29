@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer } from 'lucide-react';
+import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart } from 'lucide-react';
 import ItemCard from './ItemCard';
 import ItemDetailModal from './ItemDetailModal';
 import BookingModal from './BookingModal';
@@ -43,6 +43,11 @@ interface CatalogProps {
   setBookingForm: React.Dispatch<React.SetStateAction<BookingForm>>;
   bookItem: () => Promise<void>;
   loadBlockedBookingDates: (itemId: string) => Promise<void>;
+  isFavorite?: (itemId: string) => boolean;
+  onToggleFavorite?: (itemId: string) => void;
+  showFavoritesOnly?: boolean;
+  setShowFavoritesOnly?: (show: boolean) => void;
+  favoriteIds?: Set<string>;
 }
 
 interface NewItemData {
@@ -84,7 +89,12 @@ export default function Catalog({
   showBookingModal,
   bookingForm,
   setBookingForm,
-  bookItem
+  bookItem,
+  isFavorite,
+  onToggleFavorite,
+  showFavoritesOnly = false,
+  setShowFavoritesOnly,
+  favoriteIds,
 }: CatalogProps) {
   const [showItemModal, setShowItemModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -236,6 +246,19 @@ export default function Catalog({
             </Select>
           )}
           <Button onClick={loadItems} className="col-span-2 sm:col-span-1 text-sm">Поиск</Button>
+          {currentUser && setShowFavoritesOnly && (
+            <Button
+              variant={showFavoritesOnly ? 'default' : 'outline'}
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className="col-span-2 sm:col-span-1 text-sm"
+            >
+              <Heart className={`w-4 h-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+              Избранное
+              {favoriteIds && favoriteIds.size > 0 && (
+                <span className="ml-1 text-xs">({favoriteIds.size})</span>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -252,7 +275,7 @@ export default function Catalog({
             <SkeletonCard key={i} />
           ))
         ) : (
-          items.map((item) => (
+          (showFavoritesOnly && favoriteIds ? items.filter(item => favoriteIds.has(item._id)) : items).map((item) => (
             <ItemCard
               key={item._id}
               item={item}
@@ -310,6 +333,8 @@ export default function Catalog({
                   showAlert('Ошибка снятия с публикации', 'error');
                 }
               }}
+              isFavorite={isFavorite?.(item._id)}
+              onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(item._id) : undefined}
               onViewDetails={() => {
                 setSelectedItemId(item._id);
                 setShowItemDetailModal(true);
@@ -349,6 +374,8 @@ export default function Catalog({
         onClose={() => setShowItemDetailModal(false)}
         itemId={selectedItemId}
         currentUser={currentUser}
+        isFavorite={selectedItemId ? isFavorite?.(selectedItemId) : false}
+        onToggleFavorite={selectedItemId && onToggleFavorite ? () => onToggleFavorite(selectedItemId) : undefined}
         onBook={(item) => {
           setSelectedItem(item);
           setShowBookingModal(true);

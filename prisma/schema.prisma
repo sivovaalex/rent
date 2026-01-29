@@ -99,6 +99,7 @@ model User {
   reviews             Review[]
   reviewReplies       ReviewReply[]
   sentMessages        Message[]          @relation("SentMessages")
+  favorites           Favorite[]
 
   @@map("users")
 }
@@ -131,6 +132,7 @@ model Item {
   owner           User        @relation("OwnerItems", fields: [ownerId], references: [id], onDelete: Cascade)
   bookings        Booking[]
   reviews         Review[]
+  favorites       Favorite[]
 
   @@index([ownerId])
   @@index([category])
@@ -254,6 +256,20 @@ model MessengerLinkCode {
   @@index([code])
   @@index([chatId, type])
   @@map("messenger_link_codes")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  itemId    String   @map("item_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@map("favorites")
 }
 
 model Message {

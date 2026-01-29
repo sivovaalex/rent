@@ -11,7 +11,7 @@ import HomePage from '@/components/HomePage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, Package, Calendar, Settings, BarChart, MessageCircle } from 'lucide-react';
-import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat } from '@/hooks';
+import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat, useFavorites } from '@/hooks';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('catalog');
@@ -19,6 +19,7 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [chatInitialBookingId, setChatInitialBookingId] = useState<string | null>(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Custom hooks
   const { alert, showAlert } = useAlert();
@@ -86,6 +87,8 @@ export default function App() {
     sendMessage,
     loadUnreadCount,
   } = useChat({ currentUserId: currentUser?._id, onShowAlert: showAlert });
+
+  const { favoriteIds, isFavorite, toggleFavorite } = useFavorites({ currentUserId: currentUser?._id });
 
   // Загрузка непрочитанных при входе
   useEffect(() => {
@@ -243,6 +246,11 @@ export default function App() {
                 setBookingForm={setBookingForm}
                 bookItem={onBookItem}
                 loadBlockedBookingDates={loadBlockedBookingDates}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
+                showFavoritesOnly={showFavoritesOnly}
+                setShowFavoritesOnly={setShowFavoritesOnly}
+                favoriteIds={favoriteIds}
               />
             </TabsContent>
 

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer } from 'lucide-react';
+import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart } from 'lucide-react';
 import ReviewList from './ReviewList';
 import { Loader } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category } from '@/types';
@@ -15,9 +15,11 @@ interface ItemDetailModalProps {
   itemId: string | null;
   currentUser: User | null;
   onBook: (item: Item) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
-export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, onBook }: ItemDetailModalProps) {
+export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, onBook, isFavorite = false, onToggleFavorite }: ItemDetailModalProps) {
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,18 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-[calc(100%-1rem)] sm:w-full">
         <DialogHeader>
-          <DialogTitle className="pr-6 text-base sm:text-lg">{item?.title || 'Загрузка...'}</DialogTitle>
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="text-base sm:text-lg">{item?.title || 'Загрузка...'}</DialogTitle>
+            {item && onToggleFavorite && currentUser && (
+              <button
+                onClick={onToggleFavorite}
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label={isFavorite ? 'Убрать из избранного' : 'В избранное'}
+              >
+                <Heart className={`w-5 h-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-400'}`} />
+              </button>
+            )}
+          </div>
           <DialogDescription>
             {item && (
               <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
