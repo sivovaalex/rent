@@ -1,7 +1,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, User, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Package, User, CheckCircle, ArrowLeft, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { User as UserType } from '@/types';
 
@@ -11,6 +11,8 @@ interface HeaderProps {
   onOpenAuth: (mode?: string) => void;
   showBackButton?: boolean;
   onBack?: () => void;
+  unreadMessages?: number;
+  onOpenChat?: () => void;
 }
 
 export default function Header({
@@ -18,7 +20,9 @@ export default function Header({
   onLogout,
   onOpenAuth,
   showBackButton = false,
-  onBack
+  onBack,
+  unreadMessages = 0,
+  onOpenChat,
 }: HeaderProps) {
   const router = useRouter();
 
@@ -63,6 +67,20 @@ export default function Header({
                   </div>
                 </div>
               </div>
+              {onOpenChat && (
+                <button
+                  onClick={onOpenChat}
+                  className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Сообщения"
+                >
+                  <MessageCircle className="w-5 h-5 text-gray-600" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
+                </button>
+              )}
               <Button variant="outline" size="sm" onClick={onLogout}>
                 Выйти
               </Button>

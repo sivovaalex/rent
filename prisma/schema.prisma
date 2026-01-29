@@ -98,6 +98,7 @@ model User {
   bookingsAsRenter    Booking[]          @relation("RenterBookings")
   reviews             Review[]
   reviewReplies       ReviewReply[]
+  sentMessages        Message[]          @relation("SentMessages")
 
   @@map("users")
 }
@@ -171,6 +172,7 @@ model Booking {
   item          Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
   renter        User          @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
   review        Review?
+  messages      Message[]
 
   @@index([itemId])
   @@index([renterId])
@@ -252,4 +254,20 @@ model MessengerLinkCode {
   @@index([code])
   @@index([chatId, type])
   @@map("messenger_link_codes")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  bookingId String   @map("booking_id")
+  senderId  String   @map("sender_id")
+  text      String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@index([senderId])
+  @@map("messages")
 }

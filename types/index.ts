@@ -164,6 +164,35 @@ export interface ReviewReply {
   owner_id?: string;
 }
 
+// ==================== CHAT TYPES ====================
+
+export interface ChatMessage {
+  _id: string;
+  bookingId: string;
+  senderId: string;
+  senderName?: string;
+  text: string;
+  isRead: boolean;
+  createdAt: Date | string;
+}
+
+export interface ChatConversation {
+  bookingId: string;
+  itemTitle: string;
+  itemPhoto?: string;
+  otherUser: {
+    _id: string;
+    name: string;
+    photo?: string;
+  };
+  lastMessage?: {
+    text: string;
+    createdAt: Date | string;
+    senderId: string;
+  };
+  unreadCount: number;
+}
+
 // ==================== UI TYPES ====================
 
 export type AlertType = 'success' | 'error';

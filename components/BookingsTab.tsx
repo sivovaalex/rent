@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Star } from 'lucide-react';
+import { Calendar, Star, MessageCircle } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import { SkeletonList } from '@/components/ui/spinner';
 import type { User, Booking, AlertType } from '@/types';
@@ -15,9 +15,10 @@ interface BookingsTabProps {
   loadBookings: () => Promise<void>;
   bookings: Booking[];
   isLoading?: boolean;
+  onOpenChat?: (bookingId: string) => void;
 }
 
-export default function BookingsTab({ currentUser, showAlert, loadBookings, bookings, isLoading }: BookingsTabProps) {
+export default function BookingsTab({ currentUser, showAlert, loadBookings, bookings, isLoading, onOpenChat }: BookingsTabProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
@@ -150,6 +151,12 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                 </div>
               </CardContent>
               <CardFooter className="flex gap-2">
+                {booking.status !== 'cancelled' && onOpenChat && (
+                  <Button variant="outline" onClick={() => onOpenChat(booking._id)} className="flex items-center gap-1">
+                    <MessageCircle className="w-4 h-4" />
+                    Чат
+                  </Button>
+                )}
                 {(booking.status === 'active' || booking.status === 'paid') && ownerId === currentUser?._id && (
                   <Button onClick={() => confirmReturn(booking._id)} className="flex-1">
                     Подтвердить возврат
