@@ -12,6 +12,7 @@ import ItemDetailModal from './ItemDetailModal';
 import BookingModal from './BookingModal';
 import { SkeletonCard } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category, BookingForm, AlertType } from '@/types';
+import { getCategoryAttributes } from '@/lib/constants';
 
 type CategoryKey = 'stream' | 'electronics' | 'clothing' | 'sports' | 'tools';
 
@@ -99,6 +100,7 @@ export default function Catalog({
   const [showItemModal, setShowItemModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [showItemDetailModal, setShowItemDetailModal] = useState(false);
+  const [attributeFilters, setAttributeFilters] = useState<Record<string, string>>({});
 
   const categorySubcategories: Record<CategoryKey, string[]> = {
     stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
@@ -183,6 +185,7 @@ export default function Catalog({
           <Select value={categoryFilter} onValueChange={(value) => {
             setCategoryFilter(value);
             setSubCategoryFilter('all');
+            setAttributeFilters({});
           }}>
             <SelectTrigger className="w-full sm:w-[180px] text-xs sm:text-sm">
               <SelectValue />
@@ -259,8 +262,61 @@ export default function Catalog({
               )}
             </Button>
           )}
+          {(searchQuery || categoryFilter !== 'all' || showFavoritesOnly || Object.keys(attributeFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="col-span-2 sm:col-span-1 text-sm text-red-500 hover:text-red-600"
+              onClick={() => {
+                setSearchQuery('');
+                setCategoryFilter('all');
+                setSubCategoryFilter('all');
+                setAttributeFilters({});
+                if (setShowFavoritesOnly) setShowFavoritesOnly(false);
+              }}
+            >
+              Сбросить все фильтры
+            </Button>
+          )}
         </div>
       </div>
+
+      {categoryFilter !== 'all' && getCategoryAttributes(categoryFilter).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {getCategoryAttributes(categoryFilter).filter(attr => attr.type === 'select').map((attr) => (
+            <Select
+              key={attr.key}
+              value={attributeFilters[attr.key] || 'all'}
+              onValueChange={(value) => {
+                setAttributeFilters(prev => {
+                  const next = { ...prev };
+                  if (value === 'all') {
+                    delete next[attr.key];
+                  } else {
+                    next[attr.key] = value;
+                  }
+                  return next;
+                });
+              }}
+            >
+              <SelectTrigger className="w-[150px] text-xs sm:text-sm">
+                <SelectValue placeholder={attr.label} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все: {attr.label}</SelectItem>
+                {attr.options?.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ))}
+          {Object.keys(attributeFilters).length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setAttributeFilters({})}>
+              Сбросить фильтры
+            </Button>
+          )}
+        </div>
+      )}
 
       {currentUser?.is_verified && (currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
         <Button onClick={() => setShowItemModal(true)} className="w-full lg:w-auto">
@@ -275,7 +331,15 @@ export default function Catalog({
             <SkeletonCard key={i} />
           ))
         ) : (
-          (showFavoritesOnly && favoriteIds ? items.filter(item => favoriteIds.has(item._id)) : items).map((item) => (
+          (showFavoritesOnly && favoriteIds ? items.filter(item => favoriteIds.has(item._id)) : items)
+          .filter((item) => {
+            if (Object.keys(attributeFilters).length === 0) return true;
+            const attrs = (item.attributes || {}) as Record<string, string>;
+            return Object.entries(attributeFilters).every(
+              ([key, value]) => attrs[key] === value
+            );
+          })
+          .map((item) => (
             <ItemCard
               key={item._id}
               item={item}
@@ -767,6 +831,51 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 <p className="text-red-500 text-sm mt-1">{getFieldError('address')}</p>
               )}
             </div>
+
+            {getCategoryAttributes(newItem.category).length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Характеристики</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {getCategoryAttributes(newItem.category).map((attr) => (
+                    <div key={attr.key}>
+                      <Label className="text-sm">{attr.label}</Label>
+                      {attr.type === 'select' ? (
+                        <Select
+                          value={(newItem.attributes[attr.key] as string) || ''}
+                          onValueChange={(value) =>
+                            setNewItem(prev => ({
+                              ...prev,
+                              attributes: { ...prev.attributes, [attr.key]: value },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="w-full text-sm">
+                            <SelectValue placeholder={`Выберите ${attr.label.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {attr.options?.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={(newItem.attributes[attr.key] as string) || ''}
+                          onChange={(e) =>
+                            setNewItem(prev => ({
+                              ...prev,
+                              attributes: { ...prev.attributes, [attr.key]: e.target.value },
+                            }))
+                          }
+                          placeholder={attr.placeholder || ''}
+                          className="text-sm"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <Label>Фотографии (максимум 5)</Label>
