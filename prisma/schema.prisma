@@ -109,6 +109,8 @@ model User {
   reviewReplies       ReviewReply[]
   sentMessages        Message[]          @relation("SentMessages")
   favorites           Favorite[]
+  verificationHistory VerificationHistory[] @relation("VerificationUser")
+  verificationActions VerificationHistory[] @relation("VerificationAdmin")
 
   @@map("users")
 }
@@ -295,4 +297,23 @@ model Message {
   @@index([bookingId, createdAt])
   @@index([senderId])
   @@map("messages")
+}
+
+model VerificationHistory {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  editorId   String   @map("editor_id")
+  action     String   // "approve" | "reject"
+  reason     String?
+  entityType String   @default("user") @map("entity_type") // "user" | "item"
+  entityId   String?  @map("entity_id") // item ID when entityType = "item"
+  entityName String?  @map("entity_name") // item title for display
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation("VerificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  editor     User     @relation("VerificationAdmin", fields: [editorId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("verification_history")
 }

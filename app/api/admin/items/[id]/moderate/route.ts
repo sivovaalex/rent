@@ -28,15 +28,28 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return errorResponse('Лот не найден', 404);
     }
 
-    await prisma.item.update({
-      where: { id: itemId },
-      data: {
-        status,
-        rejectionReason: status === 'rejected' ? rejection_reason : null,
-        moderatedAt: new Date(),
-        moderatedBy: authResult.userId,
-      },
-    });
+    await prisma.$transaction([
+      prisma.item.update({
+        where: { id: itemId },
+        data: {
+          status,
+          rejectionReason: status === 'rejected' ? rejection_reason : null,
+          moderatedAt: new Date(),
+          moderatedBy: authResult.userId,
+        },
+      }),
+      prisma.verificationHistory.create({
+        data: {
+          userId: item.ownerId,
+          editorId: authResult.userId,
+          action: status === 'approved' ? 'approve' : 'reject',
+          reason: rejection_reason || null,
+          entityType: 'item',
+          entityId: itemId,
+          entityName: item.title,
+        },
+      }),
+    ]);
 
     // Send notification to item owner
     notifyItemModeration(

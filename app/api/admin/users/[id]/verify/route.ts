@@ -34,16 +34,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return errorResponse('Пользователь не найден', 404);
     }
 
-    await prisma.user.update({
-      where: { id: targetUserId },
-      data: {
-        verificationStatus: action === 'approve' ? 'verified' : 'rejected',
-        isVerified: action === 'approve',
-        verifiedAt: action === 'approve' ? new Date() : null,
-        verifiedBy: action === 'approve' ? authResult.userId : null,
-        rejectionReason: action === 'reject' ? reason : null,
-      },
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          verificationStatus: action === 'approve' ? 'verified' : 'rejected',
+          isVerified: action === 'approve',
+          verifiedAt: action === 'approve' ? new Date() : null,
+          verifiedBy: action === 'approve' ? authResult.userId : null,
+          rejectionReason: action === 'reject' ? reason : null,
+        },
+      }),
+      prisma.verificationHistory.create({
+        data: {
+          userId: targetUserId,
+          editorId: authResult.userId,
+          action,
+          reason: reason || null,
+        },
+      }),
+    ]);
 
     // Send notification to user
     notifyVerification(

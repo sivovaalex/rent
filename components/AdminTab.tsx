@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2 } from 'lucide-react';
+import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
@@ -51,6 +51,26 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const [isCreating, setIsCreating] = useState(false);
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
   const [moderatingItemId, setModeratingItemId] = useState<string | null>(null);
+  const [verificationSubTab, setVerificationSubTab] = useState('pending');
+  const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const loadVerificationHistory = async () => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    setHistoryLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/admin/verifications', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      console.log('Verification history response:', res.status, data);
+      if (res.ok) setVerificationHistory(data.history || []);
+      else console.error('Verification history error:', data);
+    } catch (err) { console.error('Verification history fetch error:', err); } finally {
+      setHistoryLoading(false);
+    }
+  };
   const [newAdminUser, setNewAdminUser] = useState<NewAdminUser>({
     name: '',
     phone: '',
@@ -70,11 +90,12 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
 
     setVerifyingUserId(userId);
     try {
+      const token = localStorage.getItem('auth_token');
       const res = await fetch(`/api/admin/users/${userId}/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
+          ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': currentUser._id }),
         },
         body: JSON.stringify({ action })
       });
@@ -100,7 +121,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
+          ...(localStorage.getItem('auth_token') ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : { 'x-user-id': currentUser._id })
         },
         body: JSON.stringify({ status, rejection_reason })
       });
@@ -141,7 +162,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
+          ...(localStorage.getItem('auth_token') ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : { 'x-user-id': currentUser._id })
         },
         body: JSON.stringify(newAdminUser)
       });
@@ -232,6 +253,108 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
             </div>
           ) : (
           <div className="space-y-6">
+            {/* Sub-tabs only for admin */}
+            {currentUser?.role === 'admin' && (
+              <div className="flex gap-2 border-b pb-2">
+                <button
+                  onClick={() => setVerificationSubTab('pending')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    verificationSubTab === 'pending'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  Ожидание
+                  {pendingUsers.length > 0 && (
+                    <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">{pendingUsers.length}</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setVerificationSubTab('history'); loadVerificationHistory(); }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    verificationSubTab === 'history'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <History className="w-4 h-4" />
+                  История
+                </button>
+              </div>
+            )}
+
+            {/* History tab (admin only) */}
+            {currentUser?.role === 'admin' && verificationSubTab === 'history' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>История верификаций</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {historyLoading ? (
+                    <div className="py-8"><Loader size="md" text="Загрузка истории..." /></div>
+                  ) : verificationHistory.length === 0 ? (
+                    <p className="text-center text-gray-500 py-4">История пуста</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Дата</TableHead>
+                          <TableHead>Тип</TableHead>
+                          <TableHead>Объект</TableHead>
+                          <TableHead>Действие</TableHead>
+                          <TableHead>Согласовант</TableHead>
+                          <TableHead>Причина</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {verificationHistory.map((h: any) => (
+                          <TableRow key={h._id}>
+                            <TableCell className="text-sm whitespace-nowrap">
+                              {new Date(h.createdAt).toLocaleString('ru-RU')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {h.entityType === 'item' ? 'Лот' : 'Пользователь'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                {h.entityType === 'item' ? (
+                                  <>
+                                    <p className="font-medium text-sm">{h.entityName || 'Без названия'}</p>
+                                    <p className="text-xs text-gray-500">Владелец: {h.user.name}</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="font-medium text-sm">{h.user.name}</p>
+                                    <p className="text-xs text-gray-500">{h.user.phone}</p>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {h.action === 'approve' ? (
+                                <Badge variant="secondary" className="bg-green-100 text-green-700">Одобрено</Badge>
+                              ) : h.action === 'reject' ? (
+                                <Badge variant="destructive">Отклонено</Badge>
+                              ) : (
+                                <Badge variant="outline">{h.action}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">{h.editor.name}</TableCell>
+                            <TableCell className="text-sm text-gray-500 max-w-[200px] truncate">
+                              {h.reason || '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+            /* Pending tab (default, shown for both admin and moderator) */
             <Card>
               <CardHeader>
                 <CardTitle>Верификация пользователей</CardTitle>
@@ -282,7 +405,10 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                 </div>
               </CardContent>
             </Card>
+            )}
 
+            {/* Модерация лотов — скрыта когда открыта История */}
+            {!(currentUser?.role === 'admin' && verificationSubTab === 'history') && (
             <Card>
               <CardHeader>
                 <CardTitle>Модерация лотов</CardTitle>
@@ -335,6 +461,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                 </div>
               </CardContent>
             </Card>
+            )}
           </div>
           )}
         </TabsContent>
