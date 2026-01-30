@@ -6,15 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart } from 'lucide-react';
+import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart, MapPin, List, Loader2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import ItemCard from './ItemCard';
 import ItemDetailModal from './ItemDetailModal';
 import BookingModal from './BookingModal';
+import { MapView } from './MapView';
+import { AddressSuggest } from './AddressSuggest';
 import { SkeletonCard } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category, BookingForm, AlertType } from '@/types';
 import { getCategoryAttributes } from '@/lib/constants';
 
-type CategoryKey = 'stream' | 'electronics' | 'clothing' | 'sports' | 'tools';
+type CategoryKey = 'stream' | 'electronics' | 'clothes' | 'sports' | 'tools';
 
 interface CatalogProps {
   currentUser: User | null;
@@ -49,6 +52,12 @@ interface CatalogProps {
   showFavoritesOnly?: boolean;
   setShowFavoritesOnly?: (show: boolean) => void;
   favoriteIds?: Set<string>;
+  // Geo
+  nearLat?: number | null;
+  nearLon?: number | null;
+  radius?: number;
+  setNearLocation?: (lat: number | null, lon: number | null) => void;
+  setRadius?: (radius: number) => void;
 }
 
 interface NewItemData {
@@ -60,6 +69,8 @@ interface NewItemData {
   price_per_month: string;
   deposit: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   photos: string[];
   attributes: Record<string, string | number | boolean>;
 }
@@ -96,6 +107,11 @@ export default function Catalog({
   showFavoritesOnly = false,
   setShowFavoritesOnly,
   favoriteIds,
+  nearLat,
+  nearLon,
+  radius = 10,
+  setNearLocation,
+  setRadius,
 }: CatalogProps) {
   const [showItemModal, setShowItemModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(() => {
@@ -110,6 +126,8 @@ export default function Catalog({
     return false;
   });
   const [attributeFilters, setAttributeFilters] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [geoLoading, setGeoLoading] = useState(false);
 
   // Sync item modal ↔ hash
   const openItemDetail = (itemId: string) => {
@@ -141,7 +159,7 @@ export default function Catalog({
   const categorySubcategories: Record<CategoryKey, string[]> = {
     stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
     electronics: ['Телефоны', 'Ноутбуки', 'Планшеты', 'Фотоаппараты', 'Аудиотехника'],
-    clothing: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
+    clothes: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
     sports: ['Велосипеды', 'Лыжи', 'Сноуборды', 'Спортивные залы', 'Инвентарь'],
     tools: ['Строительные', 'Садовые', 'Ручные инструменты', 'Электроинструменты', 'Измерительные приборы']
   };
@@ -240,7 +258,7 @@ export default function Catalog({
                   Электроника
                 </div>
               </SelectItem>
-              <SelectItem value="clothing">
+              <SelectItem value="clothes">
                 <div className="flex items-center gap-2">
                   <Shirt className="w-4 h-4" />
                   Одежда
@@ -285,6 +303,55 @@ export default function Catalog({
             </Select>
           )}
           <Button onClick={loadItems} className="col-span-2 sm:col-span-1 text-sm">Поиск</Button>
+          {/* View toggle: List / Map */}
+          <div className="flex gap-1 border rounded-md p-0.5">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'map' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setViewMode('map')}
+            >
+              <MapPin className="w-4 h-4" />
+            </Button>
+          </div>
+          {/* Near me button */}
+          {setNearLocation && (
+            <Button
+              variant={nearLat !== null && nearLat !== undefined ? 'default' : 'outline'}
+              className="col-span-2 sm:col-span-1 text-sm"
+              disabled={geoLoading}
+              onClick={() => {
+                if (nearLat !== null && nearLat !== undefined) {
+                  setNearLocation(null, null);
+                  loadItems();
+                } else {
+                  setGeoLoading(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setNearLocation(pos.coords.latitude, pos.coords.longitude);
+                      setGeoLoading(false);
+                    },
+                    () => {
+                      showAlert('Не удалось определить местоположение. Разрешите доступ к геолокации.', 'error');
+                      setGeoLoading(false);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                  );
+                }
+              }}
+            >
+              {geoLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MapPin className="w-4 h-4 mr-1" />}
+              {nearLat !== null && nearLat !== undefined ? 'Сбросить' : 'Рядом со мной'}
+            </Button>
+          )}
           {currentUser && setShowFavoritesOnly && (
             <Button
               variant={showFavoritesOnly ? 'default' : 'outline'}
@@ -354,6 +421,25 @@ export default function Catalog({
         </div>
       )}
 
+      {/* Radius slider when geo-filter active */}
+      {nearLat !== null && nearLat !== undefined && setRadius && (
+        <div className="flex items-center gap-4 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+          <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+          <span className="text-sm text-indigo-700 whitespace-nowrap">Радиус: {radius} км</span>
+          <Slider
+            value={[radius]}
+            min={1}
+            max={50}
+            step={1}
+            onValueChange={([v]) => setRadius(v)}
+            className="flex-1"
+          />
+          <Button size="sm" variant="outline" onClick={loadItems} className="shrink-0">
+            Применить
+          </Button>
+        </div>
+      )}
+
       {currentUser?.is_verified && (currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
         <Button onClick={() => setShowItemModal(true)} className="w-full lg:w-auto">
           <Upload className="w-4 h-4 mr-2" />
@@ -361,6 +447,14 @@ export default function Catalog({
         </Button>
       )}
 
+      {viewMode === 'map' ? (
+        <MapView
+          items={showFavoritesOnly && favoriteIds ? items.filter(item => favoriteIds.has(item._id)) : items}
+          onItemClick={(id) => openItemDetail(id)}
+          userLocation={nearLat !== null && nearLat !== undefined && nearLon !== null && nearLon !== undefined ? [nearLat, nearLon] : null}
+          radiusKm={radius}
+        />
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
@@ -433,6 +527,7 @@ export default function Catalog({
                   showAlert('Ошибка снятия с публикации', 'error');
                 }
               }}
+              distance={(item as any).distance}
               isFavorite={isFavorite?.(item._id)}
               onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(item._id) : undefined}
               onViewDetails={() => openItemDetail(item._id)}
@@ -456,6 +551,7 @@ export default function Catalog({
           ))
         )}
       </div>
+      )}
 
       {!isLoading && items.length === 0 && (
         <div className="text-center py-12">
@@ -591,6 +687,8 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
     price_per_month: '',
     deposit: '',
     address: '',
+    latitude: null,
+    longitude: null,
     photos: [],
     attributes: {}
   });
@@ -631,6 +729,8 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
         price_per_month: String(item.price_per_month) || '',
         deposit: String(item.deposit) || '',
         address: item.address || '',
+        latitude: item.latitude ?? null,
+        longitude: item.longitude ?? null,
         photos: item.photos || [],
         attributes: item.attributes || {}
       });
@@ -646,6 +746,8 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
         price_per_month: '',
         deposit: '',
         address: '',
+        latitude: null,
+        longitude: null,
         photos: [],
         attributes: {}
       });
@@ -729,7 +831,7 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
   const categorySubcategories: Record<CategoryKey, string[]> = {
     stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
     electronics: ['Телефоны', 'Ноутбуки', 'Планшеты', 'Фотоаппараты', 'Аудиотехника'],
-    clothing: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
+    clothes: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
     sports: ['Велосипеды', 'Лыжи', 'Сноуборды', 'Спортивные залы', 'Инвентарь'],
     tools: ['Строительные', 'Садовые', 'Ручные инструменты', 'Электроинструменты', 'Измерительные приборы']
   };
@@ -757,7 +859,7 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 <SelectContent>
                   <SelectItem value="stream">Стрим-оборудование</SelectItem>
                   <SelectItem value="electronics">Электроника</SelectItem>
-                  <SelectItem value="clothing">Одежда</SelectItem>
+                  <SelectItem value="clothes">Одежда</SelectItem>
                   <SelectItem value="sports">Спорт</SelectItem>
                   <SelectItem value="tools">Инструменты</SelectItem>
                 </SelectContent>
@@ -854,11 +956,11 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
 
             <div>
               <Label>Адрес самовывоза</Label>
-              <Input
+              <AddressSuggest
                 value={newItem.address}
-                onChange={(e) => setNewItem({ ...newItem, address: e.target.value })}
+                onChange={(address, lat, lng) => setNewItem({ ...newItem, address, latitude: lat, longitude: lng })}
                 placeholder="Москва, ул. Примерная, д. 1"
-                className={getFieldError('address') ? 'border-red-500' : ''}
+                className={getFieldError('address') ? '[&_input]:border-red-500' : ''}
               />
               {getFieldError('address') && (
                 <p className="text-red-500 text-sm mt-1">{getFieldError('address')}</p>

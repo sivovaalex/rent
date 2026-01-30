@@ -1,4 +1,5 @@
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
@@ -31,6 +32,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ru">
       <body className={inter.className}>
+        <Script
+          src={`https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY}&lang=ru_RU&load=package.full`}
+          strategy="beforeInteractive"
+        />
         <Providers>
           {children}
         </Providers>

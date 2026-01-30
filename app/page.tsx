@@ -79,6 +79,11 @@ export default function App() {
     setBookingForm,
     bookItem,
     loadBlockedBookingDates,
+    nearLat,
+    nearLon,
+    radius,
+    setNearLocation,
+    setRadius,
   } = useItems({ currentUser, onShowAlert: showAlert });
 
   const { bookings, isLoading: bookingsLoading, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
@@ -290,6 +295,11 @@ export default function App() {
                 showFavoritesOnly={showFavoritesOnly}
                 setShowFavoritesOnly={setShowFavoritesOnly}
                 favoriteIds={favoriteIds}
+                nearLat={nearLat}
+                nearLon={nearLon}
+                radius={radius}
+                setNearLocation={setNearLocation}
+                setRadius={setRadius}
               />
             </TabsContent>
 

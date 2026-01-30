@@ -15,6 +15,9 @@ interface CatalogFilters {
   sortBy: string;
   catalogView: 'all' | 'mine';
   showAllStatuses: boolean;
+  nearLat: number | null;
+  nearLon: number | null;
+  radius: number;
 }
 
 export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
@@ -29,6 +32,9 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     sortBy: 'newest',
     catalogView: 'all',
     showAllStatuses: false,
+    nearLat: null,
+    nearLon: null,
+    radius: 10,
   });
 
   // Booking modal state
@@ -56,6 +62,13 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
         if (filters.showAllStatuses) {
           params.append('show_all_statuses', 'true');
         }
+      }
+
+      // Geo filters
+      if (filters.nearLat !== null && filters.nearLon !== null) {
+        params.append('lat', String(filters.nearLat));
+        params.append('lon', String(filters.nearLon));
+        params.append('radius', String(filters.radius));
       }
 
       const res = await fetch(`/api/items?${params}`);
@@ -141,6 +154,14 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     setFilters(prev => ({ ...prev, showAllStatuses: value }));
   }, []);
 
+  const setNearLocation = useCallback((lat: number | null, lon: number | null) => {
+    setFilters(prev => ({ ...prev, nearLat: lat, nearLon: lon }));
+  }, []);
+
+  const setRadius = useCallback((value: number) => {
+    setFilters(prev => ({ ...prev, radius: value }));
+  }, []);
+
   return {
     items,
     isLoading,
@@ -158,6 +179,12 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     setCatalogView,
     showAllStatuses: filters.showAllStatuses,
     setShowAllStatuses,
+    // Geo
+    nearLat: filters.nearLat,
+    nearLon: filters.nearLon,
+    radius: filters.radius,
+    setNearLocation,
+    setRadius,
     // Booking modal
     selectedItem,
     setSelectedItem,

@@ -81,6 +81,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (data.category) updateData.category = data.category;
     if (data.subcategory !== undefined) updateData.subcategory = data.subcategory;
     if (data.address) updateData.address = data.address;
+    if (data.latitude !== undefined) updateData.latitude = data.latitude;
+    if (data.longitude !== undefined) updateData.longitude = data.longitude;
     if (data.photos) updateData.photos = data.photos;
     if (data.attributes) updateData.attributes = data.attributes;
 

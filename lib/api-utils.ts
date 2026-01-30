@@ -177,6 +177,8 @@ export function transformItem(item: ItemWithOwner): ClientItem {
     description: item.description,
     deposit: item.deposit,
     address: item.address,
+    latitude: item.latitude ?? undefined,
+    longitude: item.longitude ?? undefined,
     photos: item.photos,
     attributes: item.attributes as Record<string, string | number | boolean> | undefined,
     status: item.status,

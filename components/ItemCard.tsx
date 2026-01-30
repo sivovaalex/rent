@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, Eye, EyeOff, Heart, Link2 } from 'lucide-react';
+import { Star, Eye, EyeOff, Heart, Link2, MapPin } from 'lucide-react';
 import type { Item, User, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
 import { withCommission, formatPrice } from '@/lib/constants';
@@ -21,6 +21,7 @@ interface ItemCardProps {
   onBook: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  distance?: number;
 }
 
 export default function ItemCard({
@@ -37,6 +38,7 @@ export default function ItemCard({
   onBook,
   isFavorite = false,
   onToggleFavorite,
+  distance,
 }: ItemCardProps) {
   const isOwner = currentUser?.role === 'owner' && item.owner_id === currentUser._id;
   const isAdminOrModerator = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
@@ -124,6 +126,12 @@ export default function ItemCard({
             <span className="text-gray-600">Залог:</span>
             <span className="font-medium">{item.deposit} ₽</span>
           </div>
+          {distance !== undefined && (
+            <div className="flex items-center gap-1 text-xs text-indigo-600 mt-1">
+              <MapPin className="w-3 h-3" />
+              <span>{distance < 1 ? `${Math.round(distance * 1000)} м` : `${distance.toFixed(1)} км`}</span>
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-2 space-y-1">
             <div>Владелец: {item.owner_name}</div>
             {item.ownerTrustBadges && item.ownerTrustBadges.length > 0 && (

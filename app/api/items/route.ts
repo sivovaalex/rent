@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { requireVerified, transformItem, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, createItemSchema } from '@/lib/validations';
 import { logError, apiLogger } from '@/lib/logger';
+import { boundingBox, haversineDistance } from '@/lib/geo-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +55,20 @@ export async function GET(request: NextRequest) {
       if (maxPrice) where.pricePerDay.lte = parseFloat(maxPrice);
     }
 
+    // Geo filter — bounding box pre-filter
+    const lat = url.searchParams.get('lat');
+    const lon = url.searchParams.get('lon');
+    const radius = url.searchParams.get('radius');
+    const userLat = lat ? parseFloat(lat) : null;
+    const userLon = lon ? parseFloat(lon) : null;
+    const radiusKm = radius ? parseFloat(radius) : null;
+
+    if (userLat !== null && userLon !== null && radiusKm) {
+      const box = boundingBox(userLat, userLon, radiusKm);
+      where.latitude = { gte: box.minLat, lte: box.maxLat };
+      where.longitude = { gte: box.minLon, lte: box.maxLon };
+    }
+
     // Sorting
     let orderBy: Prisma.ItemOrderByWithRelationInput = {};
     if (sort === 'newest') orderBy = { createdAt: 'desc' };
@@ -64,7 +79,7 @@ export async function GET(request: NextRequest) {
     const items = await prisma.item.findMany({
       where,
       orderBy,
-      take: 50,
+      take: 100, // больше для карты
       include: {
         owner: {
           select: { id: true, name: true, rating: true, phone: true, trustBadges: true, trustScore: true },
@@ -72,7 +87,21 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const transformedItems = items.map(transformItem);
+    // Post-filter by exact Haversine distance + add distance field
+    let transformedItems = items.map(transformItem);
+
+    if (userLat !== null && userLon !== null && radiusKm) {
+      transformedItems = transformedItems
+        .map((item: any) => {
+          if (item.latitude && item.longitude) {
+            const dist = haversineDistance(userLat, userLon, item.latitude, item.longitude);
+            return { ...item, distance: Math.round(dist * 100) / 100 };
+          }
+          return item;
+        })
+        .filter((item: any) => !item.distance || item.distance <= radiusKm)
+        .sort((a: any, b: any) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+    }
 
     return successResponse({ items: transformedItems });
   } catch (error) {
@@ -102,6 +131,8 @@ export async function POST(request: NextRequest) {
         pricePerMonth: data.price_per_month ?? data.pricePerMonth!,
         deposit: data.deposit,
         address: data.address,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
         photos: data.photos,
         attributes: data.attributes,
         status: 'pending',

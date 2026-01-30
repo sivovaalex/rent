@@ -71,6 +71,8 @@ export interface Item {
   pricePerMonth: number;
   deposit: number;
   address: string;
+  latitude?: number;
+  longitude?: number;
   photos: string[];
   attributes?: Record<string, string | number | boolean>;
   status: ItemStatus;

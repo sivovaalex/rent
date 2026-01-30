@@ -28,6 +28,8 @@ export const createItemSchema = z.object({
     z.number().nonnegative('Залог не может быть отрицательным')
   ),
   address: z.string().min(5, 'Адрес должен содержать минимум 5 символов'),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
   photos: z.array(z.string()).max(5, 'Максимум 5 фото').default([]),
   attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
 });
@@ -52,6 +54,8 @@ export const updateItemSchema = z.object({
     z.number().nonnegative()
   ).optional(),
   address: z.string().min(5).optional(),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
   photos: z.array(z.string()).max(5).optional(),
   category: categorySchema.optional(),
   subcategory: z.string().optional().nullable(),

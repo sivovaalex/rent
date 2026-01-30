@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart } from 'lucide-react';
+import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart, MapPin } from 'lucide-react';
+import { YandexMap } from './YandexMap';
+import { getCategoryAttributes } from '@/lib/constants';
 import ReviewList from './ReviewList';
 import TrustBadges from './TrustBadges';
 import { Loader } from '@/components/ui/spinner';
@@ -165,12 +167,15 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                   <h3 className="font-semibold">Характеристики</h3>
                   {Object.keys(item.attributes || {}).length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(item.attributes || {}).map(([key, value]) => (
-                        <div key={key} className="text-sm">
-                          <span className="text-gray-500">{key}:</span>
-                          <span className="font-medium ml-1">{String(value)}</span>
-                        </div>
-                      ))}
+                      {Object.entries(item.attributes || {}).map(([key, value]) => {
+                        const attrDef = getCategoryAttributes(item.category).find(a => a.key === key);
+                        return (
+                          <div key={key} className="text-sm">
+                            <span className="text-gray-500">{attrDef?.label || key}:</span>
+                            <span className="font-medium ml-1">{String(value)}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-gray-500">Характеристики не указаны</p>
@@ -224,7 +229,26 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
 
                 <div>
                   <h3 className="font-semibold mb-2">Адрес самовывоза</h3>
-                  <p className="text-gray-600">{item.address || 'Адрес не указан'}</p>
+                  <div className="flex items-start gap-1 text-gray-600">
+                    <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{item.address || 'Адрес не указан'}</span>
+                  </div>
+                  {item.latitude && item.longitude && (
+                    <div className="mt-2">
+                      <YandexMap
+                        center={[item.latitude, item.longitude]}
+                        zoom={15}
+                        markers={[{
+                          id: item._id,
+                          lat: item.latitude,
+                          lng: item.longitude,
+                          title: item.title,
+                          price: item.pricePerDay ?? item.price_per_day,
+                        }]}
+                        className="h-[200px]"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
