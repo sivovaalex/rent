@@ -45,6 +45,8 @@ export function MapView({ items, onItemClick, userLocation, radiusKm }: MapViewP
       lng: item.longitude!,
       title: item.title,
       price: item.pricePerDay,
+      priceMonth: item.pricePerMonth,
+      deposit: item.deposit,
       photo: item.photos?.[0] || undefined,
       category: item.category,
     })),

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, Search, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface AddressSuggestProps {
   value: string;
@@ -11,6 +11,9 @@ interface AddressSuggestProps {
   placeholder?: string;
   className?: string;
 }
+
+// Status: idle (empty), typing (user is typing), geocoding (loading), resolved (coords found), failed (not found)
+type GeoStatus = 'idle' | 'typing' | 'geocoding' | 'resolved' | 'failed';
 
 export function AddressSuggest({
   value,
@@ -23,19 +26,20 @@ export function AddressSuggest({
   const suggestRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
   const placemarkRef = useRef<any>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [localValue, setLocalValue] = useState(value);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showMap, setShowMap] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
+  const [geoStatus, setGeoStatus] = useState<GeoStatus>('idle');
 
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
-  // Geocode address text to coordinates
   const geocodeAddress = useCallback((address: string) => {
     if (!address.trim() || !window.ymaps) return;
-    setGeocoding(true);
+    setGeoStatus('geocoding');
     window.ymaps.ready(() => {
       window.ymaps.geocode(address, { results: 1 }).then((res: any) => {
         const firstGeoObject = res.geoObjects.get(0);
@@ -46,14 +50,14 @@ export function AddressSuggest({
           const fullAddress = firstGeoObject.getAddressLine();
           setCoords({ lat, lng });
           setLocalValue(fullAddress);
+          setGeoStatus('resolved');
           onChange(fullAddress, lat, lng);
         } else {
-          // Address not found — show map for manual pick
+          setGeoStatus('failed');
           setShowMap(true);
         }
-        setGeocoding(false);
       }).catch(() => {
-        setGeocoding(false);
+        setGeoStatus('failed');
         setShowMap(true);
       });
     });
@@ -74,6 +78,7 @@ export function AddressSuggest({
         suggestRef.current.events.add('select', (e: any) => {
           const selectedValue = e.get('item').value;
           setLocalValue(selectedValue);
+          setGeoStatus('geocoding');
 
           window.ymaps.geocode(selectedValue, { results: 1 }).then((res: any) => {
             const firstGeoObject = res.geoObjects.get(0);
@@ -83,8 +88,10 @@ export function AddressSuggest({
               const lng = coordsArr[1];
               setCoords({ lat, lng });
               setShowMap(false);
+              setGeoStatus('resolved');
               onChange(selectedValue, lat, lng);
             } else {
+              setGeoStatus('failed');
               onChange(selectedValue, null, null);
             }
           });
@@ -126,7 +133,6 @@ export function AddressSuggest({
 
       mapRef.current = map;
 
-      // Add existing placemark if coords known
       if (coords) {
         const placemark = new window.ymaps.Placemark([coords.lat, coords.lng], {}, {
           preset: 'islands#violetDotIcon',
@@ -141,7 +147,6 @@ export function AddressSuggest({
         });
       }
 
-      // Click on map to place/move marker
       map.events.add('click', (e: any) => {
         const clickCoords = e.get('coords');
 
@@ -175,24 +180,39 @@ export function AddressSuggest({
   }, [showMap]);
 
   const reverseGeocode = (lat: number, lng: number) => {
+    setGeoStatus('geocoding');
     window.ymaps.geocode([lat, lng], { results: 1 }).then((res: any) => {
       const firstGeoObject = res.geoObjects.get(0);
       if (firstGeoObject) {
         const address = firstGeoObject.getAddressLine();
         setLocalValue(address);
         setCoords({ lat, lng });
+        setGeoStatus('resolved');
         onChange(address, lat, lng);
       } else {
         setCoords({ lat, lng });
+        setGeoStatus('resolved');
         onChange(localValue, lat, lng);
       }
     });
   };
 
-  const handleBlur = () => {
-    // If address typed manually without selecting from suggest and no coords — try geocoding
-    if (localValue.trim() && !coords) {
-      geocodeAddress(localValue);
+  const statusIndicator = () => {
+    switch (geoStatus) {
+      case 'geocoding':
+        return (
+          <span className="absolute right-24 top-1/2 -translate-y-1/2">
+            <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+          </span>
+        );
+      case 'resolved':
+        return (
+          <span className="absolute right-24 top-1/2 -translate-y-1/2">
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+          </span>
+        );
+      default:
+        return null;
     }
   };
 
@@ -205,22 +225,33 @@ export function AddressSuggest({
           type="text"
           value={localValue}
           onChange={(e) => {
-            setLocalValue(e.target.value);
+            const val = e.target.value;
+            setLocalValue(val);
             setCoords(null);
-            onChange(e.target.value, null, null);
+            onChange(val, null, null);
+
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+
+            if (val.trim().length >= 5) {
+              setGeoStatus('typing');
+              debounceRef.current = setTimeout(() => {
+                geocodeAddress(val);
+              }, 1000);
+            } else {
+              setGeoStatus(val.trim() ? 'typing' : 'idle');
+            }
           }}
-          onBlur={handleBlur}
           placeholder={placeholder}
-          className="pl-9 pr-20"
+          className="pl-9 pr-28"
         />
+        {statusIndicator()}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
-          {localValue.trim() && !coords && (
+          {localValue.trim() && !coords && geoStatus !== 'geocoding' && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="h-7 px-2"
-              disabled={geocoding}
               onClick={() => geocodeAddress(localValue)}
             >
               <Search className="w-3 h-3" />
@@ -238,16 +269,16 @@ export function AddressSuggest({
         </div>
       </div>
 
-      {coords && (
+      {geoStatus === 'resolved' && coords && (
         <p className="text-xs text-green-600 flex items-center gap-1">
-          <MapPin className="w-3 h-3" />
-          Координаты определены: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+          <CheckCircle2 className="w-3 h-3" />
+          Координаты определены
         </p>
       )}
 
-      {!coords && localValue.trim() && !geocoding && (
+      {geoStatus === 'failed' && (
         <p className="text-xs text-amber-600">
-          Координаты не определены. Выберите адрес из подсказок, нажмите поиск или укажите на карте.
+          Не удалось определить координаты. Уточните адрес или укажите на карте.
         </p>
       )}
 

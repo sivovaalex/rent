@@ -1,7 +1,7 @@
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/Providers';
 
@@ -11,17 +11,18 @@ export const metadata: Metadata = {
   title: 'Аренда PRO - Единая шеринг-платформа',
   description: 'Платформа для аренды стрим-оборудования, электроники и премиальной одежды',
   manifest: '/manifest.json',
-  themeColor: '#4f46e5',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Arenada Pro',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#4f46e5',
 };
 
 interface RootLayoutProps {
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="ru">
       <body className={inter.className}>
         <Script
-          src={`https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY}&lang=ru_RU&load=package.full`}
+          src={`https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY}&lang=ru_RU`}
           strategy="beforeInteractive"
         />
         <Providers>

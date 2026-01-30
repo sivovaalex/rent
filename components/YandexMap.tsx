@@ -14,6 +14,8 @@ export interface MapMarker {
   lng: number;
   title: string;
   price?: number;
+  priceMonth?: number;
+  deposit?: number;
   photo?: string;
   category?: string;
 }
@@ -69,19 +71,33 @@ export function YandexMap({
 
       // Add markers
       const placemarks = markers.map((m) => {
+        const priceLabel = m.price ? `${m.price} ₽` : '';
+
+        const hintParts = [
+          `<b style="font-size:13px">${m.title}</b>`,
+          m.price ? `<div style="color:#4f46e5;font-weight:600">${m.price} ₽/день</div>` : '',
+          m.priceMonth ? `<div style="color:#4f46e5">${m.priceMonth} ₽/мес</div>` : '',
+          m.deposit ? `<div style="color:#666">Залог: ${m.deposit} ₽</div>` : '',
+        ].filter(Boolean).join('');
+
+        const balloonBody = [
+          m.photo ? `<img src="${m.photo}" style="width:160px;height:100px;object-fit:cover;border-radius:8px;margin-bottom:8px" />` : '',
+          `<div style="margin-bottom:4px"><b>${m.title}</b></div>`,
+          m.price ? `<div style="font-weight:600;color:#4f46e5;font-size:15px">${m.price} ₽/день</div>` : '',
+          m.priceMonth ? `<div style="color:#4f46e5;font-size:13px">${m.priceMonth} ₽/мес</div>` : '',
+          m.deposit ? `<div style="color:#666;font-size:13px">Залог: ${m.deposit} ₽</div>` : '',
+          `<a href="#" onclick="window.__ymapItemClick__('${m.id}');return false" style="display:inline-block;margin-top:8px;color:#4f46e5;font-size:13px;font-weight:500">Подробнее →</a>`,
+        ].filter(Boolean).join('');
+
         const placemark = new window.ymaps.Placemark(
           [m.lat, m.lng],
           {
-            balloonContentHeader: m.title,
-            balloonContentBody: [
-              m.photo ? `<img src="${m.photo}" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin-bottom:4px" />` : '',
-              m.price ? `<div style="font-weight:600;color:#4f46e5">${m.price} ₽/день</div>` : '',
-              `<a href="#" onclick="window.__ymapItemClick__('${m.id}');return false" style="color:#4f46e5;font-size:13px">Подробнее →</a>`,
-            ].filter(Boolean).join('<br/>'),
-            hintContent: m.title,
+            balloonContentBody: balloonBody,
+            hintContent: hintParts,
+            iconContent: priceLabel,
           },
           {
-            preset: 'islands#violetDotIcon',
+            preset: 'islands#violetStretchyIcon',
           }
         );
 
