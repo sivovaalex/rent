@@ -121,7 +121,7 @@ export function AddressSuggest({
       const map = new window.ymaps.Map(mapContainerRef.current, {
         center,
         zoom: coords ? 15 : 10,
-        controls: ['zoomControl', 'searchControl', 'geolocationControl'],
+        controls: ['zoomControl', 'geolocationControl'],
       });
 
       mapRef.current = map;
