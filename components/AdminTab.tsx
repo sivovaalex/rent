@@ -64,10 +64,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      console.log('Verification history response:', res.status, data);
       if (res.ok) setVerificationHistory(data.history || []);
-      else console.error('Verification history error:', data);
-    } catch (err) { console.error('Verification history fetch error:', err); } finally {
+    } catch { /* ignore */ } finally {
       setHistoryLoading(false);
     }
   };

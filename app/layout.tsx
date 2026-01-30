@@ -9,6 +9,18 @@ const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 export const metadata: Metadata = {
   title: 'Аренда PRO - Единая шеринг-платформа',
   description: 'Платформа для аренды стрим-оборудования, электроники и премиальной одежды',
+  manifest: '/manifest.json',
+  themeColor: '#4f46e5',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Arenada Pro',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 interface RootLayoutProps {

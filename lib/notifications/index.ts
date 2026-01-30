@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendTelegramMessage } from './telegram';
 import { sendVkMessage } from './vk';
+import { sendPushNotification, PushCategory } from './push';
 import {
   NotificationEvent,
   NotificationEventType,
@@ -21,6 +22,24 @@ interface NotificationResult {
   email: boolean;
   telegram: boolean;
   vk: boolean;
+  push: boolean;
+}
+
+/** Маппинг типа события на категорию push */
+function getPushCategory(type: NotificationEventType): PushCategory {
+  if (type.startsWith('booking_')) return 'bookings';
+  if (type === 'item_approved' || type === 'item_rejected') return 'moderation';
+  if (type === 'verification_approved' || type === 'verification_rejected') return 'moderation';
+  return 'bookings';
+}
+
+/** URL для перехода по клику на push */
+function getPushUrl(event: NotificationEvent): string {
+  const data = event.data as Record<string, string>;
+  if (data.itemId) return `/#catalog`;
+  if (event.type.startsWith('booking_')) return `/#bookings`;
+  if (event.type.startsWith('verification_')) return `/#profile`;
+  return '/';
 }
 
 /**
@@ -34,6 +53,7 @@ export async function sendNotification(
     email: false,
     telegram: false,
     vk: false,
+    push: false,
   };
 
   try {
@@ -92,11 +112,27 @@ export async function sendNotification(
       );
     }
 
+    // Push
+    promises.push(
+      sendPushNotification(
+        userId,
+        {
+          title: getEmailSubject(event),
+          body: messengerText,
+          url: getPushUrl(event),
+          tag: event.type,
+        },
+        getPushCategory(event.type)
+      ).then((success) => {
+        result.push = success;
+      })
+    );
+
     await Promise.all(promises);
 
     console.log(
       `[NOTIFICATIONS] Sent ${event.type} to user ${userId}:`,
-      `email=${result.email}, telegram=${result.telegram}, vk=${result.vk}`
+      `email=${result.email}, telegram=${result.telegram}, vk=${result.vk}, push=${result.push}`
     );
 
     return result;

@@ -96,6 +96,12 @@ model User {
   notifyEmail         Boolean            @default(true) @map("notify_email")
   notifyVk            Boolean            @default(false) @map("notify_vk")
   notifyTelegram      Boolean            @default(false) @map("notify_telegram")
+  notifyPush          Boolean            @default(false) @map("notify_push")
+  pushBookings        Boolean            @default(true) @map("push_bookings")
+  pushChat            Boolean            @default(true) @map("push_chat")
+  pushModeration      Boolean            @default(true) @map("push_moderation")
+  pushReviews         Boolean            @default(true) @map("push_reviews")
+  pushReminders       Boolean            @default(true) @map("push_reminders")
   vkId                String?            @map("vk_id")
   telegramChatId      String?            @map("telegram_chat_id")
 
@@ -109,6 +115,7 @@ model User {
   reviewReplies       ReviewReply[]
   sentMessages        Message[]          @relation("SentMessages")
   favorites           Favorite[]
+  pushSubscriptions   PushSubscription[]
   verificationHistory VerificationHistory[] @relation("VerificationUser")
   verificationActions VerificationHistory[] @relation("VerificationAdmin")
 
@@ -297,6 +304,21 @@ model Message {
   @@index([bookingId, createdAt])
   @@index([senderId])
   @@map("messages")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 model VerificationHistory {

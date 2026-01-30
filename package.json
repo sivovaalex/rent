@@ -82,6 +82,7 @@
         "tailwindcss-animate": "^1.0.7",
         "uuid": "^9.0.1",
         "vaul": "^1.1.2",
+        "web-push": "^3.6.7",
         "zod": "^4.3.5"
     },
     "devDependencies": {
@@ -93,6 +94,7 @@
         "@types/nodemailer": "^7.0.5",
         "@types/react": "^19.2.9",
         "@types/react-dom": "^19.2.3",
+        "@types/web-push": "^3.6.4",
         "@vitejs/plugin-react": "4.2.1",
         "autoprefixer": "^10.4.19",
         "dotenv-cli": "^7.4.2",

@@ -13,6 +13,12 @@ const updateSchema = z.object({
   notifyEmail: z.boolean().optional(),
   notifyVk: z.boolean().optional(),
   notifyTelegram: z.boolean().optional(),
+  notifyPush: z.boolean().optional(),
+  pushBookings: z.boolean().optional(),
+  pushChat: z.boolean().optional(),
+  pushModeration: z.boolean().optional(),
+  pushReviews: z.boolean().optional(),
+  pushReminders: z.boolean().optional(),
 });
 
 /**
@@ -38,6 +44,12 @@ export async function GET(request: NextRequest) {
         notifyEmail: true,
         notifyVk: true,
         notifyTelegram: true,
+        notifyPush: true,
+        pushBookings: true,
+        pushChat: true,
+        pushModeration: true,
+        pushReviews: true,
+        pushReminders: true,
         vkId: true,
         telegramChatId: true,
       },
@@ -52,6 +64,12 @@ export async function GET(request: NextRequest) {
       notifyEmail: user.notifyEmail,
       notifyVk: user.notifyVk,
       notifyTelegram: user.notifyTelegram,
+      notifyPush: user.notifyPush,
+      pushBookings: user.pushBookings,
+      pushChat: user.pushChat,
+      pushModeration: user.pushModeration,
+      pushReviews: user.pushReviews,
+      pushReminders: user.pushReminders,
       vkConnected: !!user.vkId,
       telegramConnected: !!user.telegramChatId,
     });
@@ -90,7 +108,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { notifyEmail, notifyVk, notifyTelegram } = validation.data;
+    const { notifyEmail, notifyVk, notifyTelegram, notifyPush, pushBookings, pushChat, pushModeration, pushReviews, pushReminders } = validation.data;
 
     // Get current user to check messenger connections
     const currentUser = await prisma.user.findUnique({
@@ -126,12 +144,24 @@ export async function PATCH(request: NextRequest) {
         ...(notifyEmail !== undefined && { notifyEmail }),
         ...(notifyVk !== undefined && { notifyVk }),
         ...(notifyTelegram !== undefined && { notifyTelegram }),
+        ...(notifyPush !== undefined && { notifyPush }),
+        ...(pushBookings !== undefined && { pushBookings }),
+        ...(pushChat !== undefined && { pushChat }),
+        ...(pushModeration !== undefined && { pushModeration }),
+        ...(pushReviews !== undefined && { pushReviews }),
+        ...(pushReminders !== undefined && { pushReminders }),
       },
       select: {
         email: true,
         notifyEmail: true,
         notifyVk: true,
         notifyTelegram: true,
+        notifyPush: true,
+        pushBookings: true,
+        pushChat: true,
+        pushModeration: true,
+        pushReviews: true,
+        pushReminders: true,
         vkId: true,
         telegramChatId: true,
       },
@@ -142,6 +172,12 @@ export async function PATCH(request: NextRequest) {
       notifyEmail: user.notifyEmail,
       notifyVk: user.notifyVk,
       notifyTelegram: user.notifyTelegram,
+      notifyPush: user.notifyPush,
+      pushBookings: user.pushBookings,
+      pushChat: user.pushChat,
+      pushModeration: user.pushModeration,
+      pushReviews: user.pushReviews,
+      pushReminders: user.pushReminders,
       vkConnected: !!user.vkId,
       telegramConnected: !!user.telegramChatId,
     });

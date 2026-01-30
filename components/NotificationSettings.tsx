@@ -7,13 +7,20 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, MessageCircle, Send, Loader2, Check, X, ExternalLink } from 'lucide-react';
+import { Mail, MessageCircle, Send, Loader2, Check, X, ExternalLink, Bell, BellOff } from 'lucide-react';
+import { isPushSupported, subscribeToPush, unsubscribeFromPush, getSubscription, registerServiceWorker } from '@/lib/push-client';
 
 interface NotificationSettingsData {
   email: string | null;
   notifyEmail: boolean;
   notifyVk: boolean;
   notifyTelegram: boolean;
+  notifyPush: boolean;
+  pushBookings: boolean;
+  pushChat: boolean;
+  pushModeration: boolean;
+  pushReviews: boolean;
+  pushReminders: boolean;
   vkConnected: boolean;
   telegramConnected: boolean;
 }
@@ -29,15 +36,24 @@ export function NotificationSettings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Push states
+  const [pushSupported] = useState(() => isPushSupported());
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
   // Link code states
   const [telegramCode, setTelegramCode] = useState('');
   const [vkCode, setVkCode] = useState('');
   const [linkingTelegram, setLinkingTelegram] = useState(false);
   const [linkingVk, setLinkingVk] = useState(false);
 
-  // Fetch settings on mount
+  // Fetch settings on mount + check push subscription
   useEffect(() => {
     fetchSettings();
+    if (pushSupported) {
+      registerServiceWorker();
+      getSubscription().then((sub) => setPushSubscribed(!!sub));
+    }
   }, []);
 
   const fetchSettings = async () => {
@@ -206,6 +222,89 @@ export function NotificationSettings() {
           <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-600">
             <Check className="h-4 w-4" />
             {success}
+          </div>
+        )}
+
+        {/* Push notifications */}
+        {pushSupported && (
+          <div className="rounded-lg border p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-indigo-100 p-2">
+                  <Bell className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <Label className="text-base font-medium">Push-уведомления</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {pushSubscribed ? 'Включены' : 'Отключены'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={pushSubscribed ? 'outline' : 'default'}
+                size="sm"
+                disabled={pushLoading}
+                onClick={async () => {
+                  setPushLoading(true);
+                  try {
+                    if (pushSubscribed) {
+                      const ok = await unsubscribeFromPush();
+                      if (ok) {
+                        setPushSubscribed(false);
+                        setSuccess('Push-уведомления отключены');
+                      }
+                    } else {
+                      const sub = await subscribeToPush();
+                      if (sub) {
+                        setPushSubscribed(true);
+                        setSuccess('Push-уведомления включены');
+                        fetchSettings();
+                      } else {
+                        setError('Не удалось включить push. Проверьте разрешения браузера.');
+                      }
+                    }
+                    setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+                  } catch {
+                    setError('Ошибка при настройке push');
+                    setTimeout(() => setError(null), 5000);
+                  } finally {
+                    setPushLoading(false);
+                  }
+                }}
+              >
+                {pushLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : pushSubscribed ? (
+                  <><BellOff className="h-4 w-4 mr-1" /> Отключить</>
+                ) : (
+                  <><Bell className="h-4 w-4 mr-1" /> Включить</>
+                )}
+              </Button>
+            </div>
+
+            {pushSubscribed && settings && (
+              <div className="mt-4 space-y-3 border-t pt-4">
+                <p className="text-sm font-medium text-foreground">Категории push-уведомлений:</p>
+                <div className="space-y-2">
+                  {[
+                    { key: 'pushBookings' as const, label: 'Бронирования' },
+                    { key: 'pushChat' as const, label: 'Сообщения в чате' },
+                    { key: 'pushModeration' as const, label: 'Модерация и верификация' },
+                    { key: 'pushReviews' as const, label: 'Отзывы' },
+                    { key: 'pushReminders' as const, label: 'Напоминания' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between py-1">
+                      <span className="text-sm text-muted-foreground">{label}</span>
+                      <Switch
+                        checked={settings[key]}
+                        onCheckedChange={(checked) => updateSetting(key, checked)}
+                        disabled={saving}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
