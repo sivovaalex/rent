@@ -58,6 +58,10 @@ export const LEGAL_LINKS: Record<string, LegalLink> = {
 // Ссылки для раздела "Помощь" в футере
 export const FOOTER_HELP_LINKS: LegalLink[] = [
   {
+    href: '/guide',
+    label: 'Руководство пользователя',
+  },
+  {
     href: '/legal/rental-rules',
     label: 'Как арендовать',
   },

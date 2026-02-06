@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2 } from 'lucide-react';
+import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2, BookOpen, ChevronRight } from 'lucide-react';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import TrustBadges, { TrustScore } from './TrustBadges';
 import type { User, UserRole, AlertType, ApprovalMode, Review } from '@/types';
@@ -366,6 +366,29 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
     <div className="mt-6">
       <NotificationSettings />
     </div>
+
+    {/* Руководство пользователя */}
+    <Card className="mt-6">
+      <CardContent className="p-4 sm:p-6">
+        <a
+          href="/guide"
+          className="flex items-center gap-4 group"
+        >
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
+            <BookOpen className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+              Руководство пользователя
+            </h3>
+            <p className="text-sm text-gray-500">
+              Как пользоваться платформой, FAQ, инструкции
+            </p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
+        </a>
+      </CardContent>
+    </Card>
   </>
   );
 }
