@@ -27,7 +27,10 @@ interface NotificationResult {
 
 /** Маппинг типа события на категорию push */
 function getPushCategory(type: NotificationEventType): PushCategory {
-  if (type === 'review_received') return 'reviews';
+  if (type === 'review_received' || type === 'review_reminder') return 'reviews';
+  if (type === 'chat_unread') return 'chat';
+  if (type === 'rental_return_reminder') return 'reminders';
+  if (type.startsWith('moderation_pending_')) return 'moderation';
   if (type.startsWith('booking_')) return 'bookings';
   if (type === 'item_approved' || type === 'item_rejected') return 'moderation';
   if (type === 'verification_approved' || type === 'verification_rejected') return 'moderation';
@@ -37,6 +40,9 @@ function getPushCategory(type: NotificationEventType): PushCategory {
 /** URL для перехода по клику на push */
 function getPushUrl(event: NotificationEvent): string {
   const data = event.data as Record<string, string>;
+  if (event.type === 'chat_unread') return '/#chat';
+  if (event.type.startsWith('moderation_pending_')) return '/#admin';
+  if (event.type === 'rental_return_reminder' || event.type === 'review_reminder') return '/#bookings';
   if (data.itemId) return `/#catalog`;
   if (event.type.startsWith('booking_')) return `/#bookings`;
   if (event.type.startsWith('verification_')) return `/#profile`;
@@ -68,11 +74,21 @@ export async function sendNotification(
         notifyVk: true,
         telegramChatId: true,
         vkId: true,
+        notifyBookingRequests: true,
       },
     });
 
     if (!user) {
       console.error(`[NOTIFICATIONS] User not found: ${userId}`);
+      return result;
+    }
+
+    // Check if booking request notifications are disabled for this owner
+    if (
+      (event.type === 'booking_approval_request' || event.type === 'booking_new') &&
+      user.notifyBookingRequests === false
+    ) {
+      console.log(`[NOTIFICATIONS] Booking request notifications disabled for user ${userId}`);
       return result;
     }
 
@@ -307,6 +323,89 @@ export async function notifyReviewReceived(
 ): Promise<NotificationResult> {
   return sendNotification(userId, {
     type: 'review_received',
+    data,
+  });
+}
+
+/**
+ * Helper: send chat unread notification
+ */
+export async function notifyChatUnread(
+  userId: string,
+  data: {
+    bookingId: string;
+    itemTitle: string;
+    unreadCount: number;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(userId, {
+    type: 'chat_unread',
+    data,
+  });
+}
+
+/**
+ * Helper: send moderation pending reminder for item
+ */
+export async function notifyModerationPendingItem(
+  adminId: string,
+  data: {
+    itemId: string;
+    itemTitle: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(adminId, {
+    type: 'moderation_pending_item',
+    data,
+  });
+}
+
+/**
+ * Helper: send moderation pending reminder for user verification
+ */
+export async function notifyModerationPendingUser(
+  adminId: string,
+  data: {
+    userId: string;
+    userName: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(adminId, {
+    type: 'moderation_pending_user',
+    data,
+  });
+}
+
+/**
+ * Helper: send rental return reminder
+ */
+export async function notifyRentalReturnReminder(
+  userId: string,
+  data: {
+    bookingId: string;
+    itemTitle: string;
+    renterName?: string;
+    isOwner: boolean;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(userId, {
+    type: 'rental_return_reminder',
+    data,
+  });
+}
+
+/**
+ * Helper: send review reminder
+ */
+export async function notifyReviewReminder(
+  userId: string,
+  data: {
+    bookingId: string;
+    itemTitle: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(userId, {
+    type: 'review_reminder',
     data,
   });
 }

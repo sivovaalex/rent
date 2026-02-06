@@ -21,6 +21,7 @@ interface NotificationSettingsData {
   pushModeration: boolean;
   pushReviews: boolean;
   pushReminders: boolean;
+  notifyBookingRequests: boolean;
   vkConnected: boolean;
   telegramConnected: boolean;
 }
@@ -307,6 +308,26 @@ export function NotificationSettings() {
             )}
           </div>
         )}
+
+        {/* Booking request notifications toggle */}
+        <div className="flex items-start justify-between rounded-lg border p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-amber-100 p-2">
+              <Bell className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <Label className="text-base font-medium">Запросы на бронирование</Label>
+              <p className="text-sm text-muted-foreground">
+                Уведомления о новых запросах аренды ваших лотов
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={settings.notifyBookingRequests}
+            onCheckedChange={(checked) => updateSetting('notifyBookingRequests', checked)}
+            disabled={saving}
+          />
+        </div>
 
         {/* Email notifications */}
         <div className="flex items-start justify-between rounded-lg border p-4">

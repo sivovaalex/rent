@@ -15,7 +15,12 @@ export type NotificationEventType =
   | 'booking_approval_request'
   | 'booking_approved'
   | 'booking_rejected'
-  | 'review_received';
+  | 'review_received'
+  | 'chat_unread'
+  | 'moderation_pending_item'
+  | 'moderation_pending_user'
+  | 'rental_return_reminder'
+  | 'review_reminder';
 
 export interface NotificationEvent {
   type: NotificationEventType;
@@ -218,6 +223,75 @@ export const templates: Record<NotificationEventType, Template> = {
       <p><strong>Оценка:</strong> ${'★'.repeat(Number(data.rating))}${'☆'.repeat(5 - Number(data.rating))}</p>
       <p><strong>Текст:</strong> ${data.text}</p>
       <p><a href="${BASE_URL}/#profile" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Посмотреть в профиле</a></p>
+    `,
+  },
+
+  // Chat unread messages
+  chat_unread: {
+    subject: 'Непрочитанные сообщения',
+    text: (data) =>
+      `У вас ${data.unreadCount} непрочитанных сообщений в чате по аренде «${data.itemTitle}».\n\n` +
+      `Посмотреть: ${BASE_URL}/#chat`,
+    html: (data) => `
+      <h2>Непрочитанные сообщения</h2>
+      <p>У вас <strong>${data.unreadCount}</strong> непрочитанных сообщений в чате по аренде <strong>«${data.itemTitle}»</strong>.</p>
+      <p><a href="${BASE_URL}/#chat" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Перейти в чат</a></p>
+    `,
+  },
+
+  // Moderation pending - item
+  moderation_pending_item: {
+    subject: 'Заявка на модерацию ожидает решения',
+    text: (data) =>
+      `Заявка на модерацию лота «${data.itemTitle}» ожидает решения уже 30 минут.\n\n` +
+      `Посмотреть: ${BASE_URL}/#admin`,
+    html: (data) => `
+      <h2>Ожидает модерации</h2>
+      <p>Заявка на модерацию лота <strong>«${data.itemTitle}»</strong> ожидает решения уже 30 минут.</p>
+      <p><a href="${BASE_URL}/#admin" style="display: inline-block; background: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Перейти к модерации</a></p>
+    `,
+  },
+
+  // Moderation pending - user verification
+  moderation_pending_user: {
+    subject: 'Заявка на верификацию ожидает решения',
+    text: (data) =>
+      `Заявка на верификацию пользователя «${data.userName}» ожидает решения уже 30 минут.\n\n` +
+      `Посмотреть: ${BASE_URL}/#admin`,
+    html: (data) => `
+      <h2>Ожидает верификации</h2>
+      <p>Заявка на верификацию пользователя <strong>«${data.userName}»</strong> ожидает решения уже 30 минут.</p>
+      <p><a href="${BASE_URL}/#admin" style="display: inline-block; background: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Перейти к модерации</a></p>
+    `,
+  },
+
+  // Rental return reminder
+  rental_return_reminder: {
+    subject: 'Напоминание о возврате',
+    text: (data) =>
+      data.isOwner
+        ? `Напоминаем, завтра истекает срок аренды «${data.itemTitle}» арендатору ${data.renterName}.\n\nПосмотреть: ${BASE_URL}/#bookings`
+        : `Напоминаем, завтра истекает срок аренды «${data.itemTitle}».\n\nПосмотреть: ${BASE_URL}/#bookings`,
+    html: (data) => `
+      <h2>Напоминание о возврате</h2>
+      <p>${data.isOwner
+        ? `Напоминаем, завтра истекает срок аренды <strong>«${data.itemTitle}»</strong> арендатору <strong>${data.renterName}</strong>.`
+        : `Напоминаем, завтра истекает срок аренды <strong>«${data.itemTitle}»</strong>.`
+      }</p>
+      <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Посмотреть бронирование</a></p>
+    `,
+  },
+
+  // Review reminder
+  review_reminder: {
+    subject: 'Оставьте отзыв',
+    text: (data) =>
+      `Оцените аренду «${data.itemTitle}». Ваш отзыв поможет другим пользователям!\n\n` +
+      `Посмотреть: ${BASE_URL}/#bookings`,
+    html: (data) => `
+      <h2>Оцените аренду</h2>
+      <p>Оцените аренду <strong>«${data.itemTitle}»</strong>. Ваш отзыв поможет другим пользователям!</p>
+      <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Оставить отзыв</a></p>
     `,
   },
 };

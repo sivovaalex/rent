@@ -119,6 +119,7 @@ model User {
   pushModeration      Boolean            @default(true) @map("push_moderation")
   pushReviews         Boolean            @default(true) @map("push_reviews")
   pushReminders       Boolean            @default(true) @map("push_reminders")
+  notifyBookingRequests Boolean          @default(true) @map("notify_booking_requests")
   vkId                String?            @map("vk_id")
   telegramChatId      String?            @map("telegram_chat_id")
 
@@ -370,4 +371,18 @@ model VerificationHistory {
   @@index([userId])
   @@index([createdAt])
   @@map("verification_history")
+}
+
+model NotificationLog {
+  id          String   @id @default(uuid())
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  eventType   String   @map("event_type")
+  recipientId String   @map("recipient_id")
+  sentAt      DateTime @default(now()) @map("sent_at")
+
+  @@unique([entityType, entityId, eventType, recipientId])
+  @@index([entityType, eventType])
+  @@index([sentAt])
+  @@map("notification_log")
 }

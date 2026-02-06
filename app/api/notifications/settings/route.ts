@@ -19,6 +19,7 @@ const updateSchema = z.object({
   pushModeration: z.boolean().optional(),
   pushReviews: z.boolean().optional(),
   pushReminders: z.boolean().optional(),
+  notifyBookingRequests: z.boolean().optional(),
 });
 
 /**
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
         pushModeration: true,
         pushReviews: true,
         pushReminders: true,
+        notifyBookingRequests: true,
         vkId: true,
         telegramChatId: true,
       },
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
       pushModeration: user.pushModeration,
       pushReviews: user.pushReviews,
       pushReminders: user.pushReminders,
+      notifyBookingRequests: user.notifyBookingRequests,
       vkConnected: !!user.vkId,
       telegramConnected: !!user.telegramChatId,
     });
@@ -108,7 +111,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { notifyEmail, notifyVk, notifyTelegram, notifyPush, pushBookings, pushChat, pushModeration, pushReviews, pushReminders } = validation.data;
+    const { notifyEmail, notifyVk, notifyTelegram, notifyPush, pushBookings, pushChat, pushModeration, pushReviews, pushReminders, notifyBookingRequests } = validation.data;
 
     // Get current user to check messenger connections
     const currentUser = await prisma.user.findUnique({
@@ -150,6 +153,7 @@ export async function PATCH(request: NextRequest) {
         ...(pushModeration !== undefined && { pushModeration }),
         ...(pushReviews !== undefined && { pushReviews }),
         ...(pushReminders !== undefined && { pushReminders }),
+        ...(notifyBookingRequests !== undefined && { notifyBookingRequests }),
       },
       select: {
         email: true,
@@ -162,6 +166,7 @@ export async function PATCH(request: NextRequest) {
         pushModeration: true,
         pushReviews: true,
         pushReminders: true,
+        notifyBookingRequests: true,
         vkId: true,
         telegramChatId: true,
       },
@@ -178,6 +183,7 @@ export async function PATCH(request: NextRequest) {
       pushModeration: user.pushModeration,
       pushReviews: user.pushReviews,
       pushReminders: user.pushReminders,
+      notifyBookingRequests: user.notifyBookingRequests,
       vkConnected: !!user.vkId,
       telegramConnected: !!user.telegramChatId,
     });
