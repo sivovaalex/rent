@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+/// <reference types="vitest/globals" />
 
 // Mock Prisma client for testing
 export const prismaMock = {
@@ -46,7 +46,21 @@ export const prismaMock = {
     upsert: vi.fn(),
     delete: vi.fn(),
   },
-  $transaction: vi.fn((callback) => callback(prismaMock)),
+  message: {
+    findMany: vi.fn(),
+    count: vi.fn(),
+    groupBy: vi.fn(),
+  },
+  notificationLog: {
+    findMany: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+  $transaction: vi.fn((callback) => {
+    if (Array.isArray(callback)) return Promise.resolve(callback);
+    return callback(prismaMock);
+  }),
 };
 
 // Mock the prisma module

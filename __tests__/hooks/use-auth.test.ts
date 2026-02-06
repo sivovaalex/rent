@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+/// <reference types="vitest/globals" />
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth, getAuthHeaders } from '@/hooks/use-auth';
 

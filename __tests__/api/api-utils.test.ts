@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/// <reference types="vitest/globals" />
 
 // Test helper functions logic without importing the full api-utils
 // to avoid crypto dependency issues in browser environment

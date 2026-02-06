@@ -33,7 +33,4 @@ export default defineConfig({
       crypto: 'crypto-browserify',
     },
   },
-  define: {
-    'process.env': {},
-  },
 });
