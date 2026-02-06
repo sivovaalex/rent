@@ -11,7 +11,11 @@ export type NotificationEventType =
   | 'booking_new'
   | 'booking_confirmed'
   | 'booking_cancelled'
-  | 'booking_completed';
+  | 'booking_completed'
+  | 'booking_approval_request'
+  | 'booking_approved'
+  | 'booking_rejected'
+  | 'review_received';
 
 export interface NotificationEvent {
   type: NotificationEventType;
@@ -144,6 +148,76 @@ export const templates: Record<NotificationEventType, Template> = {
       <p>Аренда лота <strong>"${data.itemTitle}"</strong> успешно завершена.</p>
       <p>Пожалуйста, оставьте отзыв о сделке.</p>
       <p><a href="${BASE_URL}/profile/bookings" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Оставить отзыв</a></p>
+    `,
+  },
+
+  // Approval system
+  booking_approval_request: {
+    subject: 'Новый запрос на бронирование',
+    text: (data) =>
+      `Новый запрос на бронирование!\n\n` +
+      `Лот: ${data.itemTitle}\n` +
+      `Арендатор: ${data.renterName}\n` +
+      `Период: ${data.startDate} - ${data.endDate}\n` +
+      `Сумма: ${data.totalPrice} ₽\n\n` +
+      `Подтвердите или отклоните запрос в течение 24 часов.`,
+    html: (data) => `
+      <h2>Новый запрос на бронирование</h2>
+      <p>Поступил запрос на бронирование лота <strong>"${data.itemTitle}"</strong></p>
+      <table style="margin: 15px 0;">
+        <tr><td style="padding: 4px 12px 4px 0;"><strong>Арендатор:</strong></td><td>${data.renterName}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0;"><strong>Период:</strong></td><td>${data.startDate} - ${data.endDate}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0;"><strong>Сумма:</strong></td><td>${data.totalPrice} ₽</td></tr>
+      </table>
+      <p style="color: #dc2626;"><strong>Подтвердите или отклоните запрос в течение 24 часов.</strong></p>
+      <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Перейти к бронированиям</a></p>
+    `,
+  },
+
+  booking_approved: {
+    subject: 'Бронирование одобрено',
+    text: (data) =>
+      `Ваш запрос на бронирование одобрен!\n\n` +
+      `Лот: ${data.itemTitle}\n` +
+      `Период: ${data.startDate} - ${data.endDate}\n\n` +
+      `Оплата проведена. Свяжитесь с владельцем для передачи вещи.`,
+    html: (data) => `
+      <h2>Бронирование одобрено!</h2>
+      <p>Ваш запрос на бронирование лота <strong>"${data.itemTitle}"</strong> одобрен владельцем.</p>
+      <p><strong>Период:</strong> ${data.startDate} - ${data.endDate}</p>
+      <p>Оплата проведена. Свяжитесь с владельцем для передачи вещи.</p>
+      <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Посмотреть бронирование</a></p>
+    `,
+  },
+
+  booking_rejected: {
+    subject: 'Бронирование отклонено',
+    text: (data) =>
+      `Ваш запрос на бронирование отклонён.\n\n` +
+      `Лот: ${data.itemTitle}\n` +
+      `Причина: ${data.reason || 'Не указана'}\n\n` +
+      `Вы можете выбрать другой лот или попробовать позже.`,
+    html: (data) => `
+      <h2>Бронирование отклонено</h2>
+      <p>Ваш запрос на бронирование лота <strong>"${data.itemTitle}"</strong> был отклонён владельцем.</p>
+      <p><strong>Причина:</strong> ${data.reason || 'Не указана'}</p>
+      <p>Вы можете выбрать другой лот или попробовать позже.</p>
+    `,
+  },
+
+  review_received: {
+    subject: 'Новый отзыв',
+    text: (data) =>
+      `Вы получили новый отзыв!\n\n` +
+      `Оценка: ${'★'.repeat(Number(data.rating))}${'☆'.repeat(5 - Number(data.rating))}\n` +
+      `Текст: ${data.text}\n\n` +
+      `Посмотреть: ${BASE_URL}/#profile`,
+    html: (data) => `
+      <h2>Новый отзыв!</h2>
+      <p>Вы получили новый отзыв.</p>
+      <p><strong>Оценка:</strong> ${'★'.repeat(Number(data.rating))}${'☆'.repeat(5 - Number(data.rating))}</p>
+      <p><strong>Текст:</strong> ${data.text}</p>
+      <p><a href="${BASE_URL}/#profile" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Посмотреть в профиле</a></p>
     `,
   },
 };

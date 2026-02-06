@@ -27,6 +27,7 @@ interface NotificationResult {
 
 /** Маппинг типа события на категорию push */
 function getPushCategory(type: NotificationEventType): PushCategory {
+  if (type === 'review_received') return 'reviews';
   if (type.startsWith('booking_')) return 'bookings';
   if (type === 'item_approved' || type === 'item_rejected') return 'moderation';
   if (type === 'verification_approved' || type === 'verification_rejected') return 'moderation';
@@ -237,6 +238,75 @@ export async function notifyBookingCompleted(
 ): Promise<NotificationResult> {
   return sendNotification(userId, {
     type: 'booking_completed',
+    data,
+  });
+}
+
+/**
+ * Helper: send approval request notification to owner
+ */
+export async function notifyBookingApprovalRequest(
+  ownerId: string,
+  data: {
+    bookingId: string;
+    itemTitle: string;
+    renterName: string;
+    startDate: string;
+    endDate: string;
+    totalPrice: number;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(ownerId, {
+    type: 'booking_approval_request',
+    data,
+  });
+}
+
+/**
+ * Helper: send booking approved notification to renter
+ */
+export async function notifyBookingApproved(
+  renterId: string,
+  data: {
+    itemTitle: string;
+    startDate: string;
+    endDate: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(renterId, {
+    type: 'booking_approved',
+    data,
+  });
+}
+
+/**
+ * Helper: send booking rejected notification to renter
+ */
+export async function notifyBookingRejected(
+  renterId: string,
+  data: {
+    itemTitle: string;
+    reason: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(renterId, {
+    type: 'booking_rejected',
+    data,
+  });
+}
+
+/**
+ * Helper: send review received notification
+ */
+export async function notifyReviewReceived(
+  userId: string,
+  data: {
+    rating: number;
+    text: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(userId, {
+    type: 'review_received',
     data,
   });
 }

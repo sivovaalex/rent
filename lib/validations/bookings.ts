@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const rentalTypeSchema = z.enum(['day', 'month']);
 
 // Booking status enum (matches Prisma schema)
-export const bookingStatusSchema = z.enum(['pending_payment', 'paid', 'active', 'completed', 'cancelled']);
+export const bookingStatusSchema = z.enum(['pending_approval', 'pending_payment', 'paid', 'active', 'completed', 'cancelled']);
 
 // Create booking request
 export const createBookingSchema = z.object({
@@ -43,8 +43,14 @@ export const bookingsQuerySchema = z.object({
   limit: z.coerce.number().default(20),
 });
 
+// Reject booking request
+export const rejectBookingSchema = z.object({
+  reason: z.string().min(5, 'Причина должна содержать минимум 5 символов').max(500, 'Причина слишком длинная'),
+});
+
 // Types
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type ChecklistInput = z.infer<typeof checklistSchema>;
 export type ConfirmReturnInput = z.infer<typeof confirmReturnSchema>;
 export type BookingsQueryInput = z.infer<typeof bookingsQuerySchema>;
+export type RejectBookingInput = z.infer<typeof rejectBookingSchema>;

@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Star, MessageCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import { SkeletonList } from '@/components/ui/spinner';
-import type { User, Booking, AlertType } from '@/types';
+import type { User, Booking, AlertType, ReviewType } from '@/types';
 import { getAuthHeaders } from '@/hooks/use-auth';
 
 interface BookingsTabProps {
@@ -21,6 +23,12 @@ interface BookingsTabProps {
 export default function BookingsTab({ currentUser, showAlert, loadBookings, bookings, isLoading, onOpenChat }: BookingsTabProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [reviewType, setReviewType] = useState<ReviewType>('renter_review');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectBookingId, setRejectBookingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [isApproving, setIsApproving] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -49,12 +57,66 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     }
   };
 
-  const canLeaveReview = (booking: Booking): boolean => {
+  const approveBooking = async (bookingId: string) => {
+    if (!currentUser) return;
+    setIsApproving(bookingId);
+
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/approve`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Бронирование одобрено!', 'success');
+        loadBookings();
+      } else {
+        showAlert(data.error, 'error');
+      }
+    } catch {
+      showAlert('Ошибка одобрения', 'error');
+    } finally {
+      setIsApproving(null);
+    }
+  };
+
+  const openRejectModal = (bookingId: string) => {
+    setRejectBookingId(bookingId);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const submitReject = async () => {
+    if (!rejectBookingId || !rejectReason.trim()) return;
+    setIsRejecting(true);
+
+    try {
+      const res = await fetch(`/api/bookings/${rejectBookingId}/reject`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ reason: rejectReason.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Бронирование отклонено', 'success');
+        setShowRejectModal(false);
+        loadBookings();
+      } else {
+        showAlert(data.error, 'error');
+      }
+    } catch {
+      showAlert('Ошибка отклонения', 'error');
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const canLeaveRenterReview = (booking: Booking): boolean => {
     const renterId = booking.renterId ?? booking.renter_id;
     if (!currentUser || renterId !== currentUser._id) return false;
-    if (booking.review) return false;
-    if (booking.status === 'pending_payment' || booking.status === 'cancelled') return false;
-    // Можно оставить отзыв после окончания периода аренды
+    const renterReview = booking.reviews?.find(r => r.type === 'renter_review') ?? booking.review;
+    if (renterReview) return false;
+    if (booking.status === 'pending_payment' || booking.status === 'cancelled' || booking.status === 'pending_approval') return false;
     const endDateStr = booking.endDate ?? booking.end_date;
     if (!endDateStr) return false;
     const endDate = new Date(endDateStr);
@@ -63,18 +125,22 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     return endDate < today || booking.status === 'completed';
   };
 
-  const handleOpenReviewModal = (booking: Booking) => {
+  const canLeaveOwnerReview = (booking: Booking): boolean => {
+    const ownerId = booking.item?.ownerId ?? booking.item?.owner_id;
+    if (!currentUser || ownerId !== currentUser._id) return false;
+    const ownerReview = booking.reviews?.find(r => r.type === 'owner_review');
+    if (ownerReview) return false;
+    if (booking.status !== 'completed') return false;
+    return true;
+  };
+
+  const handleOpenReviewModal = (booking: Booking, type: ReviewType) => {
     if (!currentUser) {
-      showAlert('Пожалуйста, войдите в систему, чтобы оставить отзыв', 'error');
+      showAlert('Пожалуйста, войдите в систему', 'error');
       return;
     }
-
-    if (booking.review) {
-      showAlert('Вы уже оставили отзыв для этого бронирования', 'error');
-      return;
-    }
-
     setSelectedBooking(booking);
+    setReviewType(type);
     setShowReviewModal(true);
   };
 
@@ -85,6 +151,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
   const getStatusLabel = (status: Booking['status']) => {
     switch (status) {
+      case 'pending_approval': return 'Ожидает одобрения';
       case 'pending_payment': return 'Ожидает оплаты';
       case 'paid': return 'Оплачено';
       case 'active': return 'Активно';
@@ -92,6 +159,26 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       case 'cancelled': return 'Отменено';
       default: return status;
     }
+  };
+
+  const getStatusVariant = (status: Booking['status']): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    switch (status) {
+      case 'pending_approval': return 'outline';
+      case 'cancelled': return 'destructive';
+      case 'completed': return 'secondary';
+      default: return 'default';
+    }
+  };
+
+  const getDeadlineText = (deadline: string | undefined): string | null => {
+    if (!deadline) return null;
+    const d = new Date(deadline);
+    const now = new Date();
+    const diff = d.getTime() - now.getTime();
+    if (diff <= 0) return 'Время истекло';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}ч ${minutes}мин`;
   };
 
   if (isLoading) {
@@ -112,6 +199,8 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
           const totalPrice = booking.totalPrice ?? booking.total_price ?? 0;
           const renterId = booking.renterId ?? booking.renter_id;
           const ownerId = booking.item?.ownerId ?? booking.item?.owner_id;
+          const renterReview = booking.reviews?.find(r => r.type === 'renter_review') ?? booking.review;
+          const ownerReview = booking.reviews?.find(r => r.type === 'owner_review');
 
           return (
             <Card key={booking._id}>
@@ -123,13 +212,28 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                       {startDate && new Date(startDate).toLocaleDateString()} - {endDate && new Date(endDate).toLocaleDateString()}
                     </CardDescription>
                   </div>
-                  <Badge variant={booking.status === 'completed' ? 'secondary' : 'default'}>
+                  <Badge variant={getStatusVariant(booking.status)}>
+                    {booking.status === 'pending_approval' && <Clock className="w-3 h-3 mr-1" />}
                     {getStatusLabel(booking.status)}
                   </Badge>
                 </div>
+
+                {booking.status === 'pending_approval' && booking.approvalDeadline && (
+                  <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
+                    <Clock className="w-3 h-3" />
+                    <span>Осталось: {getDeadlineText(booking.approvalDeadline)}</span>
+                  </div>
+                )}
               </CardHeader>
+
               <CardContent>
                 <div className="space-y-2 text-sm">
+                  {ownerId === currentUser?._id && booking.renter && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Арендатор:</span>
+                      <span>{booking.renter.name}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Аренда:</span>
                     <span>{rentalPrice + (booking.commission || 0)} ₽</span>
@@ -148,33 +252,84 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                     <span>Итого:</span>
                     <span>{totalPrice} ₽</span>
                   </div>
+
+                  {booking.status === 'cancelled' && booking.rejectionReason && (
+                    <div className="flex items-start gap-2 pt-2 text-red-600 bg-red-50 rounded p-2 mt-2">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-xs">Причина отклонения:</span>
+                        <p className="text-xs">{booking.rejectionReason}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
-              <CardFooter className="flex gap-2">
-                {booking.status !== 'cancelled' && onOpenChat && (
-                  <Button variant="outline" onClick={() => onOpenChat(booking._id)} className="flex items-center gap-1">
+
+              <CardFooter className="flex flex-wrap gap-2">
+                {booking.status !== 'cancelled' && booking.status !== 'pending_approval' && onOpenChat && (
+                  <Button variant="outline" size="sm" onClick={() => onOpenChat(booking._id)} className="flex items-center gap-1">
                     <MessageCircle className="w-4 h-4" />
                     Чат
                   </Button>
                 )}
+
+                {/* Owner: Approve / Reject */}
+                {booking.status === 'pending_approval' && ownerId === currentUser?._id && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => approveBooking(booking._id)}
+                      disabled={isApproving === booking._id}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      {isApproving === booking._id ? 'Одобрение...' : 'Одобрить'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => openRejectModal(booking._id)}
+                      className="flex-1"
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Отклонить
+                    </Button>
+                  </>
+                )}
+
+                {/* Owner: Confirm return */}
                 {(booking.status === 'active' || booking.status === 'paid') && ownerId === currentUser?._id && (
-                  <Button onClick={() => confirmReturn(booking._id)} className="flex-1">
+                  <Button size="sm" onClick={() => confirmReturn(booking._id)} className="flex-1">
                     Подтвердить возврат
                   </Button>
                 )}
+
+                {/* Renter: leave review on item */}
                 {renterId === currentUser?._id && (
-                  booking.review ? (
-                    <div className="flex items-center gap-1 text-yellow-500 flex-1 justify-center">
+                  renterReview ? (
+                    <div className="flex items-center gap-1 text-yellow-500 text-sm">
                       <Star className="w-4 h-4 fill-current" />
-                      <span>{booking.review.rating}/5</span>
-                      <span className="text-gray-500 text-sm">(отзыв оставлен)</span>
+                      <span>{renterReview.rating}/5</span>
+                      <span className="text-gray-500">(отзыв оставлен)</span>
                     </div>
-                  ) : canLeaveReview(booking) ? (
-                    <Button
-                      onClick={() => handleOpenReviewModal(booking)}
-                      className="flex-1"
-                    >
+                  ) : canLeaveRenterReview(booking) ? (
+                    <Button size="sm" onClick={() => handleOpenReviewModal(booking, 'renter_review')}>
                       Оставить отзыв
+                    </Button>
+                  ) : null
+                )}
+
+                {/* Owner: leave review on renter */}
+                {ownerId === currentUser?._id && (
+                  ownerReview ? (
+                    <div className="flex items-center gap-1 text-blue-500 text-sm">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span>{ownerReview.rating}/5</span>
+                      <span className="text-gray-500">(оценка арендатора)</span>
+                    </div>
+                  ) : canLeaveOwnerReview(booking) ? (
+                    <Button size="sm" variant="outline" onClick={() => handleOpenReviewModal(booking, 'owner_review')}>
+                      Оценить арендатора
                     </Button>
                   ) : null
                 )}
@@ -198,8 +353,38 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
           booking={selectedBooking}
           currentUser={currentUser}
           onSubmit={handleReviewSubmit}
+          reviewType={reviewType}
         />
       )}
+
+      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Отклонить бронирование</DialogTitle>
+            <DialogDescription>Укажите причину отказа. Арендатор получит уведомление.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Причина отклонения (минимум 5 символов)..."
+              rows={3}
+              maxLength={500}
+            />
+            <p className="text-xs text-gray-500 text-right">{rejectReason.length}/500</p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowRejectModal(false)}>Отмена</Button>
+            <Button
+              variant="destructive"
+              onClick={submitReject}
+              disabled={isRejecting || rejectReason.trim().length < 5}
+            >
+              {isRejecting ? 'Отклонение...' : 'Отклонить'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

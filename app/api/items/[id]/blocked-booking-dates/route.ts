@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const bookings = await prisma.booking.findMany({
       where: {
         itemId: id,
-        status: { in: ['pending_payment', 'paid', 'active'] },
+        status: { in: ['pending_approval', 'pending_payment', 'paid', 'active'] },
       },
     });
 

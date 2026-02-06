@@ -157,6 +157,9 @@ export function safeUser(user: User): ClientUser {
     confirmationRate: user.confirmationRate,
     avgResponseMinutes: user.avgResponseMinutes,
     trustBadges: user.trustBadges,
+    // Approval settings
+    defaultApprovalMode: user.defaultApprovalMode,
+    defaultApprovalThreshold: user.defaultApprovalThreshold,
     // snake_case (legacy, deprecated)
     is_verified: user.isVerified,
     verification_status: user.verificationStatus,
@@ -183,6 +186,8 @@ export function transformItem(item: ItemWithOwner): ClientItem {
     attributes: item.attributes as Record<string, string | number | boolean> | undefined,
     status: item.status,
     rating: item.rating ?? undefined,
+    approvalMode: item.approvalMode ?? undefined,
+    approvalThreshold: item.approvalThreshold ?? undefined,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     // camelCase (preferred)
@@ -215,11 +220,30 @@ interface PartialRenter {
 interface BookingWithRelations extends Booking {
   item?: ItemWithOwner | null;
   renter?: PartialRenter | null;
+  reviews?: Review[] | null;
   review?: Review | null;
+}
+
+function transformReview(r: Review) {
+  return {
+    _id: r.id,
+    bookingId: r.bookingId,
+    itemId: r.itemId,
+    userId: r.userId,
+    rating: r.rating,
+    text: r.text,
+    photos: r.photos,
+    type: r.type,
+    createdAt: r.createdAt,
+  };
 }
 
 /** Transform booking for response */
 export function transformBooking(booking: BookingWithRelations): ClientBooking {
+  // Find renter_review for backward compatibility
+  const renterReview = booking.reviews?.find(r => r.type === 'renter_review')
+    ?? booking.review;
+
   return {
     _id: booking.id,
     deposit: booking.deposit,
@@ -248,16 +272,15 @@ export function transformBooking(booking: BookingWithRelations): ClientBooking {
       email: booking.renter.email ?? null,
       phone: booking.renter.phone,
     } as ClientUser : undefined,
-    review: booking.review ? {
-      _id: booking.review.id,
-      bookingId: booking.review.bookingId,
-      itemId: booking.review.itemId,
-      userId: booking.review.userId,
-      rating: booking.review.rating,
-      text: booking.review.text,
-      photos: booking.review.photos,
-      createdAt: booking.review.createdAt,
-    } : undefined,
+    // Reviews (new: array)
+    reviews: booking.reviews?.map(transformReview),
+    // Backward compat: single renter review
+    review: renterReview ? transformReview(renterReview) : undefined,
+    // Approval fields
+    approvalDeadline: booking.approvalDeadline?.toISOString(),
+    rejectionReason: booking.rejectionReason ?? undefined,
+    approvedAt: booking.approvedAt?.toISOString(),
+    rejectedAt: booking.rejectedAt?.toISOString(),
     // snake_case (legacy, deprecated)
     item_id: booking.itemId,
     renter_id: booking.renterId,

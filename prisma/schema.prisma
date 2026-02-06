@@ -44,6 +44,7 @@ enum Category {
 }
 
 enum BookingStatus {
+  pending_approval
   pending_payment
   paid
   active
@@ -54,6 +55,18 @@ enum BookingStatus {
 enum RentalType {
   day
   month
+}
+
+enum ReviewType {
+  renter_review
+  owner_review
+}
+
+enum ApprovalMode {
+  auto_approve
+  manual
+  rating_based
+  verified_only
 }
 
 // ==================== MODELS ====================
@@ -91,6 +104,10 @@ model User {
   avgResponseMinutes  Float?             @map("avg_response_minutes")
   trustBadges         String[]           @default([]) @map("trust_badges")
   trustUpdatedAt      DateTime?          @map("trust_updated_at")
+
+  // Approval settings (default for all items)
+  defaultApprovalMode       ApprovalMode   @default(auto_approve) @map("default_approval_mode")
+  defaultApprovalThreshold  Float          @default(4.0) @map("default_approval_threshold")
 
   // Notification settings
   notifyEmail         Boolean            @default(true) @map("notify_email")
@@ -140,6 +157,10 @@ model Item {
   status          ItemStatus  @default(pending)
   rating          Float?
 
+  // Approval settings (per-item override, null = use owner default)
+  approvalMode      ApprovalMode?  @map("approval_mode")
+  approvalThreshold Float?         @map("approval_threshold")
+
   // Moderation
   moderatedAt     DateTime?   @map("moderated_at")
   moderatedBy     String?     @map("moderated_by")
@@ -186,6 +207,12 @@ model Booking {
   handoverConfirmedAt DateTime? @map("handover_confirmed_at")
   returnConfirmedAt   DateTime? @map("return_confirmed_at")
 
+  // Approval
+  approvalDeadline  DateTime?     @map("approval_deadline")
+  rejectionReason   String?       @map("rejection_reason")
+  approvedAt        DateTime?     @map("approved_at")
+  rejectedAt        DateTime?     @map("rejected_at")
+
   paidAt        DateTime?     @map("paid_at")
   completedAt   DateTime?     @map("completed_at")
   createdAt     DateTime      @default(now()) @map("created_at")
@@ -194,7 +221,7 @@ model Booking {
   // Relations
   item          Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
   renter        User          @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
-  review        Review?
+  reviews       Review[]
   messages      Message[]
 
   @@index([itemId])
@@ -205,22 +232,24 @@ model Booking {
 }
 
 model Review {
-  id          String    @id @default(uuid())
-  bookingId   String    @unique @map("booking_id")
-  itemId      String    @map("item_id")
-  userId      String    @map("user_id")
+  id          String     @id @default(uuid())
+  bookingId   String     @map("booking_id")
+  itemId      String     @map("item_id")
+  userId      String     @map("user_id")
   rating      Int
   text        String
-  photos      String[]  @default([])
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  photos      String[]   @default([])
+  type        ReviewType @default(renter_review)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking     Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  item        Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   reply       ReviewReply?
 
+  @@unique([bookingId, type])
   @@index([itemId])
   @@index([userId])
   @@map("reviews")

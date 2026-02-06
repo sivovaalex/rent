@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Star, AlertCircle, ImageIcon, X, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { User, Booking, Item } from '@/types';
+import type { User, Booking, Item, ReviewType } from '@/types';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface ReviewModalProps {
   booking: Booking & { item?: Item };
   currentUser: User;
   onSubmit?: () => void;
+  reviewType?: ReviewType;
 }
 
 interface ReviewForm {
@@ -28,7 +29,7 @@ interface PhotoPreview {
   preview: string;
 }
 
-export default function ReviewModal({ isOpen, onClose, booking, currentUser, onSubmit }: ReviewModalProps) {
+export default function ReviewModal({ isOpen, onClose, booking, currentUser, onSubmit, reviewType = 'renter_review' }: ReviewModalProps) {
   useEffect(() => {
     if (isOpen && !currentUser) {
       console.error('currentUser не передан в ReviewModal');
@@ -148,10 +149,11 @@ export default function ReviewModal({ isOpen, onClose, booking, currentUser, onS
         },
         body: JSON.stringify({
           booking_id: booking._id,
-          item_id: booking.item_id,
+          item_id: booking.item_id || booking.itemId || booking.item?._id,
           rating: reviewForm.rating,
           text: reviewForm.text.trim(),
-          photos: reviewForm.photos || []
+          photos: reviewForm.photos || [],
+          type: reviewType,
         })
       });
 
@@ -177,9 +179,13 @@ export default function ReviewModal({ isOpen, onClose, booking, currentUser, onS
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md w-[calc(100%-1rem)] sm:w-full">
         <DialogHeader>
-          <DialogTitle className="pr-6">Оставить отзыв</DialogTitle>
+          <DialogTitle className="pr-6">
+            {reviewType === 'owner_review' ? 'Оценить арендатора' : 'Оставить отзыв'}
+          </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Поделитесь опытом аренды: {booking?.item?.title}
+            {reviewType === 'owner_review'
+              ? `Оцените арендатора: ${booking?.renter?.name || 'Арендатор'}`
+              : `Поделитесь опытом аренды: ${booking?.item?.title}`}
           </DialogDescription>
         </DialogHeader>
 

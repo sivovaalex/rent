@@ -3,11 +3,15 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { requireAuth, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
 import { logError } from '@/lib/logger';
+import { autoRejectExpiredBookings } from '@/lib/approval';
 
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
     if ('error' in authResult) return authResult.error;
+
+    // Auto-reject expired pending_approval bookings
+    autoRejectExpiredBookings().catch(console.error);
 
     const url = new URL(request.url);
     const userType = url.searchParams.get('type');
@@ -35,7 +39,7 @@ export async function GET(request: NextRequest) {
           },
         },
         renter: { select: { id: true, name: true, phone: true, email: true } },
-        review: true,
+        reviews: true,
       },
     });
 

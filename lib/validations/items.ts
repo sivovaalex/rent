@@ -3,6 +3,9 @@ import { z } from 'zod';
 // Category enum (matches Prisma schema)
 export const categorySchema = z.enum(['stream', 'electronics', 'clothes', 'sports', 'tools', 'other']);
 
+// Approval mode enum
+export const approvalModeSchema = z.enum(['auto_approve', 'manual', 'rating_based', 'verified_only']);
+
 // Item status enum
 export const itemStatusSchema = z.enum(['pending', 'approved', 'rejected', 'draft']);
 
@@ -32,6 +35,8 @@ export const createItemSchema = z.object({
   longitude: z.number().min(-180).max(180).optional().nullable(),
   photos: z.array(z.string()).max(5, 'Максимум 5 фото').default([]),
   attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
+  approval_mode: approvalModeSchema.optional().nullable(),
+  approval_threshold: z.number().min(3.0).max(5.0).optional().nullable(),
 });
 
 // Update item request (all fields optional)
@@ -60,6 +65,8 @@ export const updateItemSchema = z.object({
   category: categorySchema.optional(),
   subcategory: z.string().optional().nullable(),
   attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+  approval_mode: approvalModeSchema.optional().nullable(),
+  approval_threshold: z.number().min(3.0).max(5.0).optional().nullable(),
 });
 
 // Item list query params

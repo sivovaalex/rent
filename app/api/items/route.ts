@@ -135,6 +135,8 @@ export async function POST(request: NextRequest) {
         longitude: data.longitude ?? null,
         photos: data.photos,
         attributes: data.attributes,
+        approvalMode: data.approval_mode ?? null,
+        approvalThreshold: data.approval_threshold ?? null,
         status: 'pending',
       },
     });

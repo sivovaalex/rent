@@ -5,11 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import type { Item, BookingForm, RentalType } from '@/types';
+import type { Item, BookingForm, RentalType, ApprovalMode } from '@/types';
 import { withCommission, formatPrice } from '@/lib/constants';
 import { BOOKING_CONSENT_LINKS } from '@/lib/constants/legal-links';
 
@@ -316,6 +316,30 @@ export default function BookingModal({
             </div>
           </div>
 
+          {/* Инфо о режиме одобрения */}
+          {item.approvalMode && item.approvalMode !== 'auto_approve' && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+              <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-amber-800">
+                {item.approvalMode === 'manual' && (
+                  <p>Владелец рассмотрит ваш запрос на бронирование в течение 24 часов.</p>
+                )}
+                {item.approvalMode === 'rating_based' && (
+                  <p>
+                    Авто-одобрение при рейтинге от {item.approvalThreshold || 4.0}.
+                    Если ваш рейтинг ниже, владелец рассмотрит запрос вручную (до 24 часов).
+                  </p>
+                )}
+                {item.approvalMode === 'verified_only' && (
+                  <p>
+                    Авто-одобрение только для верифицированных пользователей.
+                    Иначе владелец рассмотрит запрос вручную (до 24 часов).
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Согласие с правилами аренды */}
           <div className="flex items-start space-x-2 pt-2 border-t">
             <Checkbox
@@ -342,7 +366,10 @@ export default function BookingModal({
             </Button>
             <Button type="submit" disabled={isSubmitting || !acceptRentalRules} className="w-full sm:w-auto">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Бронирование...' : 'Забронировать'}
+              {isSubmitting
+                ? (item.approvalMode && item.approvalMode !== 'auto_approve' ? 'Отправка запроса...' : 'Бронирование...')
+                : (item.approvalMode && item.approvalMode !== 'auto_approve' ? 'Отправить запрос' : 'Забронировать')
+              }
             </Button>
           </div>
         </form>

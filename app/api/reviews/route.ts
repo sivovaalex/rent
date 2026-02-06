@@ -4,6 +4,68 @@ import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, createReviewSchema } from '@/lib/validations';
 import { recalculateTrust } from '@/lib/trust';
 
+export async function GET(request: NextRequest) {
+  try {
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
+    const type = url.searchParams.get('type') || 'renter_review';
+
+    if (!userId) {
+      return errorResponse('userId обязателен', 400);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
+
+    if (type === 'owner_review') {
+      // Reviews about a renter (from owners)
+      where.type = 'owner_review';
+      where.booking = { renterId: userId };
+    } else {
+      // Reviews about items owned by this user (from renters)
+      where.type = 'renter_review';
+      where.item = { ownerId: userId };
+    }
+
+    const reviews = await prisma.review.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, photo: true } },
+        reply: true,
+        item: { select: { id: true, title: true } },
+      },
+    });
+
+    return successResponse({
+      reviews: reviews.map((r) => ({
+        _id: r.id,
+        bookingId: r.bookingId,
+        itemId: r.itemId,
+        userId: r.userId,
+        userName: r.user.name,
+        userPhoto: r.user.photo,
+        itemTitle: r.item?.title,
+        rating: r.rating,
+        text: r.text,
+        photos: r.photos,
+        type: r.type,
+        reply: r.reply ? {
+          _id: r.reply.id,
+          reviewId: r.reply.reviewId,
+          ownerId: r.reply.ownerId,
+          text: r.reply.text,
+          createdAt: r.reply.createdAt,
+        } : undefined,
+        createdAt: r.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('GET /reviews Error:', error);
+    return errorResponse('Ошибка сервера', 500);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
@@ -12,21 +74,30 @@ export async function POST(request: NextRequest) {
     const validation = await validateBody(request, createReviewSchema);
     if (!validation.success) return validation.error;
 
-    const { booking_id, item_id, rating, text, photos } = validation.data;
+    const { booking_id, item_id, rating, text, photos, type } = validation.data;
 
-    // Check booking exists and belongs to user
-    const booking = await prisma.booking.findFirst({
-      where: {
-        id: booking_id,
-        renterId: authResult.userId,
-      },
+    // Get booking with item info
+    const booking = await prisma.booking.findUnique({
+      where: { id: booking_id },
+      include: { item: true },
     });
 
     if (!booking) {
-      return errorResponse('Бронирование не найдено или не принадлежит вам', 400);
+      return errorResponse('Бронирование не найдено', 400);
     }
 
-    // Check if review period has passed (booking end date)
+    // Authorization depends on review type
+    if (type === 'renter_review') {
+      if (booking.renterId !== authResult.userId) {
+        return errorResponse('Бронирование не принадлежит вам', 400);
+      }
+    } else if (type === 'owner_review') {
+      if (booking.item?.ownerId !== authResult.userId) {
+        return errorResponse('Вы не являетесь владельцем лота', 403);
+      }
+    }
+
+    // Check booking is completed or end date passed
     const endDate = new Date(booking.endDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -35,18 +106,17 @@ export async function POST(request: NextRequest) {
       return errorResponse('Отзыв можно оставить только после завершения аренды', 400);
     }
 
-    // Check for existing review
-    const existingReview = await prisma.review.findFirst({
-      where: { bookingId: booking_id },
+    // Check for existing review of this type (compound unique)
+    const existingReview = await prisma.review.findUnique({
+      where: { bookingId_type: { bookingId: booking_id, type } },
     });
 
     if (existingReview) {
       return errorResponse('Вы уже оставили отзыв для этого бронирования', 400);
     }
 
-    // Get item to update owner rating
+    // Get item
     const item = await prisma.item.findUnique({ where: { id: item_id } });
-
     if (!item) {
       return errorResponse('Лот не найден', 400);
     }
@@ -60,34 +130,60 @@ export async function POST(request: NextRequest) {
         rating,
         text: text.trim(),
         photos: photos || [],
+        type,
       },
     });
 
-    // Update ratings
+    // Update ratings based on type
     try {
-      const allReviews = await prisma.review.findMany({
-        where: { itemId: item_id },
-        select: { rating: true },
-      });
+      if (type === 'renter_review') {
+        // Existing logic: update item rating and owner rating
+        const allItemReviews = await prisma.review.findMany({
+          where: { itemId: item_id, type: 'renter_review' },
+          select: { rating: true },
+        });
 
-      if (allReviews.length > 0) {
-        const avgRating =
-          allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-        const roundedRating = Math.round(avgRating * 100) / 100;
+        if (allItemReviews.length > 0) {
+          const avgRating =
+            allItemReviews.reduce((sum, r) => sum + r.rating, 0) / allItemReviews.length;
+          const roundedRating = Math.round(avgRating * 100) / 100;
 
-        await prisma.$transaction([
-          prisma.user.update({
-            where: { id: item.ownerId },
+          await prisma.$transaction([
+            prisma.user.update({
+              where: { id: item.ownerId },
+              data: { rating: roundedRating },
+            }),
+            prisma.item.update({
+              where: { id: item_id },
+              data: { rating: roundedRating },
+            }),
+          ]);
+        }
+
+        recalculateTrust(item.ownerId).catch(console.error);
+      } else if (type === 'owner_review') {
+        // New: update renter's rating based on owner reviews
+        const renterReviews = await prisma.review.findMany({
+          where: {
+            type: 'owner_review',
+            booking: { renterId: booking.renterId },
+          },
+          select: { rating: true },
+        });
+
+        if (renterReviews.length > 0) {
+          const avgRating =
+            renterReviews.reduce((sum, r) => sum + r.rating, 0) / renterReviews.length;
+          const roundedRating = Math.round(avgRating * 100) / 100;
+
+          await prisma.user.update({
+            where: { id: booking.renterId },
             data: { rating: roundedRating },
-          }),
-          prisma.item.update({
-            where: { id: item_id },
-            data: { rating: roundedRating },
-          }),
-        ]);
+          });
+        }
+
+        recalculateTrust(booking.renterId).catch(console.error);
       }
-      // Recalculate trust after rating update
-      recalculateTrust(item.ownerId).catch(console.error);
     } catch (ratingError) {
       console.error('Ошибка обновления рейтинга:', ratingError);
     }
@@ -102,6 +198,7 @@ export async function POST(request: NextRequest) {
         rating: review.rating,
         text: review.text,
         photos: review.photos,
+        type: review.type,
         createdAt: review.createdAt,
       },
     });

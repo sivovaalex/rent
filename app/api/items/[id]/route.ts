@@ -34,16 +34,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const transformedItem = {
       ...transformItem(item),
       owner_createdAt: item.owner.createdAt,
-      reviews: item.reviews.map((r) => ({
-        _id: r.id,
-        ...r,
-        user_id: r.userId,
-        item_id: r.itemId,
-        booking_id: r.bookingId,
-        user_name: r.user.name,
-        user_photo: r.user.photo,
-        reply: r.reply,
-      })),
+      reviews: item.reviews
+        .filter((r) => r.type === 'renter_review')
+        .map((r) => ({
+          _id: r.id,
+          ...r,
+          user_id: r.userId,
+          item_id: r.itemId,
+          booking_id: r.bookingId,
+          user_name: r.user.name,
+          user_photo: r.user.photo,
+          type: r.type,
+          reply: r.reply,
+        })),
     };
 
     return successResponse({ item: transformedItem });
@@ -92,6 +95,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (data.price_per_month !== undefined) updateData.pricePerMonth = data.price_per_month;
     if (data.pricePerMonth !== undefined) updateData.pricePerMonth = data.pricePerMonth;
     if (data.deposit !== undefined) updateData.deposit = data.deposit;
+
+    // Approval settings
+    if (data.approval_mode !== undefined) updateData.approvalMode = data.approval_mode;
+    if (data.approval_threshold !== undefined) updateData.approvalThreshold = data.approval_threshold;
 
     await prisma.item.update({
       where: { id },

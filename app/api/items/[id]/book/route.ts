@@ -5,7 +5,8 @@ import { requireVerified, transformBooking, errorResponse, successResponse } fro
 import { validateBody, createBookingSchema } from '@/lib/validations';
 import { COMMISSION_RATE } from '@/lib/constants';
 import { logError, logBooking } from '@/lib/logger';
-import { notifyNewBooking } from '@/lib/notifications';
+import { notifyNewBooking, notifyBookingApprovalRequest } from '@/lib/notifications';
+import { getApprovalDecision } from '@/lib/approval';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -41,11 +42,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const end = new Date(end_date);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    // Check for overlapping bookings
+    // Check for overlapping bookings (include pending_approval)
     const existingBookings = await prisma.booking.findMany({
       where: {
         itemId,
-        status: { in: ['pending_payment', 'paid', 'active'] },
+        status: { in: ['pending_approval', 'pending_payment', 'paid', 'active'] },
         OR: [
           {
             AND: [
@@ -76,50 +77,95 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const total = Math.round((rentalPrice + deposit + commission + insurance) * 100) / 100;
     const prepayment = Math.round(rentalPrice * 0.30 * 100) / 100;
 
-    // Create booking with mock payment
-    const booking = await prisma.booking.create({
-      data: {
-        itemId,
-        renterId: authResult.userId,
-        startDate: start,
-        endDate: end,
-        rentalType: rental_type,
-        rentalPrice,
-        deposit,
-        commission,
-        insurance,
-        totalPrice: total,
-        prepayment,
-        isInsured: is_insured,
-        status: 'paid',
-        depositStatus: 'held',
-        paymentId: `MOCK_${crypto.randomUUID()}`,
-        paidAt: new Date(),
-      },
-    });
-
-    logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
-
     // Get renter name for notification
     const renter = await prisma.user.findUnique({
       where: { id: authResult.userId },
       select: { name: true },
     });
 
-    // Send notification to item owner about new booking
-    notifyNewBooking(item.ownerId, {
-      itemId: item.id,
-      itemTitle: item.title,
-      renterName: renter?.name || 'Пользователь',
-      startDate: start.toLocaleDateString('ru-RU'),
-      endDate: end.toLocaleDateString('ru-RU'),
-      totalPrice: total,
-    }).catch((err) => console.error('Failed to send new booking notification:', err));
+    // Check approval decision
+    const decision = await getApprovalDecision(itemId, authResult.userId);
 
-    return successResponse({
-      success: true,
-      booking: transformBooking(booking),
-    });
+    if (decision.shouldAutoApprove) {
+      // Auto-approve: create booking with mock payment (current flow)
+      const booking = await prisma.booking.create({
+        data: {
+          itemId,
+          renterId: authResult.userId,
+          startDate: start,
+          endDate: end,
+          rentalType: rental_type,
+          rentalPrice,
+          deposit,
+          commission,
+          insurance,
+          totalPrice: total,
+          prepayment,
+          isInsured: is_insured,
+          status: 'paid',
+          depositStatus: 'held',
+          paymentId: `MOCK_${crypto.randomUUID()}`,
+          paidAt: new Date(),
+          approvedAt: new Date(),
+        },
+      });
+
+      logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
+
+      notifyNewBooking(item.ownerId, {
+        itemId: item.id,
+        itemTitle: item.title,
+        renterName: renter?.name || 'Пользователь',
+        startDate: start.toLocaleDateString('ru-RU'),
+        endDate: end.toLocaleDateString('ru-RU'),
+        totalPrice: total,
+      }).catch((err) => console.error('Failed to send new booking notification:', err));
+
+      return successResponse({
+        success: true,
+        booking: transformBooking(booking),
+      });
+    } else {
+      // Manual approval: create as pending_approval with 24h deadline
+      const approvalDeadline = new Date();
+      approvalDeadline.setHours(approvalDeadline.getHours() + 24);
+
+      const booking = await prisma.booking.create({
+        data: {
+          itemId,
+          renterId: authResult.userId,
+          startDate: start,
+          endDate: end,
+          rentalType: rental_type,
+          rentalPrice,
+          deposit,
+          commission,
+          insurance,
+          totalPrice: total,
+          prepayment,
+          isInsured: is_insured,
+          status: 'pending_approval',
+          approvalDeadline,
+        },
+      });
+
+      logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total, status: 'pending_approval' });
+
+      notifyBookingApprovalRequest(item.ownerId, {
+        bookingId: booking.id,
+        itemTitle: item.title,
+        renterName: renter?.name || 'Пользователь',
+        startDate: start.toLocaleDateString('ru-RU'),
+        endDate: end.toLocaleDateString('ru-RU'),
+        totalPrice: total,
+      }).catch((err) => console.error('Failed to send approval request notification:', err));
+
+      return successResponse({
+        success: true,
+        booking: transformBooking(booking),
+        message: 'Запрос на бронирование отправлен владельцу. Ожидайте подтверждения в течение 24 часов.',
+      });
+    }
   } catch (error) {
     logError(error as Error, { path: '/api/items/[id]/book', method: 'POST', itemId });
     return errorResponse('Ошибка сервера', 500);

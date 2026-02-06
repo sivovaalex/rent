@@ -14,7 +14,7 @@ import BookingModal from './BookingModal';
 import { MapView } from './MapView';
 import { AddressSuggest } from './AddressSuggest';
 import { SkeletonCard } from '@/components/ui/spinner';
-import type { User, Item, ItemStatus, Category, BookingForm, AlertType } from '@/types';
+import type { User, Item, ItemStatus, Category, BookingForm, AlertType, ApprovalMode } from '@/types';
 import { getCategoryAttributes } from '@/lib/constants';
 
 type CategoryKey = 'stream' | 'electronics' | 'clothes' | 'sports' | 'tools';
@@ -73,6 +73,8 @@ interface NewItemData {
   longitude: number | null;
   photos: string[];
   attributes: Record<string, string | number | boolean>;
+  approval_mode?: ApprovalMode | null;
+  approval_threshold?: number | null;
 }
 
 export default function Catalog({
@@ -690,7 +692,9 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
     latitude: null,
     longitude: null,
     photos: [],
-    attributes: {}
+    attributes: {},
+    approval_mode: null,
+    approval_threshold: null,
   });
 
   const [photoPreviews, setPhotoPreviews] = useState<PhotoPreview[]>([]);
@@ -732,7 +736,9 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
         latitude: item.latitude ?? null,
         longitude: item.longitude ?? null,
         photos: item.photos || [],
-        attributes: item.attributes || {}
+        attributes: item.attributes || {},
+        approval_mode: item.approvalMode || null,
+        approval_threshold: item.approvalThreshold || null,
       });
 
       setPhotoPreviews(item.photos?.map(url => ({ preview: url })) || []);
@@ -749,7 +755,9 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
         latitude: null,
         longitude: null,
         photos: [],
-        attributes: {}
+        attributes: {},
+        approval_mode: null,
+        approval_threshold: null,
       });
       setPhotoPreviews([]);
     }
@@ -1011,6 +1019,55 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
                 </div>
               </div>
             )}
+
+            {/* Режим одобрения бронирований */}
+            <div className="space-y-3 border-t pt-4">
+              <Label className="text-sm font-semibold">Режим одобрения бронирований</Label>
+              <p className="text-xs text-gray-500">
+                Переопределяет глобальную настройку из профиля для этого лота.
+              </p>
+              <Select
+                value={newItem.approval_mode || 'default'}
+                onValueChange={(value) =>
+                  setNewItem(prev => ({
+                    ...prev,
+                    approval_mode: value === 'default' ? null : value as ApprovalMode,
+                    approval_threshold: value === 'rating_based' ? (prev.approval_threshold || 4.0) : prev.approval_threshold,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">По умолчанию (из профиля)</SelectItem>
+                  <SelectItem value="auto_approve">Автоматическое одобрение</SelectItem>
+                  <SelectItem value="manual">Ручное одобрение</SelectItem>
+                  <SelectItem value="rating_based">По рейтингу арендатора</SelectItem>
+                  <SelectItem value="verified_only">Только верифицированные</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {newItem.approval_mode === 'rating_based' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Минимальный рейтинг: {(newItem.approval_threshold || 4.0).toFixed(1)}
+                  </Label>
+                  <Slider
+                    value={[newItem.approval_threshold || 4.0]}
+                    onValueChange={([v]) => setNewItem(prev => ({ ...prev, approval_threshold: v }))}
+                    min={3.0}
+                    max={5.0}
+                    step={0.5}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>3.0</span>
+                    <span>5.0</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div>
               <Label>Фотографии (максимум 5)</Label>

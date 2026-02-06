@@ -1,15 +1,18 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Star, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2 } from 'lucide-react';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import TrustBadges, { TrustScore } from './TrustBadges';
-import type { User, UserRole, AlertType } from '@/types';
+import type { User, UserRole, AlertType, ApprovalMode, Review } from '@/types';
 
 interface ProfileProps {
   currentUser: User | null;
@@ -18,13 +21,85 @@ interface ProfileProps {
   onVerifyRequest: () => void;
 }
 
+const APPROVAL_MODE_LABELS: Record<ApprovalMode, string> = {
+  auto_approve: 'Автоматическое одобрение',
+  manual: 'Ручное одобрение',
+  rating_based: 'По рейтингу арендатора',
+  verified_only: 'Только верифицированные',
+};
+
 export default function Profile({ currentUser, showAlert, onRoleChange, onVerifyRequest }: ProfileProps) {
   const [name, setName] = useState(currentUser?.name || '');
   const [editingName, setEditingName] = useState(false);
 
+  // Approval settings
+  const [approvalMode, setApprovalMode] = useState<ApprovalMode>(
+    currentUser?.defaultApprovalMode || 'auto_approve'
+  );
+  const [approvalThreshold, setApprovalThreshold] = useState<number>(
+    currentUser?.defaultApprovalThreshold || 4.0
+  );
+  const [savingApproval, setSavingApproval] = useState(false);
+
+  // Reviews about me
+  const [myReviews, setMyReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
   useEffect(() => {
     setName(currentUser?.name || '');
+    setApprovalMode(currentUser?.defaultApprovalMode || 'auto_approve');
+    setApprovalThreshold(currentUser?.defaultApprovalThreshold || 4.0);
   }, [currentUser]);
+
+  const fetchMyReviews = useCallback(async () => {
+    if (!currentUser) return;
+    setLoadingReviews(true);
+    try {
+      const res = await fetch(`/api/reviews?userId=${currentUser._id}&type=owner_review`, {
+        headers: { 'x-user-id': currentUser._id },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyReviews(data.reviews || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    fetchMyReviews();
+  }, [fetchMyReviews]);
+
+  const handleSaveApproval = async () => {
+    if (!currentUser) return;
+    setSavingApproval(true);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser._id,
+        },
+        body: JSON.stringify({
+          defaultApprovalMode: approvalMode,
+          defaultApprovalThreshold: approvalThreshold,
+        }),
+      });
+      if (res.ok) {
+        showAlert('Настройки одобрения сохранены');
+      } else {
+        const data = await res.json();
+        showAlert(data.error || 'Ошибка сохранения', 'error');
+      }
+    } catch {
+      showAlert('Ошибка сохранения настроек', 'error');
+    } finally {
+      setSavingApproval(false);
+    }
+  };
 
   const handleNameUpdate = async () => {
     if (!currentUser) return;
@@ -170,6 +245,119 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
               Чтобы создавать лоты и получать доход от аренды, необходимо пройти верификацию личности. Загрузите скан паспорта или иного документа, удостоверяющего личность.
             </AlertDescription>
           </Alert>
+        )}
+      </CardContent>
+    </Card>
+
+    {/* Настройки одобрения бронирований (для владельцев) */}
+    {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Настройки одобрения бронирований
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Глобальная настройка по умолчанию для всех ваших лотов. Можно переопределить для каждого лота отдельно.
+          </p>
+
+          <div className="space-y-2">
+            <Label>Режим одобрения</Label>
+            <Select value={approvalMode} onValueChange={(v) => setApprovalMode(v as ApprovalMode)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(APPROVAL_MODE_LABELS) as ApprovalMode[]).map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {APPROVAL_MODE_LABELS[mode]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              {approvalMode === 'auto_approve' && 'Все бронирования одобряются автоматически.'}
+              {approvalMode === 'manual' && 'Каждое бронирование требует вашего одобрения (24 часа на ответ).'}
+              {approvalMode === 'rating_based' && 'Автоматическое одобрение для арендаторов с рейтингом выше порога.'}
+              {approvalMode === 'verified_only' && 'Автоматическое одобрение только для верифицированных пользователей.'}
+            </p>
+          </div>
+
+          {approvalMode === 'rating_based' && (
+            <div className="space-y-2">
+              <Label>Минимальный рейтинг: {approvalThreshold.toFixed(1)}</Label>
+              <Slider
+                value={[approvalThreshold]}
+                onValueChange={([v]) => setApprovalThreshold(v)}
+                min={3.0}
+                max={5.0}
+                step={0.5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>3.0</span>
+                <span>5.0</span>
+              </div>
+            </div>
+          )}
+
+          <Button onClick={handleSaveApproval} disabled={savingApproval}>
+            {savingApproval && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Сохранить настройки
+          </Button>
+        </CardContent>
+      </Card>
+    )}
+
+    {/* Отзывы обо мне (от арендодателей) */}
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5" />
+          Отзывы обо мне
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loadingReviews ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        ) : myReviews.length > 0 ? (
+          <div className="space-y-4">
+            {myReviews.map((review) => (
+              <div key={review._id} className="border rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Avatar className="w-9 h-9">
+                    <AvatarImage src={review.userPhoto || review.user_photo} alt={review.userName || review.user_name} />
+                    <AvatarFallback>{(review.userName || review.user_name || '?').charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{review.userName || review.user_name}</span>
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-700 text-sm mt-1">{review.text}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(review.createdAt).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-500">Пока нет отзывов о вас от арендодателей</p>
+          </div>
         )}
       </CardContent>
     </Card>

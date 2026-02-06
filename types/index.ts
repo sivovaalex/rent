@@ -7,7 +7,6 @@ import type {
   UserRole as PrismaUserRole,
   VerificationStatus as PrismaVerificationStatus,
   ItemStatus as PrismaItemStatus,
-  BookingStatus as PrismaBookingStatus,
   Category as PrismaCategory,
   RentalType as PrismaRentalType,
 } from '@prisma/client';
@@ -16,9 +15,13 @@ import type {
 export type UserRole = PrismaUserRole;
 export type VerificationStatus = PrismaVerificationStatus;
 export type ItemStatus = PrismaItemStatus;
-export type BookingStatus = PrismaBookingStatus;
 export type Category = PrismaCategory;
 export type RentalType = PrismaRentalType;
+
+// New enums — defined as string unions until prisma generate is run
+export type BookingStatus = 'pending_approval' | 'pending_payment' | 'paid' | 'active' | 'completed' | 'cancelled';
+export type ReviewType = 'renter_review' | 'owner_review';
+export type ApprovalMode = 'auto_approve' | 'manual' | 'rating_based' | 'verified_only';
 
 // ==================== CLIENT TYPES ====================
 // These types are used on the client side with camelCase naming
@@ -47,6 +50,9 @@ export interface User {
   confirmationRate?: number;
   avgResponseMinutes?: number | null;
   trustBadges?: string[];
+  // Approval settings
+  defaultApprovalMode?: ApprovalMode;
+  defaultApprovalThreshold?: number;
   // Legacy snake_case aliases (deprecated, use camelCase)
   is_verified?: boolean;
   verification_status?: VerificationStatus;
@@ -78,6 +84,9 @@ export interface Item {
   status: ItemStatus;
   rating?: number;
   reviews?: Review[];
+  // Approval settings (per-item override)
+  approvalMode?: ApprovalMode;
+  approvalThreshold?: number;
   createdAt: Date | string;
   updatedAt?: Date | string;
   // Legacy snake_case aliases (deprecated)
@@ -113,6 +122,12 @@ export interface Booking {
   handoverPhotos?: string[];
   returnPhotos?: string[];
   review?: Review;
+  reviews?: Review[];
+  // Approval fields
+  approvalDeadline?: string;
+  rejectionReason?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
   paidAt?: Date | string;
   createdAt: Date | string;
   // Legacy snake_case aliases (deprecated)
@@ -152,6 +167,7 @@ export interface Review {
   rating: number;
   text: string;
   photos?: string[];
+  type?: ReviewType;
   reply?: ReviewReply;
   createdAt: Date | string;
   // Legacy snake_case aliases (deprecated)

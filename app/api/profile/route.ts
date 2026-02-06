@@ -31,6 +31,8 @@ export async function PATCH(request: NextRequest) {
     if (data.avatar !== undefined) updateData.photo = data.avatar;
     if (data.address) updateData.address = data.address;
     if (data.bio) updateData.bio = data.bio;
+    if (data.defaultApprovalMode) updateData.defaultApprovalMode = data.defaultApprovalMode;
+    if (data.defaultApprovalThreshold !== undefined) updateData.defaultApprovalThreshold = data.defaultApprovalThreshold;
 
     const updatedUser = await prisma.user.update({
       where: { id: authResult.userId },
