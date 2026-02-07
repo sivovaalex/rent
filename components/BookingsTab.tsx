@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2 } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import { SkeletonList } from '@/components/ui/spinner';
 import type { User, Booking, AlertType, ReviewType } from '@/types';
@@ -29,6 +30,8 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   const [rejectReason, setRejectReason] = useState('');
   const [isApproving, setIsApproving] = useState<string | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isPaying, setIsPaying] = useState<string | null>(null);
+  const [isConfirmingHandover, setIsConfirmingHandover] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -68,7 +71,11 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       });
       const data = await res.json();
       if (res.ok) {
-        showAlert('Бронирование одобрено!', 'success');
+        if (data.paymentUrl) {
+          showAlert('Бронирование одобрено! Арендатору отправлена ссылка на оплату комиссии.', 'success');
+        } else {
+          showAlert('Бронирование одобрено!', 'success');
+        }
         loadBookings();
       } else {
         showAlert(data.error, 'error');
@@ -77,6 +84,56 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       showAlert('Ошибка одобрения', 'error');
     } finally {
       setIsApproving(null);
+    }
+  };
+
+  const payCommission = async (bookingId: string) => {
+    if (!currentUser) return;
+    setIsPaying(bookingId);
+
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/pay`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (res.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        showAlert(data.error || 'Ошибка инициализации оплаты', 'error');
+      }
+    } catch {
+      showAlert('Ошибка оплаты', 'error');
+    } finally {
+      setIsPaying(null);
+    }
+  };
+
+  const confirmHandover = async (bookingId: string, depositConfirmed: boolean, remainderConfirmed: boolean) => {
+    if (!currentUser) return;
+    setIsConfirmingHandover(bookingId);
+
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/confirm-handover`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ depositConfirmed, remainderConfirmed }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.allConfirmed) {
+          showAlert('Обе стороны подтвердили передачу! Аренда активна.', 'success');
+        } else {
+          showAlert('Подтверждение сохранено. Ожидается подтверждение другой стороны.', 'success');
+        }
+        loadBookings();
+      } else {
+        showAlert(data.error, 'error');
+      }
+    } catch {
+      showAlert('Ошибка подтверждения', 'error');
+    } finally {
+      setIsConfirmingHandover(null);
     }
   };
 
@@ -236,7 +293,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                   )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Аренда:</span>
-                    <span>{rentalPrice + (booking.commission || 0)} ₽</span>
+                    <span>{rentalPrice} ₽</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Залог:</span>
@@ -248,6 +305,14 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                       <span>{booking.insurance} ₽</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-indigo-600">
+                    <span>Комиссия (онлайн):</span>
+                    <span>{booking.commission || 0} ₽</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">При встрече:</span>
+                    <span>{rentalPrice + booking.deposit} ₽</span>
+                  </div>
                   <div className="flex justify-between font-semibold pt-2 border-t">
                     <span>Итого:</span>
                     <span>{totalPrice} ₽</span>
@@ -265,11 +330,84 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                 </div>
               </CardContent>
 
-              <CardFooter className="flex flex-wrap gap-2">
+              <CardFooter className="flex flex-col gap-3">
+                {/* Handover checklist for 'paid' status */}
+                {booking.status === 'paid' && (renterId === currentUser?._id || ownerId === currentUser?._id) && (
+                  <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                    <p className="text-sm font-medium text-blue-800">
+                      {renterId === currentUser?._id ? 'Подтвердите передачу при встрече' : 'Подтвердите получение при встрече'}
+                    </p>
+                    {(() => {
+                      const isRenter = renterId === currentUser?._id;
+                      const depositDone = isRenter ? booking.depositConfirmedByRenter : booking.depositConfirmedByOwner;
+                      const remainderDone = isRenter ? booking.remainderConfirmedByRenter : booking.remainderConfirmedByOwner;
+                      const otherDepositDone = isRenter ? booking.depositConfirmedByOwner : booking.depositConfirmedByRenter;
+                      const otherRemainderDone = isRenter ? booking.remainderConfirmedByOwner : booking.remainderConfirmedByRenter;
+                      const alreadyConfirmed = depositDone && remainderDone;
+
+                      if (alreadyConfirmed) {
+                        return (
+                          <div className="text-sm text-blue-700">
+                            <p className="flex items-center gap-1"><CheckCircle className="w-4 h-4 text-green-600" /> Вы подтвердили передачу</p>
+                            {otherDepositDone && otherRemainderDone
+                              ? <p className="flex items-center gap-1"><CheckCircle className="w-4 h-4 text-green-600" /> Другая сторона тоже подтвердила</p>
+                              : <p className="flex items-center gap-1"><Clock className="w-4 h-4 text-amber-500" /> Ожидается подтверждение другой стороны</p>
+                            }
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox id={`deposit-${booking._id}`} disabled />
+                            <label htmlFor={`deposit-${booking._id}`} className="text-sm text-gray-700">
+                              {isRenter ? 'Залог передан владельцу' : 'Залог получен от арендатора'}
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox id={`remainder-${booking._id}`} disabled />
+                            <label htmlFor={`remainder-${booking._id}`} className="text-sm text-gray-700">
+                              {isRenter ? 'Аренда оплачена владельцу' : 'Оплата аренды получена'}
+                            </label>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="w-full mt-1"
+                            disabled={isConfirmingHandover === booking._id}
+                            onClick={() => confirmHandover(booking._id, true, true)}
+                          >
+                            {isConfirmingHandover === booking._id
+                              ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Подтверждение...</>
+                              : <><CheckCircle className="w-4 h-4 mr-1" />Подтвердить передачу</>
+                            }
+                          </Button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 w-full">
                 {booking.status !== 'cancelled' && booking.status !== 'pending_approval' && onOpenChat && (
                   <Button variant="outline" size="sm" onClick={() => onOpenChat(booking._id)} className="flex items-center gap-1">
                     <MessageCircle className="w-4 h-4" />
                     Чат
+                  </Button>
+                )}
+
+                {/* Renter: Pay commission */}
+                {booking.status === 'pending_payment' && renterId === currentUser?._id && (
+                  <Button
+                    size="sm"
+                    onClick={() => payCommission(booking._id)}
+                    disabled={isPaying === booking._id}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    {isPaying === booking._id
+                      ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Переход к оплате...</>
+                      : <><CreditCard className="w-4 h-4 mr-1" />Оплатить комиссию</>
+                    }
                   </Button>
                 )}
 
@@ -298,7 +436,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                 )}
 
                 {/* Owner: Confirm return */}
-                {(booking.status === 'active' || booking.status === 'paid') && ownerId === currentUser?._id && (
+                {booking.status === 'active' && ownerId === currentUser?._id && (
                   <Button size="sm" onClick={() => confirmReturn(booking._id)} className="flex-1">
                     Подтвердить возврат
                   </Button>
@@ -333,6 +471,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                     </Button>
                   ) : null
                 )}
+                </div>
               </CardFooter>
             </Card>
           );

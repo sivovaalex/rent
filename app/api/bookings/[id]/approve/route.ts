@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
-import { notifyBookingApproved } from '@/lib/notifications';
+import { notifyBookingApproved, notifyPaymentRequired } from '@/lib/notifications';
+import { createPayment, isYooKassaConfigured } from '@/lib/yookassa';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -32,38 +33,91 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return errorResponse('Бронирование не ожидает одобрения', 400);
     }
 
-    // Approve: move to paid with mock payment
-    const updated = await prisma.booking.update({
-      where: { id },
-      data: {
-        status: 'paid',
-        depositStatus: 'held',
-        paymentId: `MOCK_${crypto.randomUUID()}`,
-        paidAt: new Date(),
-        approvedAt: new Date(),
-      },
-      include: {
-        item: {
-          include: {
-            owner: { select: { id: true, name: true, phone: true } },
-          },
+    if (isYooKassaConfigured()) {
+      // Real payment: move to pending_payment, create YooKassa payment
+      const updated = await prisma.booking.update({
+        where: { id },
+        data: {
+          status: 'pending_payment',
+          approvedAt: new Date(),
         },
-        renter: { select: { id: true, name: true, phone: true, email: true } },
-        reviews: true,
-      },
-    });
+        include: {
+          item: {
+            include: {
+              owner: { select: { id: true, name: true, phone: true } },
+            },
+          },
+          renter: { select: { id: true, name: true, phone: true, email: true } },
+          reviews: true,
+        },
+      });
 
-    // Notify renter about approval
-    notifyBookingApproved(booking.renterId, {
-      itemTitle: booking.item.title,
-      startDate: booking.startDate.toLocaleDateString('ru-RU'),
-      endDate: booking.endDate.toLocaleDateString('ru-RU'),
-    }).catch(console.error);
+      try {
+        const payment = await createPayment({
+          amount: booking.commission,
+          bookingId: booking.id,
+          description: `Комиссия за аренду: ${booking.item!.title}`,
+        });
 
-    return successResponse({
-      success: true,
-      booking: transformBooking(updated),
-    });
+        await prisma.booking.update({
+          where: { id },
+          data: { yookassaPaymentId: payment.id },
+        });
+
+        // Notify renter: approved, please pay commission
+        notifyPaymentRequired(booking.renterId, {
+          itemTitle: booking.item!.title,
+          commission: booking.commission,
+          paymentUrl: payment.confirmation?.confirmation_url || '',
+        }).catch(console.error);
+
+        return successResponse({
+          success: true,
+          booking: transformBooking(updated),
+          paymentUrl: payment.confirmation?.confirmation_url,
+        });
+      } catch (paymentError) {
+        console.error('YooKassa payment creation failed on approve:', paymentError);
+        // Revert to pending_approval so owner can try again
+        await prisma.booking.update({
+          where: { id },
+          data: { status: 'pending_approval', approvedAt: null },
+        });
+        return errorResponse('Ошибка создания платежа. Попробуйте позже.', 502);
+      }
+    } else {
+      // Fallback: mock payment
+      const updated = await prisma.booking.update({
+        where: { id },
+        data: {
+          status: 'paid',
+          depositStatus: 'held',
+          paymentId: `MOCK_${crypto.randomUUID()}`,
+          paidAt: new Date(),
+          approvedAt: new Date(),
+        },
+        include: {
+          item: {
+            include: {
+              owner: { select: { id: true, name: true, phone: true } },
+            },
+          },
+          renter: { select: { id: true, name: true, phone: true, email: true } },
+          reviews: true,
+        },
+      });
+
+      notifyBookingApproved(booking.renterId, {
+        itemTitle: booking.item!.title,
+        startDate: booking.startDate.toLocaleDateString('ru-RU'),
+        endDate: booking.endDate.toLocaleDateString('ru-RU'),
+      }).catch(console.error);
+
+      return successResponse({
+        success: true,
+        booking: transformBooking(updated),
+      });
+    }
   } catch (error) {
     console.error('POST /bookings/[id]/approve Error:', error);
     return errorResponse('Ошибка сервера', 500);

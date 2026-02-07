@@ -265,6 +265,13 @@ export function transformBooking(booking: BookingWithRelations): ClientBooking {
     depositStatus: booking.depositStatus ?? undefined,
     handoverPhotos: booking.handoverPhotos,
     returnPhotos: booking.returnPhotos,
+    // YooKassa / handover
+    yookassaPaymentId: booking.yookassaPaymentId ?? undefined,
+    depositConfirmedByRenter: booking.depositConfirmedByRenter,
+    depositConfirmedByOwner: booking.depositConfirmedByOwner,
+    remainderConfirmedByRenter: booking.remainderConfirmedByRenter,
+    remainderConfirmedByOwner: booking.remainderConfirmedByOwner,
+    handoverConfirmedAt: booking.handoverConfirmedAt?.toISOString(),
     item: booking.item ? transformItem(booking.item) : undefined,
     renter: booking.renter ? {
       _id: booking.renter.id,

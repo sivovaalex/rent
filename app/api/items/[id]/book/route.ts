@@ -7,6 +7,7 @@ import { COMMISSION_RATE } from '@/lib/constants';
 import { logError, logBooking } from '@/lib/logger';
 import { notifyNewBooking, notifyBookingApprovalRequest } from '@/lib/notifications';
 import { getApprovalDecision } from '@/lib/approval';
+import { createPayment, isYooKassaConfigured } from '@/lib/yookassa';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -87,44 +88,104 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const decision = await getApprovalDecision(itemId, authResult.userId);
 
     if (decision.shouldAutoApprove) {
-      // Auto-approve: create booking with mock payment (current flow)
-      const booking = await prisma.booking.create({
-        data: {
-          itemId,
-          renterId: authResult.userId,
-          startDate: start,
-          endDate: end,
-          rentalType: rental_type,
-          rentalPrice,
-          deposit,
-          commission,
-          insurance,
+      if (isYooKassaConfigured()) {
+        // Real payment: create booking as pending_payment, redirect to YooKassa
+        const booking = await prisma.booking.create({
+          data: {
+            itemId,
+            renterId: authResult.userId,
+            startDate: start,
+            endDate: end,
+            rentalType: rental_type,
+            rentalPrice,
+            deposit,
+            commission,
+            insurance,
+            totalPrice: total,
+            prepayment: commission, // Model B: online prepayment = commission
+            isInsured: is_insured,
+            status: 'pending_payment',
+            approvedAt: new Date(),
+          },
+        });
+
+        try {
+          const payment = await createPayment({
+            amount: commission,
+            bookingId: booking.id,
+            description: `Комиссия за аренду: ${item.title}`,
+          });
+
+          await prisma.booking.update({
+            where: { id: booking.id },
+            data: { yookassaPaymentId: payment.id },
+          });
+
+          logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total, paymentId: payment.id });
+
+          notifyNewBooking(item.ownerId, {
+            itemId: item.id,
+            itemTitle: item.title,
+            renterName: renter?.name || 'Пользователь',
+            startDate: start.toLocaleDateString('ru-RU'),
+            endDate: end.toLocaleDateString('ru-RU'),
+            totalPrice: total,
+          }).catch((err) => console.error('Failed to send new booking notification:', err));
+
+          return successResponse({
+            success: true,
+            booking: transformBooking(booking),
+            paymentUrl: payment.confirmation?.confirmation_url,
+          });
+        } catch (paymentError) {
+          // Payment creation failed — cancel the booking
+          await prisma.booking.update({
+            where: { id: booking.id },
+            data: { status: 'cancelled', rejectionReason: 'Ошибка создания платежа' },
+          });
+          console.error('YooKassa payment creation failed:', paymentError);
+          return errorResponse('Ошибка создания платежа. Попробуйте позже.', 502);
+        }
+      } else {
+        // Fallback: mock payment (no YooKassa credentials)
+        const booking = await prisma.booking.create({
+          data: {
+            itemId,
+            renterId: authResult.userId,
+            startDate: start,
+            endDate: end,
+            rentalType: rental_type,
+            rentalPrice,
+            deposit,
+            commission,
+            insurance,
+            totalPrice: total,
+            prepayment,
+            isInsured: is_insured,
+            status: 'paid',
+            depositStatus: 'held',
+            paymentId: `MOCK_${crypto.randomUUID()}`,
+            paidAt: new Date(),
+            approvedAt: new Date(),
+          },
+        });
+
+        logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
+
+        notifyNewBooking(item.ownerId, {
+          itemId: item.id,
+          itemTitle: item.title,
+          renterName: renter?.name || 'Пользователь',
+          startDate: start.toLocaleDateString('ru-RU'),
+          endDate: end.toLocaleDateString('ru-RU'),
           totalPrice: total,
-          prepayment,
-          isInsured: is_insured,
-          status: 'paid',
-          depositStatus: 'held',
-          paymentId: `MOCK_${crypto.randomUUID()}`,
-          paidAt: new Date(),
-          approvedAt: new Date(),
-        },
-      });
+        }).catch((err) => console.error('Failed to send new booking notification:', err));
 
-      logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
-
-      notifyNewBooking(item.ownerId, {
-        itemId: item.id,
-        itemTitle: item.title,
-        renterName: renter?.name || 'Пользователь',
-        startDate: start.toLocaleDateString('ru-RU'),
-        endDate: end.toLocaleDateString('ru-RU'),
-        totalPrice: total,
-      }).catch((err) => console.error('Failed to send new booking notification:', err));
-
-      return successResponse({
-        success: true,
-        booking: transformBooking(booking),
-      });
+        return successResponse({
+          success: true,
+          booking: transformBooking(booking),
+        });
+      }
     } else {
       // Manual approval: create as pending_approval with 24h deadline
       const approvalDeadline = new Date();

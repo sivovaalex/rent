@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import type { Item, BookingForm, RentalType, ApprovalMode } from '@/types';
-import { withCommission, formatPrice } from '@/lib/constants';
+import { withCommission, calculateCommission, formatPrice, COMMISSION_RATE } from '@/lib/constants';
 import { BOOKING_CONSENT_LINKS } from '@/lib/constants/legal-links';
 
 type ValuePiece = Date | null;
@@ -126,7 +126,7 @@ export default function BookingModal({
     setSelectedDates(dates);
   };
 
-  const calculateTotalPrice = (): number => {
+  const calculateRentalPrice = (): number => {
     if (!bookingForm.start_date || !bookingForm.end_date || !item) return 0;
 
     const startDate = new Date(bookingForm.start_date);
@@ -137,21 +137,29 @@ export default function BookingModal({
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-    let totalPrice = 0;
+    let price = 0;
 
     if (bookingForm.rental_type === 'day') {
-      totalPrice = diffDays * getItemPrice(item, 'day');
+      price = diffDays * getItemPrice(item, 'day');
     } else if (bookingForm.rental_type === 'month') {
       const months = Math.floor(diffDays / 30);
       const remainingDays = diffDays % 30;
-      totalPrice = months * getItemPrice(item, 'month') + remainingDays * getItemPrice(item, 'day');
+      price = months * getItemPrice(item, 'month') + remainingDays * getItemPrice(item, 'day');
     }
 
     if (hasInsurance) {
-      totalPrice += totalPrice * 0.1;
+      price += price * 0.1;
     }
 
-    return Math.round(withCommission(totalPrice));
+    return Math.round(price);
+  };
+
+  const calculateCommissionAmount = (): number => {
+    return calculateCommission(calculateRentalPrice());
+  };
+
+  const calculateTotalPrice = (): number => {
+    return Math.round(withCommission(calculateRentalPrice()));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -293,25 +301,41 @@ export default function BookingModal({
 
           <div className="space-y-2 sm:space-y-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Залог:</span>
-              <span className="font-bold text-base sm:text-lg">{item.deposit} ₽</span>
+              <span className="text-gray-600 text-sm">Стоимость аренды:</span>
+              <span className="font-medium text-sm">{formatPrice(calculateRentalPrice())} ₽</span>
             </div>
-
             <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Сумма аренды:</span>
-              <span className="font-bold text-lg sm:text-xl">
-                {calculateTotalPrice()} ₽
-              </span>
+              <span className="text-gray-600 text-sm">Залог:</span>
+              <span className="font-medium text-sm">{formatPrice(item.deposit)} ₽</span>
+            </div>
+            {hasInsurance && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Страховка (10%):</span>
+                <span className="font-medium text-sm">включена в аренду</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 text-sm">Комиссия сервиса ({Math.round(COMMISSION_RATE * 100)}%):</span>
+              <span className="font-medium text-sm">{formatPrice(calculateCommissionAmount())} ₽</span>
             </div>
 
-            <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-gray-600 text-sm">Итого:</span>
-              <span className="font-bold text-lg sm:text-xl text-indigo-600">
-                {+item.deposit + calculateTotalPrice()} ₽
-              </span>
+            <div className="pt-2 border-t space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-indigo-700 text-sm font-semibold">Оплата онлайн (комиссия):</span>
+                <span className="font-bold text-lg text-indigo-600">
+                  {formatPrice(calculateCommissionAmount())} ₽
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">При встрече (аренда + залог):</span>
+                <span className="font-medium text-sm">
+                  {formatPrice(calculateRentalPrice() + item.deposit)} ₽
+                </span>
+              </div>
             </div>
 
-            <div className="text-[10px] sm:text-xs text-gray-500">
+            <div className="text-[10px] sm:text-xs text-gray-500 pt-1">
+              <p>Комиссия оплачивается онлайн. Аренда и залог — при встрече с владельцем.</p>
               <p>Залог возвращается после возврата предмета.</p>
             </div>
           </div>

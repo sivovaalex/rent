@@ -312,6 +312,38 @@ export async function notifyBookingRejected(
 }
 
 /**
+ * Helper: notify renter to pay commission
+ */
+export async function notifyPaymentRequired(
+  renterId: string,
+  data: {
+    itemTitle: string;
+    commission: number;
+    paymentUrl: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(renterId, {
+    type: 'booking_payment_required',
+    data,
+  });
+}
+
+/**
+ * Helper: notify owner that commission was paid
+ */
+export async function notifyPaymentReceived(
+  ownerId: string,
+  data: {
+    itemTitle: string;
+  }
+): Promise<NotificationResult> {
+  return sendNotification(ownerId, {
+    type: 'booking_payment_received',
+    data,
+  });
+}
+
+/**
  * Helper: send review received notification
  */
 export async function notifyReviewReceived(

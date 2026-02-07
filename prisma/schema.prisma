@@ -201,6 +201,13 @@ model Booking {
   status        BookingStatus @default(pending_payment)
   depositStatus String?       @map("deposit_status")
   paymentId     String?       @map("payment_id")
+  yookassaPaymentId String?   @map("yookassa_payment_id")
+
+  // Handover confirmations (Model B: deposit & remainder exchanged in person)
+  depositConfirmedByRenter  Boolean   @default(false) @map("deposit_confirmed_by_renter")
+  depositConfirmedByOwner   Boolean   @default(false) @map("deposit_confirmed_by_owner")
+  remainderConfirmedByRenter Boolean  @default(false) @map("remainder_confirmed_by_renter")
+  remainderConfirmedByOwner  Boolean  @default(false) @map("remainder_confirmed_by_owner")
 
   // Checklist photos
   handoverPhotos     String[]  @default([]) @map("handover_photos")

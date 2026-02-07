@@ -111,7 +111,13 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
       const data = await res.json();
 
       if (res.ok) {
-        onShowAlert?.('Бронирование создано! Мок-платёж выполнен успешно.');
+        if (data.paymentUrl) {
+          // Redirect to YooKassa payment page
+          window.location.href = data.paymentUrl;
+          return;
+        }
+
+        onShowAlert?.(data.message || 'Бронирование создано!');
         setShowBookingModal(false);
         setSelectedItem(null);
         setBookingForm({

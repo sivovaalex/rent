@@ -123,6 +123,14 @@ export interface Booking {
   returnPhotos?: string[];
   review?: Review;
   reviews?: Review[];
+  // YooKassa payment
+  yookassaPaymentId?: string;
+  // Handover confirmations
+  depositConfirmedByRenter?: boolean;
+  depositConfirmedByOwner?: boolean;
+  remainderConfirmedByRenter?: boolean;
+  remainderConfirmedByOwner?: boolean;
+  handoverConfirmedAt?: string;
   // Approval fields
   approvalDeadline?: string;
   rejectionReason?: string;

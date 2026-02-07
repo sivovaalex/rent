@@ -15,6 +15,8 @@ export type NotificationEventType =
   | 'booking_approval_request'
   | 'booking_approved'
   | 'booking_rejected'
+  | 'booking_payment_required'
+  | 'booking_payment_received'
   | 'review_received'
   | 'chat_unread'
   | 'moderation_pending_item'
@@ -185,12 +187,40 @@ export const templates: Record<NotificationEventType, Template> = {
       `Ваш запрос на бронирование одобрен!\n\n` +
       `Лот: ${data.itemTitle}\n` +
       `Период: ${data.startDate} - ${data.endDate}\n\n` +
-      `Оплата проведена. Свяжитесь с владельцем для передачи вещи.`,
+      `Свяжитесь с владельцем для передачи вещи.`,
     html: (data) => `
       <h2>Бронирование одобрено!</h2>
       <p>Ваш запрос на бронирование лота <strong>"${data.itemTitle}"</strong> одобрен владельцем.</p>
       <p><strong>Период:</strong> ${data.startDate} - ${data.endDate}</p>
-      <p>Оплата проведена. Свяжитесь с владельцем для передачи вещи.</p>
+      <p>Свяжитесь с владельцем для передачи вещи.</p>
+      <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Посмотреть бронирование</a></p>
+    `,
+  },
+
+  booking_payment_required: {
+    subject: 'Оплатите комиссию сервиса',
+    text: (data) =>
+      `Бронирование одобрено! Оплатите комиссию сервиса.\n\n` +
+      `Лот: ${data.itemTitle}\n` +
+      `Комиссия: ${data.commission} ₽\n\n` +
+      `${data.paymentUrl ? `Оплатить: ${data.paymentUrl}` : `Перейдите в бронирования для оплаты: ${BASE_URL}/#bookings`}`,
+    html: (data) => `
+      <h2>Оплатите комиссию сервиса</h2>
+      <p>Бронирование лота <strong>"${data.itemTitle}"</strong> одобрено.</p>
+      <p>Для завершения бронирования оплатите комиссию сервиса: <strong>${data.commission} ₽</strong></p>
+      <p><a href="${data.paymentUrl || `${BASE_URL}/#bookings`}" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Оплатить комиссию</a></p>
+    `,
+  },
+
+  booking_payment_received: {
+    subject: 'Комиссия оплачена',
+    text: (data) =>
+      `Комиссия сервиса за аренду "${data.itemTitle}" оплачена!\n\n` +
+      `Свяжитесь с арендатором для передачи вещи и получения оплаты.`,
+    html: (data) => `
+      <h2>Комиссия оплачена!</h2>
+      <p>Комиссия сервиса за аренду лота <strong>"${data.itemTitle}"</strong> оплачена арендатором.</p>
+      <p>Свяжитесь с арендатором для передачи вещи и получения оплаты аренды + залога.</p>
       <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Посмотреть бронирование</a></p>
     `,
   },
