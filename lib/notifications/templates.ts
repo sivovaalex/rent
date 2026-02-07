@@ -77,7 +77,7 @@ export const templates: Record<NotificationEventType, Template> = {
     html: () => `
       <h2>Верификация пройдена!</h2>
       <p>Поздравляем! Ваш аккаунт успешно верифицирован.</p>
-      <p>Теперь вы можете сдавать вещи в аренду на платформе Аренда PRO.</p>
+      <p>Теперь вы можете сдавать вещи в аренду на платформе Аренда Про.</p>
     `,
   },
 
@@ -332,7 +332,7 @@ export const templates: Record<NotificationEventType, Template> = {
 export function getMessengerText(event: NotificationEvent): string {
   const template = templates[event.type];
   if (!template) {
-    return 'Уведомление от Аренда PRO';
+    return 'Уведомление от Аренда Про';
   }
   return template.text(event.data);
 }
@@ -342,7 +342,7 @@ export function getMessengerText(event: NotificationEvent): string {
  */
 export function getEmailSubject(event: NotificationEvent): string {
   const template = templates[event.type];
-  return template?.subject || 'Уведомление от Аренда PRO';
+  return template?.subject || 'Уведомление от Аренда Про';
 }
 
 /**
@@ -351,7 +351,7 @@ export function getEmailSubject(event: NotificationEvent): string {
 export function getEmailHtml(event: NotificationEvent): string {
   const template = templates[event.type];
   if (!template) {
-    return '<p>Уведомление от Аренда PRO</p>';
+    return '<p>Уведомление от Аренда Про</p>';
   }
 
   const content = template.html(event.data);
@@ -366,13 +366,13 @@ export function getEmailHtml(event: NotificationEvent): string {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">Аренда PRO</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">Аренда Про</h1>
   </div>
   <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
     ${content}
   </div>
   <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-    <p style="margin: 0;">© ${new Date().getFullYear()} Аренда PRO. Все права защищены.</p>
+    <p style="margin: 0;">© ${new Date().getFullYear()} Аренда Про. Все права защищены.</p>
   </div>
 </body>
 </html>

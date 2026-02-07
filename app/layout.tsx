@@ -8,7 +8,7 @@ import { Providers } from '@/components/Providers';
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
 export const metadata: Metadata = {
-  title: 'Аренда PRO - Единая шеринг-платформа',
+  title: 'Аренда Про - Единая шеринг-платформа',
   description: 'Платформа для аренды стрим-оборудования, электроники и премиальной одежды',
   manifest: '/manifest.json',
   appleWebApp: {

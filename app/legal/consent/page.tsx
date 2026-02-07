@@ -3,7 +3,7 @@ import LegalPageWrapper from '@/components/legal/LegalPageWrapper';
 import { COMPANY_INFO, DOCUMENT_VERSIONS, PERSONAL_DATA_CATEGORIES, DATA_PROCESSING_PURPOSES } from '@/lib/constants/company';
 
 export const metadata: Metadata = {
-  title: 'Согласие на обработку персональных данных - Аренда PRO',
+  title: 'Согласие на обработку персональных данных - Аренда Про',
   description: 'Текст согласия на обработку персональных данных',
 };
 

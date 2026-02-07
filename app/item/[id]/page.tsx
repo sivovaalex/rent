@@ -40,12 +40,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const item = await getItem(id);
 
   if (!item) {
-    return { title: 'Лот не найден — Аренда PRO' };
+    return { title: 'Лот не найден — Аренда Про' };
   }
 
   const categoryName = CATEGORY_NAMES[item.category] || item.category;
   const description = item.description.slice(0, 160);
-  const title = `${item.title} — аренда ${item.pricePerDay} ₽/день | Аренда PRO`;
+  const title = `${item.title} — аренда ${item.pricePerDay} ₽/день | Аренда Про`;
 
   return {
     title,
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: item.photos.length > 0 ? [{ url: item.photos[0], width: 800, height: 600 }] : undefined,
       type: 'website',
       locale: 'ru_RU',
-      siteName: 'Аренда PRO',
+      siteName: 'Аренда Про',
     },
     twitter: {
       card: 'summary_large_image',

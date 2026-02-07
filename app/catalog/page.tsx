@@ -15,14 +15,14 @@ const CATEGORY_NAMES: Record<string, string> = {
 };
 
 export const metadata: Metadata = {
-  title: 'Каталог аренды — Аренда PRO',
+  title: 'Каталог аренды — Аренда Про',
   description: 'Каталог товаров для аренды: электроника, одежда, стрим-оборудование, спорт, инструменты. Аренда от 1 дня.',
   openGraph: {
-    title: 'Каталог аренды — Аренда PRO',
+    title: 'Каталог аренды — Аренда Про',
     description: 'Каталог товаров для аренды: электроника, одежда, стрим-оборудование, спорт, инструменты.',
     type: 'website',
     locale: 'ru_RU',
-    siteName: 'Аренда PRO',
+    siteName: 'Аренда Про',
   },
 };
 

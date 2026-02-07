@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Платформа Аренда PRO - единая шеринг-платформа для аренды стрим-оборудования, электроники для контента и премиальной одежды"
+user_problem_statement: "Платформа Аренда Про - единая шеринг-платформа для аренды стрим-оборудования, электроники для контента и премиальной одежды"
 
 backend:
   - task: "Authentication and SMS verification"

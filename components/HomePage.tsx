@@ -104,7 +104,7 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
             <Package className="w-12 h-12 sm:w-16 sm:h-16 text-indigo-600" />
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-4 sm:mb-6">
-            Аренда PRO
+            Аренда Про
           </h1>
           <p className="text-base sm:text-xl text-gray-600 max-w-2xl mx-auto mb-6 sm:mb-10 px-2">
             Единая платформа для аренды и сдачи в аренду вещей. Надежно, удобно, выгодно.

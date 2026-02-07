@@ -3,8 +3,8 @@ import LegalPageWrapper from '@/components/legal/LegalPageWrapper';
 import { COMPANY_INFO, DOCUMENT_VERSIONS } from '@/lib/constants/company';
 
 export const metadata: Metadata = {
-  title: 'Правила размещения объявлений - Аренда PRO',
-  description: 'Требования к объявлениям на платформе Аренда PRO',
+  title: 'Правила размещения объявлений - Аренда Про',
+  description: 'Требования к объявлениям на платформе Аренда Про',
 };
 
 export default function ListingRulesPage() {

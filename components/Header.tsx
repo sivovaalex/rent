@@ -41,7 +41,7 @@ export default function Header({
           )}
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
             <Package className="w-8 h-8 text-indigo-600" />
-            <h1 className="text-2xl font-bold text-indigo-600">Аренда PRO</h1>
+            <h1 className="text-2xl font-bold text-indigo-600">Аренда Про</h1>
           </div>
         </div>
         <div className="flex items-center gap-4">

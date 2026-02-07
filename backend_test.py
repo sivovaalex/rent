@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Аренда PRO Platform
+Backend API Testing for Аренда Про Platform
 Tests all backend endpoints according to the technical specification
 """
 
@@ -458,7 +458,7 @@ def test_error_handling():
 
 def main():
     """Run all tests"""
-    print("🚀 Starting Backend API Tests for Аренда PRO Platform")
+    print("🚀 Starting Backend API Tests for Аренда Про Platform")
     print("=" * 60)
     
     try:
