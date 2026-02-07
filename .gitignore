@@ -22,6 +22,9 @@ public/uploads/
 /coverage
 .env.local
 
+# Production environment variables
+.env.production
+
 # Next.js
 /.next/
 /out/
