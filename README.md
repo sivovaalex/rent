@@ -9,7 +9,7 @@
 - **Database**: PostgreSQL (Supabase) + Prisma ORM
 - **Authentication**: JWT (jose) + bcryptjs
 - **Validation**: Zod
-- **Testing**: Vitest, Testing Library
+- **Testing**: Vitest, Testing Library, Playwright (E2E)
 - **Logging**: Pino
 
 ## Установка
@@ -90,6 +90,42 @@ yarn test:run
 yarn test:coverage
 ```
 
+### E2E тестирование (Playwright)
+
+E2E тесты проверяют основные пользовательские сценарии: аутентификацию, каталог, бронирования, чат, профиль и отзывы. Все API-запросы мокаются через `page.route()`, поэтому для запуска не нужна база данных.
+
+```bash
+# Установка браузеров Playwright (один раз)
+npx playwright install
+
+# Запуск всех E2E тестов
+npx playwright test
+
+# Запуск с отображением в браузере
+npx playwright test --headed
+
+# Запуск конкретного файла
+npx playwright test e2e/auth.spec.ts
+
+# Отчёт о последнем запуске
+npx playwright show-report
+```
+
+Структура E2E тестов:
+
+```
+e2e/
+├── helpers/
+│   ├── mock-api.ts          # Моки API и localStorage-авторизация
+│   └── mock-data.ts         # Тестовые данные (пользователи, товары, бронирования)
+├── auth.spec.ts             # Вход, регистрация, выход (11 тестов)
+├── booking.spec.ts          # Бронирования арендатора и арендодателя (8 тестов)
+├── catalog.spec.ts          # Каталог, поиск, навигация (7 тестов)
+├── chat.spec.ts             # Чат и сообщения (6 тестов)
+├── profile.spec.ts          # Профиль, верификация, руководство (12 тестов)
+└── reviews.spec.ts          # Просмотр и создание отзывов (5 тестов)
+```
+
 ### Проверка типов
 
 ```bash
@@ -166,12 +202,17 @@ rent/
 ├── prisma/                   # Prisma ORM
 │   └── schema.prisma         # Схема базы данных
 │
-├── __tests__/                # Тесты
+├── e2e/                      # E2E тесты (Playwright)
+│   ├── helpers/              # Моки API и тестовые данные
+│   └── *.spec.ts             # Тестовые сценарии
+│
+├── __tests__/                # Unit/Integration тесты (Vitest)
 │   ├── api/                  # Тесты API
 │   ├── hooks/                # Тесты хуков
 │   ├── mocks/                # Моки
 │   └── utils/                # Тестовые утилиты
 │
+├── playwright.config.ts      # Конфигурация Playwright (E2E)
 ├── vitest.config.ts          # Конфигурация Vitest
 ├── vitest.setup.ts           # Setup тестов
 ├── tsconfig.json             # TypeScript конфигурация
