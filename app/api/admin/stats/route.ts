@@ -1,11 +1,15 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdminOnly, errorResponse, successResponse } from '@/lib/api-utils';
+import { inlineModerationCheck } from '@/lib/cron/inline-checks';
 
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAdminOnly(request);
     if ('error' in authResult) return authResult.error;
+
+    // Fire-and-forget: remind admins about pending items/users > 30 min
+    inlineModerationCheck().catch(console.error);
 
     const [
       totalUsers,

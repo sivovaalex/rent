@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
+import { inlineChatUnreadCheck } from '@/lib/cron/inline-checks';
 
 interface RouteParams {
   params: Promise<{ bookingId: string }>;
@@ -116,6 +117,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       text,
     },
   });
+
+  // Fire-and-forget: check for unread messages > 30 min across all chats
+  inlineChatUnreadCheck().catch(console.error);
 
   return successResponse({
     _id: message.id,

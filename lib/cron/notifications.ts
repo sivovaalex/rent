@@ -1,6 +1,6 @@
 /**
  * Cron job: notification tasks
- * Runs every 5 minutes via Vercel Cron
+ * Daily run via Vercel Cron + inline checks from API routes
  */
 
 import { prisma } from '@/lib/prisma';
@@ -44,7 +44,7 @@ async function claimNotificationSlot(
 }
 
 // --- TASK 1: Chat Unread (30 min) ---
-async function processChatUnread(): Promise<number> {
+export async function processChatUnread(): Promise<number> {
   const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
   let sent = 0;
 
@@ -119,7 +119,7 @@ async function processChatUnread(): Promise<number> {
 }
 
 // --- TASK 2: Moderation Reminders (30 min) ---
-async function processModerationReminders(): Promise<number> {
+export async function processModerationReminders(): Promise<number> {
   const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
   let sent = 0;
 
