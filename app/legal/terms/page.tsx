@@ -3,8 +3,8 @@ import LegalPageWrapper from '@/components/legal/LegalPageWrapper';
 import { COMPANY_INFO, DOCUMENT_VERSIONS } from '@/lib/constants/company';
 
 export const metadata: Metadata = {
-  title: 'Пользовательское соглашение - Аренда Про',
-  description: 'Правила использования платформы Аренда Про',
+  title: 'Пользовательское соглашение - Арендол',
+  description: 'Правила использования платформы Арендол',
 };
 
 export default function TermsPage() {

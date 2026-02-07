@@ -6,7 +6,7 @@ test.describe('Аутентификация', () => {
   test('показывает лендинг для неавторизованного пользователя', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await expect(page.locator('header button')).toContainText('Войти');
-    await expect(page.getByText('Аренда Про').first()).toBeVisible();
+    await expect(page.getByText('Арендол').first()).toBeVisible();
   });
 
   test('открывает модалку входа по клику "Войти"', async ({ page }) => {

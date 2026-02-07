@@ -106,12 +106,12 @@ export async function sendPasswordResetEmail(
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
 
-  const subject = 'Сброс пароля - Аренда Про';
+  const subject = 'Сброс пароля - Арендол';
 
   const text = `
 Здравствуйте${userName ? `, ${userName}` : ''}!
 
-Вы запросили сброс пароля для вашего аккаунта на платформе Аренда Про.
+Вы запросили сброс пароля для вашего аккаунта на платформе Арендол.
 
 Для установки нового пароля перейдите по ссылке:
 ${resetLink}
@@ -121,7 +121,7 @@ ${resetLink}
 Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
 
 С уважением,
-Команда Аренда Про
+Команда Арендол
 `;
 
   const html = `
@@ -134,7 +134,7 @@ ${resetLink}
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">Аренда Про</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">Арендол</h1>
   </div>
 
   <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
@@ -142,7 +142,7 @@ ${resetLink}
 
     <p>Здравствуйте${userName ? `, <strong>${userName}</strong>` : ''}!</p>
 
-    <p>Вы запросили сброс пароля для вашего аккаунта на платформе Аренда Про.</p>
+    <p>Вы запросили сброс пароля для вашего аккаунта на платформе Арендол.</p>
 
     <p style="text-align: center; margin: 30px 0;">
       <a href="${resetLink}"
@@ -164,7 +164,7 @@ ${resetLink}
   </div>
 
   <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-    <p style="margin: 0;">© ${new Date().getFullYear()} Аренда Про. Все права защищены.</p>
+    <p style="margin: 0;">© ${new Date().getFullYear()} Арендол. Все права защищены.</p>
     <p style="margin: 5px 0 0;">Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
   </div>
 </body>
@@ -181,17 +181,17 @@ export async function sendPasswordChangedEmail(
   email: string,
   userName?: string
 ): Promise<boolean> {
-  const subject = 'Пароль изменён - Аренда Про';
+  const subject = 'Пароль изменён - Арендол';
 
   const text = `
 Здравствуйте${userName ? `, ${userName}` : ''}!
 
-Пароль для вашего аккаунта на платформе Аренда Про был успешно изменён.
+Пароль для вашего аккаунта на платформе Арендол был успешно изменён.
 
 Если это были не вы, немедленно свяжитесь с нашей службой поддержки.
 
 С уважением,
-Команда Аренда Про
+Команда Арендол
 `;
 
   const html = `
@@ -204,7 +204,7 @@ export async function sendPasswordChangedEmail(
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">Аренда Про</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">Арендол</h1>
   </div>
 
   <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
@@ -218,7 +218,7 @@ export async function sendPasswordChangedEmail(
 
     <p>Здравствуйте${userName ? `, <strong>${userName}</strong>` : ''}!</p>
 
-    <p>Пароль для вашего аккаунта на платформе Аренда Про был успешно изменён.</p>
+    <p>Пароль для вашего аккаунта на платформе Арендол был успешно изменён.</p>
 
     <div style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin-top: 20px;">
       <p style="margin: 0; color: #991b1b; font-size: 14px;">
@@ -228,7 +228,7 @@ export async function sendPasswordChangedEmail(
   </div>
 
   <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-    <p style="margin: 0;">© ${new Date().getFullYear()} Аренда Про. Все права защищены.</p>
+    <p style="margin: 0;">© ${new Date().getFullYear()} Арендол. Все права защищены.</p>
   </div>
 </body>
 </html>

@@ -3,8 +3,8 @@ import LegalPageWrapper from '@/components/legal/LegalPageWrapper';
 import { COMPANY_INFO, DOCUMENT_VERSIONS } from '@/lib/constants/company';
 
 export const metadata: Metadata = {
-  title: 'Публичная оферта - Аренда Про',
-  description: 'Публичная оферта на оказание услуг платформы Аренда Про',
+  title: 'Публичная оферта - Арендол',
+  description: 'Публичная оферта на оказание услуг платформы Арендол',
 };
 
 export default function OfferPage() {

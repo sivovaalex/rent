@@ -49,15 +49,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const user = await getUser(id);
 
-  if (!user) return { title: 'Пользователь не найден — Аренда Про' };
+  if (!user) return { title: 'Пользователь не найден — Арендол' };
 
-  const title = `${user.name} — профиль на Аренда Про`;
-  const description = `${user.name}: рейтинг ${user.rating.toFixed(1)}, ${user.items.length} объявлений. Аренда Про — шеринг-платформа.`;
+  const title = `${user.name} — профиль на Арендол`;
+  const description = `${user.name}: рейтинг ${user.rating.toFixed(1)}, ${user.items.length} объявлений. Арендол — шеринг-платформа.`;
 
   return {
     title,
     description,
-    openGraph: { title, description, type: 'profile', locale: 'ru_RU', siteName: 'Аренда Про' },
+    openGraph: { title, description, type: 'profile', locale: 'ru_RU', siteName: 'Арендол' },
   };
 }
 

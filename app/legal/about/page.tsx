@@ -3,7 +3,7 @@ import LegalPageWrapper from '@/components/legal/LegalPageWrapper';
 import { COMPANY_INFO, DOCUMENT_VERSIONS } from '@/lib/constants/company';
 
 export const metadata: Metadata = {
-  title: 'О компании - Аренда Про',
+  title: 'О компании - Арендол',
   description: 'Информация о компании, реквизиты и контактные данные',
 };
 

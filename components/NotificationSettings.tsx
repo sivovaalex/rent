@@ -28,7 +28,7 @@ interface NotificationSettingsData {
 
 const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'ArendaProBot';
 const VK_BOT_URL = process.env.NEXT_PUBLIC_VK_BOT_URL || 'https://vk.com/im?sel=-123456789';
-const VK_BOT_NAME = process.env.NEXT_PUBLIC_VK_BOT_NAME || 'Аренда Про';
+const VK_BOT_NAME = process.env.NEXT_PUBLIC_VK_BOT_NAME || 'Арендол';
 
 export function NotificationSettings() {
   const [settings, setSettings] = useState<NotificationSettingsData | null>(null);

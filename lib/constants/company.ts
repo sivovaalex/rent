@@ -6,9 +6,9 @@
 
 export const COMPANY_INFO = {
   // Наименование
-  fullName: 'Общество с ограниченной ответственностью "Аренда ПРО"',
-  shortName: 'ООО "Аренда ПРО"',
-  brandName: 'Аренда Про',
+  fullName: 'Общество с ограниченной ответственностью "Арендол"',
+  shortName: 'ООО "Арендол"',
+  brandName: 'Арендол',
 
   // Регистрационные данные (ЗАМЕНИТЬ НА РЕАЛЬНЫЕ)
   ogrn: '[ОГРН]',           // 13 цифр, например: 1234567890123
@@ -32,7 +32,7 @@ export const COMPANY_INFO = {
   settlementAccount: '[РАСЧЁТНЫЙ СЧЁТ]',      // 20 цифр
 
   // Данные платформы
-  platformName: 'Аренда Про',
+  platformName: 'Арендол',
   platformUrl: 'https://arendapro.ru',
   commissionRate: 0.15, // 15% комиссия платформы
   commissionRatePercent: '15%',

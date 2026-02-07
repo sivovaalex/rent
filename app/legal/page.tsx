@@ -5,8 +5,8 @@ import { ALL_LEGAL_PAGES } from '@/lib/constants/legal-links';
 import { COMPANY_INFO } from '@/lib/constants/company';
 
 export const metadata: Metadata = {
-  title: 'Юридическая информация - Аренда Про',
-  description: 'Юридические документы и правила платформы Аренда Про',
+  title: 'Юридическая информация - Арендол',
+  description: 'Юридические документы и правила платформы Арендол',
 };
 
 const icons: Record<string, React.ReactNode> = {
