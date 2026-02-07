@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * YooKassa Payment Webhook
  * Receives payment status notifications from YooKassa

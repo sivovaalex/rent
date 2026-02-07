@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * Telegram Bot Polling (for manual testing)
  * Manually poll for updates when webhook is not available

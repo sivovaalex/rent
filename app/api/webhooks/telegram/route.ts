@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * Telegram Bot Webhook
  * Receives messages from Telegram and generates link codes

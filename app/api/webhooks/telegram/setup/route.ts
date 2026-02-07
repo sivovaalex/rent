@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * Telegram Bot Webhook Setup
  * Configure and manage Telegram webhook

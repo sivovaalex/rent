@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateSMSCode, errorResponse, successResponse } from '@/lib/api-utils';

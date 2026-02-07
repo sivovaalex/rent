@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * Messenger unlink API
  * POST - Unlink a messenger account

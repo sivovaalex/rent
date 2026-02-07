@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * VK Bot Callback API
  * Receives messages from VK and generates link codes

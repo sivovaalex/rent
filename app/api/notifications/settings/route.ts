@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * Notification settings API
  * GET - Get current notification settings

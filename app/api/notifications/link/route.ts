@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 /**
  * Messenger link API
  * POST - Link a messenger account using a code

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse, NextRequest } from 'next/server';
 import { uploadBase64File, deleteFile, BUCKETS, generateFilePath } from '@/lib/supabase/storage';
 
