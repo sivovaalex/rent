@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { requireVerified, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
+import { requireAuth, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, createBookingSchema } from '@/lib/validations';
 import { COMMISSION_RATE } from '@/lib/constants';
 import { logError, logBooking } from '@/lib/logger';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const { id: itemId } = await context.params;
 
   try {
-    const authResult = await requireVerified(request);
+    const authResult = await requireAuth(request);
     if ('error' in authResult) return authResult.error;
 
     const item = await prisma.item.findUnique({ where: { id: itemId } });

@@ -239,9 +239,10 @@ describe('useAuth', () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
       localStorage.setItem('auth_token', mockToken);
 
+      const updatedUser = { ...mockUser, role: 'owner' };
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true }),
+        json: () => Promise.resolve({ success: true, user: updatedUser }),
       });
 
       const mockOnShowAlert = vi.fn();
@@ -258,7 +259,7 @@ describe('useAuth', () => {
 
       expect(success!).toBe(true);
       expect(result.current.currentUser?.role).toBe('owner');
-      expect(mockOnShowAlert).toHaveBeenCalledWith('Роль успешно изменена!');
+      expect(mockOnShowAlert).toHaveBeenCalledWith('Вы стали арендодателем!');
     });
 
     it('should return false if no user logged in', async () => {

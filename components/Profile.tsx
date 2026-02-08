@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2, BookOpen, ChevronRight } from 'lucide-react';
+import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2, BookOpen, ChevronRight, TrendingUp, DollarSign, Clock, ShieldCheck } from 'lucide-react';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import TrustBadges, { TrustScore } from './TrustBadges';
 import type { User, UserRole, AlertType, ApprovalMode, Review } from '@/types';
@@ -248,6 +248,79 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
         )}
       </CardContent>
     </Card>
+
+    {/* Промо-блок: Стать арендодателем (только для арендаторов) */}
+    {currentUser?.role === 'renter' && (
+      <Card className="mt-6 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-indigo-700">
+            <TrendingUp className="w-5 h-5" />
+            Станьте арендодателем
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-gray-700">
+            Зарабатывайте на вещах, которые простаивают! Сдавайте в аренду и получайте стабильный доход.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+              <DollarSign className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-sm">Дополнительный доход</p>
+                <p className="text-xs text-gray-500">Зарабатывайте на вещах, которые не используете</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+              <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-sm">Гибкий график</p>
+                <p className="text-xs text-gray-500">Сами выбирайте когда и кому сдавать</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+              <ShieldCheck className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-sm">Страхование</p>
+                <p className="text-xs text-gray-500">Защита ваших вещей и залоговый депозит</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+              <Star className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-sm">Репутация</p>
+                <p className="text-xs text-gray-500">Копите отзывы и рейтинг доверия</p>
+              </div>
+            </div>
+          </div>
+
+          {currentUser?.is_verified ? (
+            <Button
+              onClick={() => onRoleChange('owner')}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Стать арендодателем
+            </Button>
+          ) : currentUser?.verification_status === 'pending' ? (
+            <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-sm text-yellow-700">
+                Ваша заявка на верификацию на рассмотрении. После одобрения вы сможете стать арендодателем.
+              </p>
+            </div>
+          ) : (
+            <Button
+              onClick={onVerifyRequest}
+              className="w-full"
+              variant="outline"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Пройти верификацию
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    )}
 
     {/* Настройки одобрения бронирований (для владельцев) */}
     {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (

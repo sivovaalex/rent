@@ -35,7 +35,7 @@ interface Template {
   html: (data: Record<string, unknown>) => string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://rentpro.buanzu.ru';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://arendol.ru';
 
 /**
  * Notification templates for all event types

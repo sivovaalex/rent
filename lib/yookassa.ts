@@ -10,7 +10,7 @@ import crypto from 'crypto';
 const YOOKASSA_API_URL = 'https://api.yookassa.ru/v3';
 const SHOP_ID = process.env.YOOKASSA_SHOP_ID || '';
 const SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://rentpro.buanzu.ru';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://arendol.ru';
 
 // === Types ===
 

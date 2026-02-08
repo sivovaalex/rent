@@ -118,20 +118,26 @@ export function useAuth(options: UseAuthOptions = {}) {
     if (!currentUser) return false;
 
     try {
-      const res = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ role: newRole }),
-      });
+      // Use dedicated endpoint for becoming an owner
+      const isBecomingOwner = newRole === 'owner';
+      const res = await fetch(
+        isBecomingOwner ? '/api/profile/become-owner' : '/api/profile',
+        {
+          method: isBecomingOwner ? 'POST' : 'PATCH',
+          headers: getAuthHeaders(),
+          ...(!isBecomingOwner && { body: JSON.stringify({ role: newRole }) }),
+        }
+      );
 
-      if (res.ok) {
-        const updatedUser = { ...currentUser, role: newRole };
+      const data = await res.json();
+
+      if (res.ok && data.user) {
+        const updatedUser = data.user as User;
         setCurrentUser(updatedUser);
         localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-        onShowAlert?.('Роль успешно изменена!');
+        onShowAlert?.(isBecomingOwner ? 'Вы стали арендодателем!' : 'Роль успешно изменена!');
         return true;
       } else {
-        const data = await res.json();
         onShowAlert?.(data.error || 'Ошибка изменения роли', 'error');
         return false;
       }

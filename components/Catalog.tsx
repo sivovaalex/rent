@@ -534,8 +534,8 @@ export default function Catalog({
               onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(item._id) : undefined}
               onViewDetails={() => openItemDetail(item._id)}
               onBook={() => {
-                if (!currentUser?.is_verified) {
-                  showAlert('Требуется верификация', 'error');
+                if (!currentUser) {
+                  showAlert('Необходимо войти в систему', 'error');
                   return;
                 }
                 setSelectedItem(item);

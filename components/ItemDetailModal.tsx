@@ -272,7 +272,7 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
-              {currentUser?.is_verified && item.owner_id !== currentUser._id && item.status === 'approved' && (
+              {currentUser && item.owner_id !== currentUser._id && item.status === 'approved' && (
                 <Button onClick={() => onBook(item)} className="flex-1">
                   Забронировать
                 </Button>
