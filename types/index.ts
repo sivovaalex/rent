@@ -53,9 +53,16 @@ export interface User {
   // Approval settings
   defaultApprovalMode?: ApprovalMode;
   defaultApprovalThreshold?: number;
+  // Verification document
+  verificationSubmittedAt?: Date | string | null;
+  documentType?: string | null;
+  documentPath?: string | null;
   // Legacy snake_case aliases (deprecated, use camelCase)
   is_verified?: boolean;
   verification_status?: VerificationStatus;
+  verification_submitted_at?: Date | string | null;
+  document_type?: string | null;
+  document_path?: string | null;
 }
 
 /**

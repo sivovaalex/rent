@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, encryptDocument, errorResponse, successResponse } from '@/lib/api-utils';
+import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, uploadDocumentSchema } from '@/lib/validations';
+import { uploadBase64File, BUCKETS, generateFilePath } from '@/lib/supabase/storage';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,12 +15,26 @@ export async function POST(request: NextRequest) {
 
     const { document_type, document_data } = validation.data;
 
-    const encryptedData = encryptDocument(document_data);
+    // Determine content type from base64 data
+    let contentType = 'image/jpeg';
+    if (document_data.includes('data:image/png')) {
+      contentType = 'image/png';
+    } else if (document_data.includes('data:image/webp')) {
+      contentType = 'image/webp';
+    }
+
+    // Upload to Supabase Storage
+    const filePath = generateFilePath('verification', authResult.userId);
+    const uploadResult = await uploadBase64File(BUCKETS.DOCUMENTS, filePath, document_data, contentType);
+
+    if (!uploadResult.success) {
+      return errorResponse('Ошибка загрузки документа', 500);
+    }
 
     await prisma.user.update({
       where: { id: authResult.userId },
       data: {
-        encryptedDocument: encryptedData,
+        documentPath: uploadResult.url,
         documentType: document_type,
         verificationStatus: 'pending',
         verificationSubmittedAt: new Date(),

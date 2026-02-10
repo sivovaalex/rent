@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
@@ -54,6 +55,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const [verificationSubTab, setVerificationSubTab] = useState('pending');
   const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const loadVerificationHistory = async () => {
     if (!currentUser || currentUser.role !== 'admin') return;
@@ -83,7 +86,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     }
   }, [currentUser, loadAdminData]);
 
-  const verifyUser = async (userId: string, action: 'approve' | 'reject') => {
+  const verifyUser = async (userId: string, action: 'approve' | 'reject', reason?: string) => {
     if (!currentUser || verifyingUserId) return;
 
     setVerifyingUserId(userId);
@@ -95,10 +98,12 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': currentUser._id }),
         },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action, ...(reason ? { reason } : {}) })
       });
       if (res.ok) {
         showAlert(`Пользователь ${action === 'approve' ? 'верифицирован' : 'отклонён'}`);
+        setRejectingUserId(null);
+        setRejectionReason('');
         loadAdminData();
       } else {
         showAlert('Ошибка модерации', 'error');
@@ -360,14 +365,59 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
               <CardContent>
                 <div className="space-y-4">
                   {pendingUsers.map((user) => (
-                    <div key={user._id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-gray-600">{user.phone}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Подано: {user.verification_submitted_at ? new Date(user.verification_submitted_at).toLocaleString() : 'Неизвестно'}
-                        </p>
+                    <div key={user._id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-gray-600">{user.phone}</p>
+                          {user.document_type && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              <FileText className="w-3 h-3 inline mr-1" />
+                              {user.document_type === 'passport' ? 'Паспорт' : user.document_type === 'driver_license' ? 'Вод. удостоверение' : 'Другой документ'}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">
+                            Подано: {user.verification_submitted_at ? new Date(user.verification_submitted_at).toLocaleString() : 'Неизвестно'}
+                          </p>
+                        </div>
+                        {user.document_path && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(user.document_path!, '_blank')}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Документ
+                          </Button>
+                        )}
                       </div>
+
+                      {/* Document preview thumbnail */}
+                      {user.document_path && (
+                        <div
+                          className="cursor-pointer border rounded-lg overflow-hidden max-w-[200px]"
+                          onClick={() => window.open(user.document_path!, '_blank')}
+                        >
+                          <img
+                            src={user.document_path}
+                            alt="Документ"
+                            className="w-full h-24 object-cover hover:opacity-80 transition-opacity"
+                          />
+                        </div>
+                      )}
+
+                      {/* Rejection reason input */}
+                      {rejectingUserId === user._id && (
+                        <div className="space-y-2">
+                          <Textarea
+                            placeholder="Причина отклонения (необязательно)"
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            rows={2}
+                          />
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -381,19 +431,40 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                           )}
                           Одобрить
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => verifyUser(user._id, 'reject')}
-                          disabled={verifyingUserId === user._id}
-                        >
-                          {verifyingUserId === user._id ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                          ) : (
+                        {rejectingUserId === user._id ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => verifyUser(user._id, 'reject', rejectionReason || undefined)}
+                              disabled={verifyingUserId === user._id}
+                            >
+                              {verifyingUserId === user._id ? (
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                              ) : (
+                                <UserX className="w-4 h-4 mr-1" />
+                              )}
+                              Подтвердить отклонение
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => { setRejectingUserId(null); setRejectionReason(''); }}
+                            >
+                              Отмена
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setRejectingUserId(user._id)}
+                            disabled={verifyingUserId === user._id}
+                          >
                             <UserX className="w-4 h-4 mr-1" />
-                          )}
-                          Отклонить
-                        </Button>
+                            Отклонить
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

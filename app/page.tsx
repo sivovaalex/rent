@@ -8,6 +8,7 @@ import BookingsTab from '@/components/BookingsTab';
 import ChatTab from '@/components/ChatTab';
 import AnalyticsTab from '@/components/AnalyticsTab';
 import AdminTab from '@/components/AdminTab';
+import VerificationModal from '@/components/VerificationModal';
 import HomePage from '@/components/HomePage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
@@ -29,6 +30,7 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [chatInitialBookingId, setChatInitialBookingId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
 
   // Sync tab ↔ hash
   const setCurrentTab = (tab: string) => {
@@ -51,6 +53,7 @@ export default function App() {
     handleRoleChange,
     openAuth,
     closeAuth,
+    refreshUser,
   } = useAuth({ onShowAlert: showAlert });
 
   const {
@@ -187,7 +190,7 @@ export default function App() {
   };
 
   const handleVerifyRequest = () => {
-    showAlert('Верификация временно недоступна в демо-версии');
+    setVerificationModalOpen(true);
   };
 
   const showHomePage = currentPage === 'home';
@@ -400,6 +403,15 @@ export default function App() {
           setLoginPassword={setLoginPassword}
           authAlert={authAlert}
           setAuthAlert={setAuthAlert}
+        />
+      )}
+
+      {currentUser && (
+        <VerificationModal
+          isOpen={verificationModalOpen}
+          onClose={() => setVerificationModalOpen(false)}
+          currentUser={currentUser}
+          onSuccess={refreshUser}
         />
       )}
     </div>

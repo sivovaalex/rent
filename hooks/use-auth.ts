@@ -161,6 +161,20 @@ export function useAuth(options: UseAuthOptions = {}) {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await fetch('/api/profile', { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        const user = data.user as User;
+        setCurrentUser(user);
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      }
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   return {
     currentUser,
     isLoading,
@@ -174,5 +188,6 @@ export function useAuth(options: UseAuthOptions = {}) {
     openAuth,
     closeAuth,
     updateUser,
+    refreshUser,
   };
 }
