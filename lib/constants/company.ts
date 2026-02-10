@@ -21,7 +21,7 @@ export const COMPANY_INFO = {
   postalAddress: '[ПОЧТОВЫЙ АДРЕС]',   // может совпадать с юридическим
 
   // Контактная информация
-  email: 'support@arendapro.ru',
+  email: 'info@arendol.ru',
   phone: '+7 (495) 123-45-67',
   supportHours: 'Пн-Пт: 9:00-18:00 (МСК)',
 
