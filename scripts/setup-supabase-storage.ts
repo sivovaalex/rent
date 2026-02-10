@@ -45,14 +45,12 @@ const BUCKETS: BucketConfig[] = [
   },
   {
     name: 'documents',
-    public: false, // Private - verification documents
+    public: true, // Public with UUID paths for admin document viewing
     fileSizeLimit: 20 * 1024 * 1024, // 20MB
     allowedMimeTypes: [
       'image/jpeg',
       'image/png',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/webp',
     ],
   },
   {
