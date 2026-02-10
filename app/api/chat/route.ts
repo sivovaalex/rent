@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       },
     },
     orderBy: { updatedAt: 'desc' },
+    take: 50,
   });
 
   // Подсчитать непрочитанные для каждого бронирования

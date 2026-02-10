@@ -39,25 +39,40 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Все бронирования по товарам владельца за период
-  const bookings = await prisma.booking.findMany({
-    where: {
-      itemId: { in: itemIds },
-      createdAt: { gte: startDate },
-      status: { not: 'cancelled' },
-    },
-    select: {
-      id: true,
-      itemId: true,
-      rentalPrice: true,
-      commission: true,
-      totalPrice: true,
-      startDate: true,
-      endDate: true,
-      status: true,
-      createdAt: true,
-    },
-  });
+  // Prepare date for occupancy calculation
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Run both queries in parallel (they only depend on itemIds)
+  const [bookings, activeBookings] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        itemId: { in: itemIds },
+        createdAt: { gte: startDate },
+        status: { not: 'cancelled' },
+      },
+      select: {
+        id: true,
+        itemId: true,
+        rentalPrice: true,
+        commission: true,
+        totalPrice: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+    prisma.booking.findMany({
+      where: {
+        itemId: { in: itemIds },
+        status: { in: ['paid', 'active', 'completed'] },
+        startDate: { lte: now },
+        endDate: { gte: thirtyDaysAgo },
+      },
+      select: { startDate: true, endDate: true, itemId: true },
+    }),
+  ]);
 
   // 1. Доход по месяцам (rentalPrice — доход владельца, без комиссии)
   const revenueMap: Record<string, number> = {};
@@ -112,17 +127,6 @@ export async function GET(request: NextRequest) {
     });
 
   // 3. Заполняемость календаря (% дней занятых из последних 30 дней)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const activeBookings = await prisma.booking.findMany({
-    where: {
-      itemId: { in: itemIds },
-      status: { in: ['paid', 'active', 'completed'] },
-      startDate: { lte: now },
-      endDate: { gte: thirtyDaysAgo },
-    },
-    select: { startDate: true, endDate: true, itemId: true },
-  });
 
   // Считаем уникальные пары (товар, день) за последние 30 дней
   const occupiedDays = new Set<string>();

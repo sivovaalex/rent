@@ -18,24 +18,20 @@ export async function GET(request: NextRequest) {
       totalBookings,
       pendingVerifications,
       pendingItems,
+      revenueAgg,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.item.count(),
       prisma.booking.count(),
       prisma.user.count({ where: { verificationStatus: 'pending' } }),
       prisma.item.count({ where: { status: 'pending' } }),
+      prisma.booking.aggregate({
+        where: { status: 'completed' },
+        _sum: { commission: true },
+      }),
     ]);
 
-    // Calculate total revenue from completed bookings
-    const completedBookings = await prisma.booking.findMany({
-      where: { status: 'completed' },
-      select: { commission: true },
-    });
-
-    const totalRevenue = completedBookings.reduce(
-      (sum, b) => sum + (b.commission || 0),
-      0
-    );
+    const totalRevenue = revenueAgg._sum.commission || 0;
 
     return successResponse({
       totalUsers,

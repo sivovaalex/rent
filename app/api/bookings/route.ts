@@ -40,7 +40,13 @@ export async function GET(request: NextRequest) {
           },
         },
         renter: { select: { id: true, name: true, phone: true, email: true } },
-        reviews: true,
+        reviews: {
+          select: {
+            id: true, bookingId: true, itemId: true, userId: true,
+            rating: true, text: true, photos: true, type: true,
+            createdAt: true, updatedAt: true,
+          },
+        },
       },
     });
 

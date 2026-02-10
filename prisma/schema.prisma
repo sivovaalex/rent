@@ -179,6 +179,7 @@ model Item {
   @@index([ownerId])
   @@index([category])
   @@index([status])
+  @@index([status, category])
   @@index([createdAt])
   @@index([latitude, longitude])
   @@map("items")
@@ -233,8 +234,10 @@ model Booking {
   messages      Message[]
 
   @@index([itemId])
+  @@index([itemId, status])
   @@index([renterId])
   @@index([status])
+  @@index([status, createdAt])
   @@index([startDate, endDate])
   @@map("bookings")
 }
@@ -342,6 +345,7 @@ model Message {
   sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([bookingId, createdAt])
+  @@index([bookingId, senderId, isRead])
   @@index([senderId])
   @@map("messages")
 }
