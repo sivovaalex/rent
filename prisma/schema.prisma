@@ -180,6 +180,7 @@ model Item {
   @@index([category])
   @@index([status])
   @@index([status, category])
+  @@index([pricePerDay])
   @@index([createdAt])
   @@index([latitude, longitude])
   @@map("items")
@@ -238,6 +239,9 @@ model Booking {
   @@index([renterId])
   @@index([status])
   @@index([status, createdAt])
+  @@index([status, approvalDeadline])
+  @@index([status, endDate])
+  @@index([status, completedAt])
   @@index([startDate, endDate])
   @@map("bookings")
 }

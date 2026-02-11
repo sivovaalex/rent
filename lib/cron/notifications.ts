@@ -53,20 +53,39 @@ export async function processChatUnread(): Promise<number> {
     where: { entityType: 'message_batch', eventType: 'chat_unread' },
   });
 
-  for (const log of existingChatLogs) {
-    const [recipientId, bookingId] = log.entityId.split(':');
-    if (!recipientId || !bookingId) continue;
+  if (existingChatLogs.length > 0) {
+    const logPairs = existingChatLogs
+      .map(log => {
+        const [recipientId, bookingId] = log.entityId.split(':');
+        return { logId: log.id, recipientId, bookingId };
+      })
+      .filter(p => p.recipientId && p.bookingId);
 
-    const stillUnread = await prisma.message.count({
+    const cleanupBookingIds = [...new Set(logPairs.map(p => p.bookingId!))];
+
+    // Batch: 1 groupBy instead of N individual count queries
+    const unreadMsgGroups = await prisma.message.groupBy({
+      by: ['bookingId', 'senderId'],
       where: {
-        bookingId,
-        senderId: { not: recipientId },
+        bookingId: { in: cleanupBookingIds },
         isRead: false,
       },
     });
 
-    if (stillUnread === 0) {
-      await prisma.notificationLog.delete({ where: { id: log.id } }).catch(() => {});
+    // Log should be deleted if no unread messages exist for that recipient
+    const logIdsToDelete = logPairs
+      .filter(p => {
+        return !unreadMsgGroups.some(
+          g => g.bookingId === p.bookingId && g.senderId !== p.recipientId
+        );
+      })
+      .map(p => p.logId);
+
+    // Batch delete instead of N individual deletes
+    if (logIdsToDelete.length > 0) {
+      await prisma.notificationLog.deleteMany({
+        where: { id: { in: logIdsToDelete } },
+      });
     }
   }
 
@@ -80,14 +99,20 @@ export async function processChatUnread(): Promise<number> {
     _count: { id: true },
   });
 
-  for (const group of unreadGroups) {
-    const booking = await prisma.booking.findUnique({
-      where: { id: group.bookingId },
-      include: {
-        item: { select: { ownerId: true, title: true } },
-      },
-    });
+  if (unreadGroups.length === 0) return sent;
 
+  // Batch load all bookings at once (1 query instead of N)
+  const bookingIds = [...new Set(unreadGroups.map(g => g.bookingId))];
+  const bookings = await prisma.booking.findMany({
+    where: { id: { in: bookingIds } },
+    include: {
+      item: { select: { ownerId: true, title: true } },
+    },
+  });
+  const bookingMap = new Map(bookings.map(b => [b.id, b]));
+
+  for (const group of unreadGroups) {
+    const booking = bookingMap.get(group.bookingId);
     if (!booking) continue;
 
     // Recipient is the other participant (not the sender)
@@ -131,6 +156,8 @@ export async function processModerationReminders(): Promise<number> {
 
   if (admins.length === 0) return 0;
 
+  const adminIds = admins.map(a => a.id);
+
   // Pending items older than 30 min
   const pendingItems = await prisma.item.findMany({
     where: {
@@ -140,18 +167,46 @@ export async function processModerationReminders(): Promise<number> {
     select: { id: true, title: true },
   });
 
-  for (const item of pendingItems) {
-    for (const admin of admins) {
-      const shouldSend = await claimNotificationSlot(
-        'item',
-        item.id,
-        'moderation_pending_item',
-        admin.id
-      );
-      if (shouldSend) {
-        await notifyModerationPendingItem(admin.id, {
-          itemId: item.id,
-          itemTitle: item.title,
+  if (pendingItems.length > 0) {
+    // Batch: find already-sent notifications (1 query instead of N×M)
+    const existingItemLogs = await prisma.notificationLog.findMany({
+      where: {
+        entityType: 'item',
+        eventType: 'moderation_pending_item',
+        entityId: { in: pendingItems.map(i => i.id) },
+        recipientId: { in: adminIds },
+      },
+      select: { entityId: true, recipientId: true },
+    });
+    const existingItemSet = new Set(
+      existingItemLogs.map(l => `${l.entityId}:${l.recipientId}`)
+    );
+
+    // Filter to new slots only
+    const newItemSlots: Array<{ entityType: string; entityId: string; eventType: string; recipientId: string }> = [];
+    const itemSlotMeta: Array<{ recipientId: string; itemId: string; itemTitle: string }> = [];
+
+    for (const item of pendingItems) {
+      for (const admin of admins) {
+        if (!existingItemSet.has(`${item.id}:${admin.id}`)) {
+          newItemSlots.push({
+            entityType: 'item',
+            entityId: item.id,
+            eventType: 'moderation_pending_item',
+            recipientId: admin.id,
+          });
+          itemSlotMeta.push({ recipientId: admin.id, itemId: item.id, itemTitle: item.title });
+        }
+      }
+    }
+
+    // Batch create (1 query instead of N×M)
+    if (newItemSlots.length > 0) {
+      await prisma.notificationLog.createMany({ data: newItemSlots, skipDuplicates: true });
+      for (const meta of itemSlotMeta) {
+        await notifyModerationPendingItem(meta.recipientId, {
+          itemId: meta.itemId,
+          itemTitle: meta.itemTitle,
         }).catch(console.error);
         sent++;
       }
@@ -167,18 +222,44 @@ export async function processModerationReminders(): Promise<number> {
     select: { id: true, name: true },
   });
 
-  for (const user of pendingUsers) {
-    for (const admin of admins) {
-      const shouldSend = await claimNotificationSlot(
-        'user',
-        user.id,
-        'verification_pending_reminder',
-        admin.id
-      );
-      if (shouldSend) {
-        await notifyModerationPendingUser(admin.id, {
-          userId: user.id,
-          userName: user.name,
+  if (pendingUsers.length > 0) {
+    // Batch: find already-sent notifications (1 query instead of N×M)
+    const existingUserLogs = await prisma.notificationLog.findMany({
+      where: {
+        entityType: 'user',
+        eventType: 'verification_pending_reminder',
+        entityId: { in: pendingUsers.map(u => u.id) },
+        recipientId: { in: adminIds },
+      },
+      select: { entityId: true, recipientId: true },
+    });
+    const existingUserSet = new Set(
+      existingUserLogs.map(l => `${l.entityId}:${l.recipientId}`)
+    );
+
+    const newUserSlots: Array<{ entityType: string; entityId: string; eventType: string; recipientId: string }> = [];
+    const userSlotMeta: Array<{ recipientId: string; userId: string; userName: string }> = [];
+
+    for (const user of pendingUsers) {
+      for (const admin of admins) {
+        if (!existingUserSet.has(`${user.id}:${admin.id}`)) {
+          newUserSlots.push({
+            entityType: 'user',
+            entityId: user.id,
+            eventType: 'verification_pending_reminder',
+            recipientId: admin.id,
+          });
+          userSlotMeta.push({ recipientId: admin.id, userId: user.id, userName: user.name });
+        }
+      }
+    }
+
+    if (newUserSlots.length > 0) {
+      await prisma.notificationLog.createMany({ data: newUserSlots, skipDuplicates: true });
+      for (const meta of userSlotMeta) {
+        await notifyModerationPendingUser(meta.recipientId, {
+          userId: meta.userId,
+          userName: meta.userName,
         }).catch(console.error);
         sent++;
       }

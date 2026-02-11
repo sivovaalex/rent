@@ -65,8 +65,6 @@ describe('runNotificationCron', () => {
   });
 
   it('should process chat unread notifications', async () => {
-    const thirtyMinAgo = new Date(Date.now() - 31 * 60 * 1000);
-
     // No existing logs to clean up
     prismaMock.notificationLog.findMany.mockResolvedValue([]);
 
@@ -79,20 +77,21 @@ describe('runNotificationCron', () => {
       },
     ]);
 
-    // Booking with item
-    prismaMock.booking.findUnique.mockResolvedValue({
-      id: 'booking-1',
-      renterId: 'renter-1',
-      item: { ownerId: 'owner-1', title: 'Камера Sony' },
-    });
+    // Batch booking lookup (replaces findUnique)
+    prismaMock.booking.findMany
+      .mockResolvedValueOnce([{
+        id: 'booking-1',
+        renterId: 'renter-1',
+        item: { ownerId: 'owner-1', title: 'Камера Sony' },
+      }])
+      .mockResolvedValueOnce([])  // return reminders
+      .mockResolvedValueOnce([]); // review reminders
 
     // Claim slot succeeds
     prismaMock.notificationLog.create.mockResolvedValue({ id: 'log-1' });
 
     // Moderation: no admins
     prismaMock.user.findMany.mockResolvedValue([]);
-    // Return/review: no bookings
-    prismaMock.booking.findMany.mockResolvedValue([]);
 
     const result = await runNotificationCron();
 
@@ -116,12 +115,10 @@ describe('runNotificationCron', () => {
       },
     ]);
 
-    // Messages have been read (0 unread)
-    prismaMock.message.count.mockResolvedValue(0);
-    prismaMock.notificationLog.delete.mockResolvedValue({});
-
-    // No new unread groups
-    prismaMock.message.groupBy.mockResolvedValue([]);
+    // Batch groupBy: no unread messages (all read) + no new unread groups
+    prismaMock.message.groupBy
+      .mockResolvedValueOnce([])   // cleanup: no unread msgs in booking-1
+      .mockResolvedValueOnce([]);  // main: no new unread groups
 
     // Other tasks: empty
     prismaMock.user.findMany.mockResolvedValue([]);
@@ -129,38 +126,34 @@ describe('runNotificationCron', () => {
 
     await runNotificationCron();
 
-    expect(prismaMock.notificationLog.delete).toHaveBeenCalledWith({
-      where: { id: 'log-1' },
+    // Batch deleteMany instead of individual delete
+    expect(prismaMock.notificationLog.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ['log-1'] } },
     });
   });
 
   it('should send moderation reminders to all admins', async () => {
-    // Chat unread: empty
-    prismaMock.notificationLog.findMany.mockResolvedValue([]);
+    // Chat unread: empty logs, no unread groups
+    prismaMock.notificationLog.findMany
+      .mockResolvedValueOnce([])   // chat cleanup: no existing logs
+      .mockResolvedValueOnce([]);  // moderation items: no existing logs
+
     prismaMock.message.groupBy.mockResolvedValue([]);
 
-    // 2 admins
-    prismaMock.user.findMany.mockResolvedValue([
-      { id: 'admin-1' },
-      { id: 'admin-2' },
-    ]);
+    // 2 admins, then no pending users
+    prismaMock.user.findMany
+      .mockResolvedValueOnce([{ id: 'admin-1' }, { id: 'admin-2' }])
+      .mockResolvedValueOnce([]); // no pending users
 
     // Pending item
     prismaMock.item.findMany.mockResolvedValue([
       { id: 'item-1', title: 'Pending Item' },
     ]);
 
-    // No pending users
-    // user.findMany is already used for admins, we need a second call for pending users
-    // Since findMany is called twice, let's chain the mocks
-    prismaMock.user.findMany
-      .mockResolvedValueOnce([{ id: 'admin-1' }, { id: 'admin-2' }])
-      .mockResolvedValueOnce([]); // no pending users
+    // Batch create slots
+    prismaMock.notificationLog.createMany.mockResolvedValue({ count: 2 });
 
-    // Claim slots succeed
-    prismaMock.notificationLog.create.mockResolvedValue({ id: 'log-1' });
-
-    // Bookings empty
+    // Bookings empty (return + review reminders)
     prismaMock.booking.findMany.mockResolvedValue([]);
 
     const result = await runNotificationCron();
@@ -271,11 +264,16 @@ describe('runNotificationCron', () => {
         _count: { id: 2 },
       },
     ]);
-    prismaMock.booking.findUnique.mockResolvedValue({
-      id: 'booking-1',
-      renterId: 'renter-1',
-      item: { ownerId: 'owner-1', title: 'Test' },
-    });
+
+    // Batch booking lookup
+    prismaMock.booking.findMany
+      .mockResolvedValueOnce([{
+        id: 'booking-1',
+        renterId: 'renter-1',
+        item: { ownerId: 'owner-1', title: 'Test' },
+      }])
+      .mockResolvedValueOnce([])  // return reminders
+      .mockResolvedValueOnce([]); // review reminders
 
     // Claim slot fails (unique constraint violation - already sent)
     prismaMock.notificationLog.create.mockRejectedValue(
@@ -283,7 +281,6 @@ describe('runNotificationCron', () => {
     );
 
     prismaMock.user.findMany.mockResolvedValue([]);
-    prismaMock.booking.findMany.mockResolvedValue([]);
 
     const result = await runNotificationCron();
 

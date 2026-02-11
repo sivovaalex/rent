@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const bookings = await prisma.booking.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      take: 100,
       include: {
         item: {
           include: {

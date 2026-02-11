@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
       return errorResponse('Вы уже оставили отзыв для этого бронирования', 400);
     }
 
-    // Get item
-    const item = await prisma.item.findUnique({ where: { id: item_id } });
-    if (!item) {
+    // Use item from booking (already loaded via include)
+    const item = booking.item;
+    if (!item || item.id !== item_id) {
       return errorResponse('Лот не найден', 400);
     }
 
@@ -138,16 +138,14 @@ export async function POST(request: NextRequest) {
     // Update ratings based on type
     try {
       if (type === 'renter_review') {
-        // Existing logic: update item rating and owner rating
-        const allItemReviews = await prisma.review.findMany({
+        // Update item rating and owner rating using SQL aggregate
+        const avgData = await prisma.review.aggregate({
           where: { itemId: item_id, type: 'renter_review' },
-          select: { rating: true },
+          _avg: { rating: true },
         });
 
-        if (allItemReviews.length > 0) {
-          const avgRating =
-            allItemReviews.reduce((sum, r) => sum + r.rating, 0) / allItemReviews.length;
-          const roundedRating = Math.round(avgRating * 100) / 100;
+        if (avgData._avg.rating !== null) {
+          const roundedRating = Math.round(avgData._avg.rating * 100) / 100;
 
           await prisma.$transaction([
             prisma.user.update({
@@ -163,19 +161,17 @@ export async function POST(request: NextRequest) {
 
         recalculateTrust(item.ownerId).catch(console.error);
       } else if (type === 'owner_review') {
-        // New: update renter's rating based on owner reviews
-        const renterReviews = await prisma.review.findMany({
+        // Update renter's rating using SQL aggregate
+        const avgData = await prisma.review.aggregate({
           where: {
             type: 'owner_review',
             booking: { renterId: booking.renterId },
           },
-          select: { rating: true },
+          _avg: { rating: true },
         });
 
-        if (renterReviews.length > 0) {
-          const avgRating =
-            renterReviews.reduce((sum, r) => sum + r.rating, 0) / renterReviews.length;
-          const roundedRating = Math.round(avgRating * 100) / 100;
+        if (avgData._avg.rating !== null) {
+          const roundedRating = Math.round(avgData._avg.rating * 100) / 100;
 
           await prisma.user.update({
             where: { id: booking.renterId },

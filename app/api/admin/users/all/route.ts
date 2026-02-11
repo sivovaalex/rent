@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
 
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
+      take: 200,
     });
 
     const safeUsers = users.map(safeUser);

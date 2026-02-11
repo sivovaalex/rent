@@ -33,6 +33,7 @@ export const prismaMock = {
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    aggregate: vi.fn(),
   },
   reviewReply: {
     findUnique: vi.fn(),
@@ -54,6 +55,7 @@ export const prismaMock = {
   notificationLog: {
     findMany: vi.fn(),
     create: vi.fn(),
+    createMany: vi.fn(),
     delete: vi.fn(),
     deleteMany: vi.fn(),
   },

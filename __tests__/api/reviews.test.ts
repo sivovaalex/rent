@@ -177,15 +177,11 @@ describe('POST /api/reviews', () => {
       renterId: 'renter-1',
       status: 'completed',
       endDate: new Date(Date.now() - 86400000),
-      item: { ownerId: 'owner-1', title: 'Camera' },
+      item: { id: 'item-1', ownerId: 'owner-1', title: 'Camera' },
     };
 
     prismaMock.booking.findUnique.mockResolvedValue(completedBooking);
     prismaMock.review.findUnique.mockResolvedValue(null); // no existing review
-    prismaMock.item.findUnique.mockResolvedValue({
-      id: 'item-1',
-      ownerId: 'owner-1',
-    });
 
     const createdReview = {
       id: 'review-new',
@@ -199,7 +195,7 @@ describe('POST /api/reviews', () => {
       createdAt: new Date(),
     };
     prismaMock.review.create.mockResolvedValue(createdReview);
-    prismaMock.review.findMany.mockResolvedValue([{ rating: 5 }]);
+    prismaMock.review.aggregate.mockResolvedValue({ _avg: { rating: 5 } });
 
     const response = await POST(createPostRequest(validReviewBody, 'renter-1') as any);
     const body = await response.json();
@@ -300,13 +296,9 @@ describe('POST /api/reviews', () => {
       renterId: 'renter-1',
       status: 'completed',
       endDate: new Date(Date.now() - 86400000),
-      item: { ownerId: 'owner-1' },
+      item: { id: 'item-1', ownerId: 'owner-1' },
     });
     prismaMock.review.findUnique.mockResolvedValue(null);
-    prismaMock.item.findUnique.mockResolvedValue({
-      id: 'item-1',
-      ownerId: 'owner-1',
-    });
     prismaMock.review.create.mockResolvedValue({
       id: 'review-new',
       bookingId: 'booking-1',
@@ -319,11 +311,8 @@ describe('POST /api/reviews', () => {
       createdAt: new Date(),
     });
 
-    // All reviews for item
-    prismaMock.review.findMany.mockResolvedValue([
-      { rating: 5 },
-      { rating: 4 },
-    ]);
+    // Aggregate rating for item
+    prismaMock.review.aggregate.mockResolvedValue({ _avg: { rating: 4.5 } });
 
     const response = await POST(createPostRequest({
       ...validReviewBody,
@@ -342,13 +331,9 @@ describe('POST /api/reviews', () => {
       renterId: 'renter-1',
       status: 'completed',
       endDate: new Date(Date.now() - 86400000),
-      item: { ownerId: 'owner-1' },
+      item: { id: 'item-1', ownerId: 'owner-1' },
     });
     prismaMock.review.findUnique.mockResolvedValue(null);
-    prismaMock.item.findUnique.mockResolvedValue({
-      id: 'item-1',
-      ownerId: 'owner-1',
-    });
     prismaMock.review.create.mockResolvedValue({
       id: 'review-new',
       bookingId: 'booking-1',
@@ -361,8 +346,8 @@ describe('POST /api/reviews', () => {
       createdAt: new Date(),
     });
 
-    // Renter reviews
-    prismaMock.review.findMany.mockResolvedValue([{ rating: 3 }]);
+    // Aggregate renter rating
+    prismaMock.review.aggregate.mockResolvedValue({ _avg: { rating: 3 } });
 
     const response = await POST(
       createPostRequest({
