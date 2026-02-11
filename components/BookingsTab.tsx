@@ -299,12 +299,14 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                     <span className="text-gray-600">Залог:</span>
                     <span>{booking.deposit} ₽</span>
                   </div>
+                  {/* Страховка временно отключена
                   {(booking.insurance || 0) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Страховка:</span>
                       <span>{booking.insurance} ₽</span>
                     </div>
                   )}
+                  */}
                   <div className="flex justify-between text-indigo-600">
                     <span>Комиссия (онлайн):</span>
                     <span>{booking.commission || 0} ₽</span>

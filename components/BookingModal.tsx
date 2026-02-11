@@ -280,6 +280,7 @@ export default function BookingModal({
             </div>
           </div>
 
+          {/* Страховка временно отключена
           <div className="space-y-2">
             <div className="flex items-start space-x-2">
               <Checkbox
@@ -298,6 +299,7 @@ export default function BookingModal({
               </div>
             </div>
           </div>
+          */}
 
           <div className="space-y-2 sm:space-y-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
             <div className="flex justify-between items-center">
@@ -308,12 +310,14 @@ export default function BookingModal({
               <span className="text-gray-600 text-sm">Залог:</span>
               <span className="font-medium text-sm">{formatPrice(item.deposit)} ₽</span>
             </div>
+            {/* Страховка временно отключена
             {hasInsurance && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 text-sm">Страховка (10%):</span>
                 <span className="font-medium text-sm">включена в аренду</span>
               </div>
             )}
+            */}
             <div className="flex justify-between items-center">
               <span className="text-gray-600 text-sm">Комиссия сервиса ({Math.round(COMMISSION_RATE * 100)}%):</span>
               <span className="font-medium text-sm">{formatPrice(calculateCommissionAmount())} ₽</span>
