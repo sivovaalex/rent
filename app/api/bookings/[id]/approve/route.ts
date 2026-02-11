@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth, transformBooking, errorResponse, successResponse } from '@/lib/api-utils';
 import { notifyBookingApproved, notifyPaymentRequired } from '@/lib/notifications';
 import { createPayment, isYooKassaConfigured } from '@/lib/yookassa';
+import { logPayment } from '@/lib/payment-log';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -65,6 +66,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           data: { yookassaPaymentId: payment.id },
         });
 
+        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'initiated', amount: booking.commission, provider: 'yookassa', metadata: { paymentId: payment.id, trigger: 'approve' } });
+
         // Notify renter: approved, please pay commission
         notifyPaymentRequired(booking.renterId, {
           itemTitle: booking.item!.title,
@@ -78,6 +81,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           paymentUrl: payment.confirmation?.confirmation_url,
         });
       } catch (paymentError) {
+        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'failed', amount: booking.commission, provider: 'yookassa', metadata: { error: String(paymentError), trigger: 'approve' } });
         console.error('YooKassa payment creation failed on approve:', paymentError);
         // Revert to pending_approval so owner can try again
         await prisma.booking.update({
@@ -107,6 +111,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           reviews: true,
         },
       });
+
+      logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'mock', amount: booking.commission, provider: 'mock', metadata: { trigger: 'approve' } });
 
       notifyBookingApproved(booking.renterId, {
         itemTitle: booking.item!.title,

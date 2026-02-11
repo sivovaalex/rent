@@ -58,9 +58,12 @@ function getAuthHeader(): string {
 /**
  * Create a YooKassa payment for the booking commission.
  * Returns the payment object with confirmation_url for redirect.
+ * Idempotency key is derived from bookingId to prevent duplicate payments on retry.
  */
 export async function createPayment(params: CreatePaymentParams): Promise<YooKassaPayment> {
-  const idempotencyKey = crypto.randomUUID();
+  const idempotencyKey = crypto.createHash('sha256')
+    .update(`payment:${params.bookingId}:${params.amount}`)
+    .digest('hex');
   const returnUrl = params.returnUrl || `${BASE_URL}/payment/result?bookingId=${params.bookingId}`;
 
   const response = await axios.post<YooKassaPayment>(
@@ -112,29 +115,49 @@ export async function getPayment(paymentId: string): Promise<YooKassaPayment> {
  * Validate YooKassa webhook source by IP range.
  * YooKassa sends webhooks from: 185.71.76.0/27, 185.71.77.0/27,
  * 77.75.153.0/25, 77.75.156.11, 77.75.156.35, 77.75.154.128/25
+ * Exact IPs: 185.71.76.0-31, 185.71.77.0-31, 77.75.153.0-127,
+ * 77.75.154.128-255, 77.75.156.11, 77.75.156.35
  */
 export function isYooKassaIP(ip: string): boolean {
   if (process.env.NODE_ENV === 'development') return true;
 
-  const allowedPrefixes = [
-    '185.71.76.',
-    '185.71.77.',
-    '77.75.153.',
-    '77.75.154.',
-    '77.75.156.',
-  ];
+  // Exact single IPs
+  const exactIPs = ['77.75.156.11', '77.75.156.35'];
+  if (exactIPs.includes(ip)) return true;
 
-  return allowedPrefixes.some(prefix => ip.startsWith(prefix));
+  // CIDR ranges as prefix checks with octet validation
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(p => isNaN(p))) return false;
+
+  const [a, b, c, d] = parts;
+
+  // 185.71.76.0/27 → 185.71.76.0-31
+  if (a === 185 && b === 71 && c === 76 && d >= 0 && d <= 31) return true;
+  // 185.71.77.0/27 → 185.71.77.0-31
+  if (a === 185 && b === 71 && c === 77 && d >= 0 && d <= 31) return true;
+  // 77.75.153.0/25 → 77.75.153.0-127
+  if (a === 77 && b === 75 && c === 153 && d >= 0 && d <= 127) return true;
+  // 77.75.154.128/25 → 77.75.154.128-255
+  if (a === 77 && b === 75 && c === 154 && d >= 128 && d <= 255) return true;
+
+  return false;
 }
 
 /**
- * Check if YooKassa is configured with real credentials
+ * Check if YooKassa is configured with real credentials.
+ * Logs a warning in production if mock payment will be used.
  */
 export function isYooKassaConfigured(): boolean {
-  return !!(
+  const configured = !!(
     SHOP_ID &&
     SECRET_KEY &&
     SHOP_ID !== 'test-shop-id' &&
     !SHOP_ID.startsWith('your-')
   );
+
+  if (!configured && process.env.NODE_ENV === 'production') {
+    console.warn('[YOOKASSA] WARNING: YooKassa is NOT configured in production! Mock payments active.');
+  }
+
+  return configured;
 }

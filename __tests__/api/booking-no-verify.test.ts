@@ -28,6 +28,14 @@ vi.mock('@/lib/logger', () => ({
   logBooking: vi.fn(),
 }));
 
+vi.mock('@/lib/fraud-detection', () => ({
+  detectSuspiciousActivity: vi.fn().mockResolvedValue({ isSuspicious: false, reasons: [] }),
+}));
+
+vi.mock('@/lib/payment-log', () => ({
+  logPayment: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('crypto', () => ({
   default: { randomUUID: () => 'mock-uuid' },
   randomUUID: () => 'mock-uuid',

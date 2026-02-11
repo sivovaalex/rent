@@ -136,6 +136,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   verificationHistory VerificationHistory[] @relation("VerificationUser")
   verificationActions VerificationHistory[] @relation("VerificationAdmin")
+  paymentLogs         PaymentLog[]
 
   @@map("users")
 }
@@ -233,6 +234,7 @@ model Booking {
   renter        User          @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
   reviews       Review[]
   messages      Message[]
+  paymentLogs   PaymentLog[]
 
   @@index([itemId])
   @@index([itemId, status])
@@ -386,6 +388,26 @@ model VerificationHistory {
   @@index([userId])
   @@index([createdAt])
   @@map("verification_history")
+}
+
+model PaymentLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  bookingId String?  @map("booking_id")
+  action    String   // 'initiated', 'succeeded', 'failed', 'refunded', 'mock'
+  amount    Float
+  provider  String   // 'yookassa', 'mock'
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([bookingId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("payment_logs")
 }
 
 model NotificationLog {

@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { isYooKassaIP, YooKassaWebhookEvent } from '@/lib/yookassa';
 import { notifyBookingConfirmed } from '@/lib/notifications';
 import { logBooking, logError } from '@/lib/logger';
+import { logPayment } from '@/lib/payment-log';
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
         });
 
         logBooking('pay', booking.id, { paymentId, amount: event.object.amount.value });
+        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'succeeded', amount: parseFloat(event.object.amount.value), provider: 'yookassa', metadata: { paymentId, webhookEvent: event.event } });
 
         // Notify renter: payment confirmed
         if (booking.item) {
@@ -82,6 +84,7 @@ export async function POST(request: NextRequest) {
     if (event.event === 'payment.canceled') {
       console.log(`[YOOKASSA WEBHOOK] Payment canceled for booking ${booking.id}`);
       logBooking('update', booking.id, { event: 'payment_canceled', paymentId });
+      logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'failed', amount: parseFloat(event.object.amount.value), provider: 'yookassa', metadata: { paymentId, webhookEvent: event.event } });
     }
 
     return NextResponse.json({ ok: true });

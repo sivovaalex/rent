@@ -17,6 +17,10 @@ vi.mock('crypto', () => ({
   randomUUID: () => 'mock-uuid-1234',
 }));
 
+vi.mock('@/lib/payment-log', () => ({
+  logPayment: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { POST as approveBooking } from '@/app/api/bookings/[id]/approve/route';
 import { POST as rejectBooking } from '@/app/api/bookings/[id]/reject/route';
 import { verifyToken, extractTokenFromHeader } from '@/lib/jwt';

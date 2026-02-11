@@ -9,6 +9,8 @@ import { logError, logBooking } from '@/lib/logger';
 import { notifyNewBooking, notifyBookingApprovalRequest } from '@/lib/notifications';
 import { getApprovalDecision } from '@/lib/approval';
 import { createPayment, isYooKassaConfigured } from '@/lib/yookassa';
+import { logPayment } from '@/lib/payment-log';
+import { detectSuspiciousActivity } from '@/lib/fraud-detection';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -33,6 +35,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (item.ownerId === authResult.userId) {
       return errorResponse('Нельзя забронировать собственный лот', 400);
+    }
+
+    // Fraud detection
+    const fraudCheck = await detectSuspiciousActivity(authResult.userId);
+    if (fraudCheck.isSuspicious) {
+      console.warn(`[FRAUD] Suspicious activity for user ${authResult.userId}:`, fraudCheck.reasons);
+      if (fraudCheck.reasons.length >= 2) {
+        return errorResponse('Ваш аккаунт требует дополнительной верификации', 403);
+      }
     }
 
     const validation = await validateBody(request, createBookingSchema);
@@ -123,6 +134,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           });
 
           logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total, paymentId: payment.id });
+          logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'initiated', amount: commission, provider: 'yookassa', metadata: { paymentId: payment.id } });
 
           notifyNewBooking(item.ownerId, {
             itemId: item.id,
@@ -144,6 +156,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             where: { id: booking.id },
             data: { status: 'cancelled', rejectionReason: 'Ошибка создания платежа' },
           });
+          logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'failed', amount: commission, provider: 'yookassa', metadata: { error: String(paymentError) } });
           console.error('YooKassa payment creation failed:', paymentError);
           return errorResponse('Ошибка создания платежа. Попробуйте позже.', 502);
         }
@@ -172,6 +185,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         });
 
         logBooking('create', booking.id, { itemId, renterId: authResult.userId, totalPrice: total });
+        logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'mock', amount: commission, provider: 'mock', metadata: { paymentId: booking.paymentId } });
 
         notifyNewBooking(item.ownerId, {
           itemId: item.id,

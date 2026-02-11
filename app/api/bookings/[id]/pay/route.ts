@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
 import { createPayment, isYooKassaConfigured } from '@/lib/yookassa';
+import { logPayment } from '@/lib/payment-log';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -33,21 +34,29 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (booking.renterId !== authResult.userId) return errorResponse('Доступ запрещён', 403);
     if (booking.status !== 'pending_payment') return errorResponse('Бронирование не ожидает оплаты', 400);
 
-    const payment = await createPayment({
-      amount: booking.commission,
-      bookingId: booking.id,
-      description: `Комиссия за аренду: ${booking.item?.title || 'Лот'}`,
-    });
+    try {
+      const payment = await createPayment({
+        amount: booking.commission,
+        bookingId: booking.id,
+        description: `Комиссия за аренду: ${booking.item?.title || 'Лот'}`,
+      });
 
-    await prisma.booking.update({
-      where: { id },
-      data: { yookassaPaymentId: payment.id },
-    });
+      await prisma.booking.update({
+        where: { id },
+        data: { yookassaPaymentId: payment.id },
+      });
 
-    return successResponse({
-      success: true,
-      paymentUrl: payment.confirmation?.confirmation_url,
-    });
+      logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'initiated', amount: booking.commission, provider: 'yookassa', metadata: { paymentId: payment.id, trigger: 'retry_pay' } });
+
+      return successResponse({
+        success: true,
+        paymentUrl: payment.confirmation?.confirmation_url,
+      });
+    } catch (paymentError) {
+      logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'failed', amount: booking.commission, provider: 'yookassa', metadata: { error: String(paymentError), trigger: 'retry_pay' } });
+      console.error('POST /bookings/[id]/pay Error:', paymentError);
+      return errorResponse('Ошибка создания платежа', 500);
+    }
   } catch (error) {
     console.error('POST /bookings/[id]/pay Error:', error);
     return errorResponse('Ошибка создания платежа', 500);

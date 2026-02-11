@@ -59,6 +59,10 @@ export const prismaMock = {
     delete: vi.fn(),
     deleteMany: vi.fn(),
   },
+  paymentLog: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+  },
   $transaction: vi.fn((callback) => {
     if (Array.isArray(callback)) return Promise.resolve(callback);
     return callback(prismaMock);
