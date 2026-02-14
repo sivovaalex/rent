@@ -25,6 +25,8 @@ const EMAIL_CONFIG = {
     pass: process.env.SMTP_PASSWORD || '',
   },
   from: process.env.SMTP_FROM || 'noreply@arendapro.ru',
+  // Envelope sender — чистый email без display name, для SMTP MAIL FROM
+  envelopeFrom: process.env.SMTP_USER || '',
 };
 
 // Create reusable transporter
@@ -85,6 +87,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       subject,
       text,
       html,
+      // Явно указываем envelope sender — чистый email без display name
+      // BeGet требует совпадения домена с MX-записями
+      envelope: {
+        from: EMAIL_CONFIG.envelopeFrom || EMAIL_CONFIG.auth.user,
+        to,
+      },
     });
 
     emailLogger.info({ messageId: info.messageId, to, subject }, 'Email sent successfully');
