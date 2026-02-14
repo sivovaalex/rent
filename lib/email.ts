@@ -4,6 +4,7 @@
  */
 
 import nodemailer from 'nodemailer';
+import { randomUUID } from 'crypto';
 
 // Simple logger to avoid pino worker thread issues in Next.js dev mode
 const emailLogger = {
@@ -90,11 +91,19 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       subject,
       text,
       html,
+      replyTo: EMAIL_CONFIG.auth.user,
       // Явно указываем envelope sender — чистый email без display name
       // BeGet требует совпадения домена с MX-записями
       envelope: {
         from: EMAIL_CONFIG.envelopeFrom || EMAIL_CONFIG.auth.user,
         to,
+      },
+      headers: {
+        // Message-ID с доменом отправителя — повышает доверие спам-фильтров
+        'Message-ID': `<${randomUUID()}@arendol.ru>`,
+        // List-Unsubscribe — Gmail и Mail.ru учитывают наличие этого заголовка
+        'List-Unsubscribe': `<mailto:${EMAIL_CONFIG.auth.user}?subject=unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       },
     });
 
