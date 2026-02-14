@@ -36,6 +36,7 @@ interface Template {
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://arendol.ru';
+const LOGO_URL = `${BASE_URL}/icon-192.png`;
 
 /**
  * Notification templates for all event types
@@ -366,6 +367,7 @@ export function getEmailHtml(event: NotificationEvent): string {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <img src="${LOGO_URL}" alt="Арендол" width="56" height="56" style="display: block; margin: 0 auto 12px; border-radius: 12px;" />
     <h1 style="color: white; margin: 0; font-size: 28px;">Арендол</h1>
   </div>
   <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
