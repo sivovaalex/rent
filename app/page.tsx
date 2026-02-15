@@ -231,23 +231,18 @@ export default function App() {
           <HomePage onOpenAuth={openAuth} />
         ) : (
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-            <TabsList className={`grid w-full ${
-              (currentUser?.role === 'admin') ? 'grid-cols-4 md:grid-cols-6' :
-              (currentUser?.role === 'moderator') ? 'grid-cols-4 md:grid-cols-5' :
-              (currentUser?.role === 'owner') ? 'grid-cols-4 md:grid-cols-5' :
-              'grid-cols-4'
-            }`}>
-              <TabsTrigger value="catalog">
-                <Package className="w-4 h-4 mr-2" />
-                Каталог
+            <TabsList className="flex w-full overflow-x-auto">
+              <TabsTrigger value="catalog" className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
+                <Package className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Каталог</span>
               </TabsTrigger>
-              <TabsTrigger value="bookings">
-                <Calendar className="w-4 h-4 mr-2" />
-                Аренды
+              <TabsTrigger value="bookings" className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
+                <Calendar className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Аренды</span>
               </TabsTrigger>
-              <TabsTrigger value="chat" className="relative">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Чат
+              <TabsTrigger value="chat" className="relative text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
+                <MessageCircle className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Чат</span>
                 {unreadTotal > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {unreadTotal > 99 ? '99+' : unreadTotal}
@@ -255,19 +250,24 @@ export default function App() {
                 )}
               </TabsTrigger>
               {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
-                <TabsTrigger value="analytics">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Аналитика
+                <TabsTrigger value="analytics" className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
+                  <BarChart3 className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Аналитика</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="profile">
-                <Settings className="w-4 h-4 mr-2" />
-                Профиль
+              <TabsTrigger value="profile" className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
+                <Settings className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Профиль</span>
               </TabsTrigger>
               {(currentUser?.role === 'moderator' || currentUser?.role === 'admin') && (
-                <TabsTrigger value="admin">
-                  <BarChart className="w-4 h-4 mr-2" />
-                  Админ
+                <TabsTrigger value="admin" className="relative text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
+                  <BarChart className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Админ</span>
+                  {(pendingUsers.length + pendingItems.length) > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {pendingUsers.length + pendingItems.length > 99 ? '99+' : pendingUsers.length + pendingItems.length}
+                    </span>
+                  )}
                 </TabsTrigger>
               )}
             </TabsList>

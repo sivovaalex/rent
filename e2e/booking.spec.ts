@@ -74,6 +74,19 @@ test.describe('Бронирования', () => {
       // Страховка НЕ отображается в деталях
       await expect(page.locator('text=Страховка:')).not.toBeVisible();
     });
+
+    test('показывает кнопку отмены для бронирования в статусе ожидания', async ({ page }) => {
+      await page.locator('[role="tab"]:has-text("Аренды")').click();
+      await expect(page.locator('text=Камера Sony A7III')).toBeVisible({ timeout: 10000 });
+
+      // Раскрываем детали бронирования (клик по карточке)
+      await page.locator('text=Камера Sony A7III').first().click();
+
+      // Кнопка «Отменить» видна для pending_approval бронирования
+      const cancelButton = page.locator('button:has-text("Отменить")');
+      await expect(cancelButton).toBeVisible({ timeout: 5000 });
+      await expect(cancelButton).toBeEnabled();
+    });
   });
 
   test.describe('Арендодатель', () => {

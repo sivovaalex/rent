@@ -50,6 +50,32 @@ test.describe('Профиль и настройки', () => {
       await guideLink.scrollIntoViewIfNeeded();
       await expect(guideLink).toBeVisible({ timeout: 5000 });
     });
+
+    test('показывает секцию «Сменить пароль» и раскрывает форму', async ({ page }) => {
+      await page.locator('[role="tab"]:has-text("Профиль")').click();
+      await expect(page.locator('text=Профиль пользователя')).toBeVisible({ timeout: 5000 });
+
+      // Секция «Сменить пароль» видна
+      const changePasswordButton = page.locator('text=Сменить пароль').first();
+      await changePasswordButton.scrollIntoViewIfNeeded();
+      await expect(changePasswordButton).toBeVisible({ timeout: 5000 });
+
+      // Нажимаем на «Сменить пароль» — раскрывается форма
+      await changePasswordButton.click();
+
+      // Проверяем наличие полей формы пароля
+      await expect(page.locator('#currentPassword')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#newPassword')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#confirmPassword')).toBeVisible({ timeout: 5000 });
+
+      // Проверяем лейблы полей
+      await expect(page.locator('text=Текущий пароль')).toBeVisible();
+      await expect(page.locator('text=Новый пароль')).toBeVisible();
+      await expect(page.locator('text=Подтверждение пароля')).toBeVisible();
+
+      // Кнопка «Сохранить» видна
+      await expect(page.locator('button:has-text("Сохранить")')).toBeVisible();
+    });
   });
 
   test.describe('Арендодатель', () => {

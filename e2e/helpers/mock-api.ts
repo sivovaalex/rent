@@ -165,6 +165,14 @@ export async function setupMockApi(page: Page, currentUser: MockUser = mockUsers
     });
   });
 
+  await page.route('**/api/bookings/*/cancel', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ booking: { ...mockBookings[0], status: 'cancelled' } }),
+    });
+  });
+
   await page.route('**/api/bookings/*/confirm-return', (route) => {
     route.fulfill({
       status: 200,
@@ -264,6 +272,14 @@ export async function setupMockApi(page: Page, currentUser: MockUser = mockUsers
         body: JSON.stringify({ user: { ...currentUser, name: 'Обновлённое Имя' } }),
       });
     }
+  });
+
+  await page.route('**/api/auth/change-password', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Пароль успешно изменён' }),
+    });
   });
 
   await page.route('**/api/trust**', (route) => {
