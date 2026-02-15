@@ -25,6 +25,7 @@ package-lock.json
 
 # Production environment variables
 .env.production
+.env.staging
 
 # Next.js
 /.next/
