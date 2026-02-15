@@ -5,3 +5,4 @@ export { useBookings } from './use-bookings';
 export { useAdmin, type AdminStats, type PendingUser, type PendingItem } from './use-admin';
 export { useChat } from './use-chat';
 export { useFavorites } from './use-favorites';
+export { useCity } from './use-city';

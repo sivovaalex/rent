@@ -10,6 +10,7 @@ interface AddressSuggestProps {
   onChange: (address: string, lat: number | null, lng: number | null) => void;
   placeholder?: string;
   className?: string;
+  cityBounds?: string;
 }
 
 // Status: idle (empty), typing (user is typing), geocoding (loading), resolved (coords found), failed (not found)
@@ -20,6 +21,7 @@ export function AddressSuggest({
   onChange,
   placeholder = 'Начните вводить адрес...',
   className = '',
+  cityBounds,
 }: AddressSuggestProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -40,8 +42,11 @@ export function AddressSuggest({
   const geocodeAddress = useCallback((address: string) => {
     if (!address.trim() || !window.ymaps) return;
     setGeoStatus('geocoding');
+    const query = cityBounds && !address.toLowerCase().includes(cityBounds.toLowerCase())
+      ? `${cityBounds}, ${address}`
+      : address;
     window.ymaps.ready(() => {
-      window.ymaps.geocode(address, { results: 1 }).then((res: any) => {
+      window.ymaps.geocode(query, { results: 1 }).then((res: any) => {
         const firstGeoObject = res.geoObjects.get(0);
         if (firstGeoObject) {
           const coordsArr = firstGeoObject.geometry.getCoordinates();
@@ -61,7 +66,7 @@ export function AddressSuggest({
         setShowMap(true);
       });
     });
-  }, [onChange]);
+  }, [onChange, cityBounds]);
 
   // Init SuggestView
   useEffect(() => {

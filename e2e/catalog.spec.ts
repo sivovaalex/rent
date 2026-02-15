@@ -48,6 +48,23 @@ test.describe('Каталог и поиск', () => {
     await expect(page.locator('text=Профессиональная камера')).toBeVisible({ timeout: 5000 });
   });
 
+  test('город "Москва" отображается в хэдере', async ({ page }) => {
+    await expect(page.locator('header').locator('text=Москва')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('каталог загружает items с параметром city', async ({ page }) => {
+    const requestPromise = page.waitForRequest((req) =>
+      req.url().includes('/api/items') && req.url().includes('city=')
+    );
+
+    // Reload to trigger items load
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('text=Иван Арендатор')).toBeVisible({ timeout: 15000 });
+
+    const request = await requestPromise;
+    expect(request.url()).toContain('city=');
+  });
+
   test('навигация по вкладкам приложения', async ({ page }) => {
     await page.locator('[role="tab"]:has-text("Аренды")').click();
     await expect(page.locator('[role="tab"]:has-text("Аренды")').first()).toHaveAttribute('data-state', 'active', { timeout: 5000 });
