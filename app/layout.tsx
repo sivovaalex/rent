@@ -7,6 +7,8 @@ import { Providers } from '@/components/Providers';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
+const isProduction = process.env.NEXT_PUBLIC_BASE_URL === 'https://arendol.ru';
+
 export const metadata: Metadata = {
   title: 'Арендол - Единая шеринг-платформа',
   description: 'Платформа для аренды стрим-оборудования, электроники и премиальной одежды',
@@ -14,8 +16,11 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Arenada Pro',
+    title: 'Arendol',
   },
+  ...(!isProduction && {
+    robots: { index: false, follow: false },
+  }),
 };
 
 export const viewport: Viewport = {

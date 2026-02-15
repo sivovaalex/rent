@@ -1,4 +1,4 @@
-// Service Worker — Arenada Pro PWA
+// Service Worker — Арендол PWA
 const CACHE_NAME = 'arenada-v1';
 const OFFLINE_URL = '/offline.html';
 
@@ -77,7 +77,7 @@ self.addEventListener('fetch', (event) => {
 
 // ==================== PUSH ====================
 self.addEventListener('push', (event) => {
-  let data = { title: 'Arenada Pro', body: 'Новое уведомление', url: '/' };
+  let data = { title: 'Арендол', body: 'Новое уведомление', url: '/' };
 
   try {
     if (event.data) {
