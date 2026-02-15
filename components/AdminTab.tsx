@@ -60,6 +60,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [verificationSearch, setVerificationSearch] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyActionFilter, setHistoryActionFilter] = useState<string>('all');
   const [usersSearch, setUsersSearch] = useState('');
   const [usersRoleFilter, setUsersRoleFilter] = useState<string>('all');
 
@@ -74,6 +76,23 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     const q = verificationSearch.toLowerCase();
     return pendingItems.filter(i => i.title?.toLowerCase().includes(q) || i.owner_name?.toLowerCase().includes(q));
   }, [pendingItems, verificationSearch]);
+
+  const filteredHistory = useMemo(() => {
+    let result = verificationHistory;
+    if (historyActionFilter !== 'all') {
+      result = result.filter((h: any) => h.action === historyActionFilter);
+    }
+    if (historySearch.trim()) {
+      const q = historySearch.toLowerCase();
+      result = result.filter((h: any) =>
+        h.user?.name?.toLowerCase().includes(q) ||
+        h.user?.phone?.includes(q) ||
+        h.entityName?.toLowerCase().includes(q) ||
+        h.editor?.name?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [verificationHistory, historySearch, historyActionFilter]);
 
   const filteredAllUsers = useMemo(() => {
     let result = allUsers;
@@ -332,6 +351,28 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                   ) : verificationHistory.length === 0 ? (
                     <p className="text-center text-gray-500 py-4">История пуста</p>
                   ) : (
+                    <>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="relative flex-1 min-w-[180px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          value={historySearch}
+                          onChange={(e) => setHistorySearch(e.target.value)}
+                          placeholder="Поиск по имени, телефону..."
+                          className="pl-9"
+                        />
+                      </div>
+                      <Select value={historyActionFilter} onValueChange={setHistoryActionFilter}>
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Действие" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Все действия</SelectItem>
+                          <SelectItem value="approve">Одобрено</SelectItem>
+                          <SelectItem value="reject">Отклонено</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -344,7 +385,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {verificationHistory.map((h: any) => (
+                        {filteredHistory.map((h: any) => (
                           <TableRow key={h._id}>
                             <TableCell className="text-sm whitespace-nowrap">
                               {new Date(h.createdAt).toLocaleString('ru-RU')}
@@ -386,6 +427,10 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         ))}
                       </TableBody>
                     </Table>
+                    {filteredHistory.length === 0 && (
+                      <p className="text-center text-gray-500 py-4">Ничего не найдено</p>
+                    )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -396,17 +441,15 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                 <CardTitle>Верификация пользователей</CardTitle>
               </CardHeader>
               <CardContent>
-                {(pendingUsers.length > 3 || pendingItems.length > 3) && (
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      value={verificationSearch}
-                      onChange={(e) => setVerificationSearch(e.target.value)}
-                      placeholder="Поиск по имени, телефону или лоту..."
-                      className="pl-9"
-                    />
-                  </div>
-                )}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={verificationSearch}
+                    onChange={(e) => setVerificationSearch(e.target.value)}
+                    placeholder="Поиск по имени, телефону или лоту..."
+                    className="pl-9"
+                  />
+                </div>
                 <div className="space-y-4">
                   {filteredPendingUsers.map((user) => (
                     <div key={user._id} className="p-4 border rounded-lg space-y-3">

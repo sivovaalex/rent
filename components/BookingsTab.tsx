@@ -330,67 +330,65 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
           return (
             <Card key={booking._id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{booking.item?.title}</CardTitle>
-                    <CardDescription>
-                      {startDate && new Date(startDate).toLocaleDateString()} - {endDate && new Date(endDate).toLocaleDateString()}
+              <CardHeader className="pb-3">
+                <div className="flex gap-3">
+                  {/* Item photo thumbnail */}
+                  {booking.item?.photos && booking.item.photos.length > 0 ? (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                      <img
+                        src={booking.item.photos[0]}
+                        alt={booking.item.title || ''}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base sm:text-lg truncate">{booking.item?.title}</CardTitle>
+                      <Badge variant={getStatusVariant(booking.status)} className="flex-shrink-0 text-xs">
+                        {booking.status === 'pending_approval' && <Clock className="w-3 h-3 mr-1" />}
+                        {getStatusLabel(booking.status)}
+                      </Badge>
+                    </div>
+                    <CardDescription className="mt-0.5">
+                      {startDate && new Date(startDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} — {endDate && new Date(endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </CardDescription>
+                    {ownerId === currentUser?._id && booking.renter && (
+                      <p className="text-xs text-gray-500 mt-0.5">Арендатор: {booking.renter.name}</p>
+                    )}
+                    {booking.status === 'pending_approval' && booking.approvalDeadline && (
+                      <div className="flex items-center gap-1 text-xs text-amber-600 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        <span>Осталось: {getDeadlineText(booking.approvalDeadline)}</span>
+                      </div>
+                    )}
                   </div>
-                  <Badge variant={getStatusVariant(booking.status)}>
-                    {booking.status === 'pending_approval' && <Clock className="w-3 h-3 mr-1" />}
-                    {getStatusLabel(booking.status)}
-                  </Badge>
                 </div>
-
-                {booking.status === 'pending_approval' && booking.approvalDeadline && (
-                  <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
-                    <Clock className="w-3 h-3" />
-                    <span>Осталось: {getDeadlineText(booking.approvalDeadline)}</span>
-                  </div>
-                )}
               </CardHeader>
 
               <CardContent>
-                <div className="space-y-2 text-sm">
-                  {ownerId === currentUser?._id && booking.renter && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Арендатор:</span>
-                      <span>{booking.renter.name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Аренда:</span>
-                    <span>{rentalPrice} ₽</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Залог:</span>
-                    <span>{booking.deposit} ₽</span>
-                  </div>
-                  {/* Страховка временно отключена
-                  {(booking.insurance || 0) > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Страховка:</span>
-                      <span>{booking.insurance} ₽</span>
-                    </div>
-                  )}
-                  */}
-                  <div className="flex justify-between text-indigo-600">
-                    <span>Комиссия (онлайн):</span>
-                    <span>{booking.commission || 0} ₽</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">При встрече:</span>
-                    <span>{rentalPrice + booking.deposit} ₽</span>
-                  </div>
-                  <div className="flex justify-between font-semibold pt-2 border-t">
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between font-semibold">
                     <span>Итого:</span>
                     <span>{totalPrice} ₽</span>
                   </div>
+                  <div className="text-xs text-gray-500 space-y-0.5">
+                    <div className="flex justify-between">
+                      <span>Комиссия (онлайн):</span>
+                      <span>{booking.commission || 0} ₽</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>При встрече (аренда {rentalPrice} ₽ + залог {booking.deposit} ₽):</span>
+                      <span>{rentalPrice + booking.deposit} ₽</span>
+                    </div>
+                  </div>
 
                   {booking.status === 'cancelled' && booking.rejectionReason && (
-                    <div className="flex items-start gap-2 pt-2 text-red-600 bg-red-50 rounded p-2 mt-2">
+                    <div className="flex items-start gap-2 pt-2 text-red-600 bg-red-50 rounded p-2 mt-1">
                       <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                       <div>
                         <span className="font-medium text-xs">Причина отклонения:</span>
