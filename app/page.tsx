@@ -13,7 +13,7 @@ import HomePage from '@/components/HomePage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, Package, Calendar, Settings, BarChart, BarChart3, MessageCircle } from 'lucide-react';
-import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat, useFavorites } from '@/hooks';
+import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat, useFavorites, useCity } from '@/hooks';
 
 export default function App() {
   const VALID_TABS = ['catalog', 'bookings', 'chat', 'analytics', 'profile', 'admin'];
@@ -39,6 +39,7 @@ export default function App() {
   };
 
   // Custom hooks
+  const { city } = useCity();
   const { alert, showAlert } = useAlert();
 
   const {
@@ -87,6 +88,7 @@ export default function App() {
     radius,
     setNearLocation,
     setRadius,
+    setCityName,
   } = useItems({ currentUser, onShowAlert: showAlert });
 
   const { bookings, isLoading: bookingsLoading, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
@@ -112,6 +114,11 @@ export default function App() {
   } = useChat({ currentUserId: currentUser?._id, onShowAlert: showAlert });
 
   const { favoriteIds, isFavorite, toggleFavorite } = useFavorites({ currentUserId: currentUser?._id });
+
+  // Sync city → items filter
+  useEffect(() => {
+    setCityName(city.name);
+  }, [city.name, setCityName]);
 
   // Sync tab ↔ hash
   useEffect(() => {
@@ -203,6 +210,7 @@ export default function App() {
         onOpenAuth={openAuth}
         unreadMessages={unreadTotal}
         onOpenChat={() => { setCurrentPage('app'); setCurrentTab('chat'); }}
+        cityName={city.name}
       />
 
       {alert && (
@@ -303,6 +311,7 @@ export default function App() {
                 radius={radius}
                 setNearLocation={setNearLocation}
                 setRadius={setRadius}
+                cityName={city.name}
               />
             </TabsContent>
 

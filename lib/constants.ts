@@ -83,3 +83,19 @@ export function formatPrice(price: number): string {
   }
   return rounded.toFixed(2);
 }
+
+// ==================== CITIES ====================
+
+export interface City {
+  key: string;
+  name: string;
+  bounds: string;
+}
+
+export const CITIES: City[] = [
+  { key: 'moscow', name: 'Москва', bounds: 'Москва' },
+];
+
+export const DEFAULT_CITY_KEY = 'moscow';
+
+export const CITY_STORAGE_KEY = 'selected_city';

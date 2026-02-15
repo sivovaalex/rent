@@ -1,7 +1,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, User, CheckCircle, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Package, User, CheckCircle, ArrowLeft, MessageCircle, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { User as UserType } from '@/types';
 
@@ -13,6 +13,7 @@ interface HeaderProps {
   onBack?: () => void;
   unreadMessages?: number;
   onOpenChat?: () => void;
+  cityName?: string;
 }
 
 export default function Header({
@@ -23,6 +24,7 @@ export default function Header({
   onBack,
   unreadMessages = 0,
   onOpenChat,
+  cityName,
 }: HeaderProps) {
   const router = useRouter();
 
@@ -43,6 +45,12 @@ export default function Header({
             <Package className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl font-bold text-indigo-600">Арендол</h1>
           </div>
+          {cityName && (
+            <div className="flex items-center gap-1 text-sm text-gray-600 ml-3">
+              <MapPin className="w-4 h-4" />
+              <span>{cityName}</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {currentUser ? (

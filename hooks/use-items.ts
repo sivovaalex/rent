@@ -18,6 +18,7 @@ interface CatalogFilters {
   nearLat: number | null;
   nearLon: number | null;
   radius: number;
+  cityName: string;
 }
 
 export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
@@ -35,6 +36,7 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     nearLat: null,
     nearLon: null,
     radius: 10,
+    cityName: '',
   });
 
   // Booking modal state
@@ -62,6 +64,11 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
         if (filters.showAllStatuses) {
           params.append('show_all_statuses', 'true');
         }
+      }
+
+      // City filter
+      if (filters.cityName) {
+        params.append('city', filters.cityName);
       }
 
       // Geo filters
@@ -168,6 +175,10 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     setFilters(prev => ({ ...prev, radius: value }));
   }, []);
 
+  const setCityName = useCallback((value: string) => {
+    setFilters(prev => ({ ...prev, cityName: value }));
+  }, []);
+
   return {
     items,
     isLoading,
@@ -191,6 +202,9 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     radius: filters.radius,
     setNearLocation,
     setRadius,
+    // City
+    cityName: filters.cityName,
+    setCityName,
     // Booking modal
     selectedItem,
     setSelectedItem,

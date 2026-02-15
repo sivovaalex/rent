@@ -58,6 +58,7 @@ interface CatalogProps {
   radius?: number;
   setNearLocation?: (lat: number | null, lon: number | null) => void;
   setRadius?: (radius: number) => void;
+  cityName?: string;
 }
 
 interface NewItemData {
@@ -114,6 +115,7 @@ export default function Catalog({
   radius = 10,
   setNearLocation,
   setRadius,
+  cityName,
 }: CatalogProps) {
   const [showItemModal, setShowItemModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(() => {
@@ -604,6 +606,7 @@ export default function Catalog({
         }}
         item={selectedItem}
         currentUser={currentUser}
+        cityName={cityName}
         onSubmit={async (itemData) => {
           if (!currentUser) return null;
           try {
@@ -672,6 +675,7 @@ interface NewItemModalProps {
   item: Item | null;
   currentUser: User | null;
   onSubmit: (itemData: NewItemData) => Promise<FieldError[] | null>;
+  cityName?: string;
 }
 
 interface PhotoPreview {
@@ -679,7 +683,7 @@ interface PhotoPreview {
   preview: string;
 }
 
-function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemModalProps) {
+function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit, cityName }: NewItemModalProps) {
   const [newItem, setNewItem] = useState<NewItemData>({
     category: 'stream',
     subcategory: '',
@@ -967,8 +971,9 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit }: NewItemM
               <AddressSuggest
                 value={newItem.address}
                 onChange={(address, lat, lng) => setNewItem({ ...newItem, address, latitude: lat, longitude: lng })}
-                placeholder="Москва, ул. Примерная, д. 1"
+                placeholder={`${cityName || 'Москва'}, ул. Примерная, д. 1`}
                 className={getFieldError('address') ? '[&_input]:border-red-500' : ''}
+                cityBounds={cityName}
               />
               {getFieldError('address') && (
                 <p className="text-red-500 text-sm mt-1">{getFieldError('address')}</p>

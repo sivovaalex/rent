@@ -33,6 +33,12 @@ export async function GET(request: NextRequest) {
       where.status = 'approved';
     }
 
+    // City filter (by address text)
+    const city = url.searchParams.get('city');
+    if (city) {
+      where.address = { contains: city, mode: 'insensitive' };
+    }
+
     // Category filter
     if (category && category !== 'all') {
       where.category = category as any;
