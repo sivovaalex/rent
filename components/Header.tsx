@@ -46,9 +46,9 @@ export default function Header({
             <h1 className="text-2xl font-bold text-indigo-600 hidden sm:block">Арендол</h1>
           </div>
           {cityName && (
-            <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600 ml-1 sm:ml-3">
-              <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">{cityName}</span>
+            <div className="hidden sm:flex items-center gap-1 text-sm text-gray-600 ml-3">
+              <MapPin className="w-4 h-4" />
+              <span>{cityName}</span>
             </div>
           )}
         </div>

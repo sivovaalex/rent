@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
 import { notifyBookingCancelled } from '@/lib/notifications';
+import { recalculateTrust } from '@/lib/trust';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         rejectedAt: new Date(),
       },
     });
+
+    // Recalculate trust for both parties (cancellation affects confirmationRate)
+    recalculateTrust(booking.renterId).catch(console.error);
+    recalculateTrust(booking.item!.ownerId).catch(console.error);
 
     // Notify the other party
     const notifyUserId = isRenter ? booking.item!.ownerId : booking.renterId;

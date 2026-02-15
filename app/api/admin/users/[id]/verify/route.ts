@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAdmin, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody } from '@/lib/validations';
 import { notifyVerification } from '@/lib/notifications';
+import { recalculateTrust } from '@/lib/trust';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -55,6 +56,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         },
       }),
     ]);
+
+    // Recalculate trust score (verification affects it)
+    recalculateTrust(targetUserId).catch(console.error);
 
     // Send notification to user
     notifyVerification(
