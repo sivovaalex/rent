@@ -258,3 +258,80 @@ export async function sendPasswordChangedEmail(
 
   return sendEmail({ to: email, subject, text, html });
 }
+
+/**
+ * Send email verification email
+ */
+export async function sendEmailVerificationEmail(
+  email: string,
+  verificationToken: string,
+  userName?: string
+): Promise<boolean> {
+  const verifyLink = `${BASE_URL}/verify-email?token=${verificationToken}`;
+
+  const subject = 'Подтверждение email - Арендол';
+
+  const text = `
+Здравствуйте${userName ? `, ${userName}` : ''}!
+
+Для завершения регистрации на платформе Арендол подтвердите ваш email, перейдя по ссылке:
+${verifyLink}
+
+Ссылка действительна в течение 24 часов.
+
+Если вы не регистрировались на Арендол, просто проигнорируйте это письмо.
+
+С уважением,
+Команда Арендол
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подтверждение email</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <img src="${LOGO_URL}" alt="Арендол" width="56" height="56" style="display: block; margin: 0 auto 12px; border-radius: 12px;" />
+    <h1 style="color: white; margin: 0; font-size: 28px;">Арендол</h1>
+  </div>
+
+  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
+    <h2 style="color: #1f2937; margin-top: 0;">Подтвердите ваш email</h2>
+
+    <p>Здравствуйте${userName ? `, <strong>${userName}</strong>` : ''}!</p>
+
+    <p>Спасибо за регистрацию на платформе Арендол. Для завершения регистрации подтвердите ваш email-адрес.</p>
+
+    <p style="text-align: center; margin: 30px 0;">
+      <a href="${verifyLink}"
+         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+        Подтвердить email
+      </a>
+    </p>
+
+    <p style="color: #6b7280; font-size: 14px;">
+      Или скопируйте ссылку в браузер:<br>
+      <a href="${verifyLink}" style="color: #667eea; word-break: break-all;">${verifyLink}</a>
+    </p>
+
+    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">
+      <p style="margin: 0; color: #92400e; font-size: 14px;">
+        <strong>Важно:</strong> Ссылка действительна в течение 24 часов. Если вы не регистрировались на Арендол, просто проигнорируйте это письмо.
+      </p>
+    </div>
+  </div>
+
+  <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+    <p style="margin: 0;">© ${new Date().getFullYear()} Арендол. Все права защищены.</p>
+    <p style="margin: 5px 0 0;">Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
+  </div>
+</body>
+</html>
+`;
+
+  return sendEmail({ to: email, subject, text, html });
+}

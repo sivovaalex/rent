@@ -146,6 +146,10 @@ export async function PATCH(request: NextRequest) {
       return errorResponse('Неверные данные', 401);
     }
 
+    if (!user.emailVerified) {
+      return errorResponse('Подтвердите email для входа. Проверьте почту.', 403);
+    }
+
     // Generate JWT token
     const token = await signToken({
       userId: user.id,

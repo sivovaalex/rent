@@ -4,6 +4,7 @@
 export const prismaMock = {
   user: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -62,6 +63,19 @@ export const prismaMock = {
   paymentLog: {
     create: vi.fn(),
     findMany: vi.fn(),
+  },
+  emailVerificationToken: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+  passwordResetToken: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
   },
   $transaction: vi.fn((callback) => {
     if (Array.isArray(callback)) return Promise.resolve(callback);

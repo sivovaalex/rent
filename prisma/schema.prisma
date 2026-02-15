@@ -87,6 +87,10 @@ model User {
   blockedBy           String?            @map("blocked_by")
   photo               String?
 
+  // Email verification
+  emailVerified       Boolean            @default(false) @map("email_verified")
+  emailVerifiedAt     DateTime?          @map("email_verified_at")
+
   // Document verification
   documentPath        String?            @map("document_path")
   documentType        String?            @map("document_type")
@@ -308,6 +312,19 @@ model PasswordResetToken {
   @@index([email])
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  email     String
+  token     String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  @@index([email])
+  @@index([token])
+  @@map("email_verification_tokens")
 }
 
 model MessengerLinkCode {

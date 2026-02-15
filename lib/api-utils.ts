@@ -150,6 +150,9 @@ export function safeUser(user: User): ClientUser {
     isVerified: user.isVerified,
     verificationStatus: user.verificationStatus,
     isBlocked: user.isBlocked,
+    // Email verification
+    emailVerified: user.emailVerified,
+    emailVerifiedAt: user.emailVerifiedAt,
     // Trust metrics
     trustScore: user.trustScore,
     completedDeals: user.completedDeals,

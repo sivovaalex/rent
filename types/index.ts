@@ -53,6 +53,9 @@ export interface User {
   // Approval settings
   defaultApprovalMode?: ApprovalMode;
   defaultApprovalThreshold?: number;
+  // Email verification
+  emailVerified?: boolean;
+  emailVerifiedAt?: Date | string | null;
   // Verification document
   verificationSubmittedAt?: Date | string | null;
   documentType?: string | null;

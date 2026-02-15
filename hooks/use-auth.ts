@@ -94,7 +94,14 @@ export function useAuth(options: UseAuthOptions = {}) {
 
       const data = await res.json();
 
-      if (res.ok && data.token) {
+      if (res.ok && data.emailVerificationRequired) {
+        // Email verification required — don't login, show success message
+        setAuthAlert({
+          message: data.message || 'Проверьте почту для подтверждения email.',
+          type: 'success',
+        });
+        return true;
+      } else if (res.ok && data.token) {
         saveAuth(data.user, data.token);
         setAuthAlert(null);
         return true;

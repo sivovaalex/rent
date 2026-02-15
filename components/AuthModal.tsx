@@ -40,6 +40,7 @@ export default function AuthModal({
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotEmailSent, setForgotEmailSent] = useState(false);
+  const [registerEmailSent, setRegisterEmailSent] = useState(false);
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -59,6 +60,7 @@ export default function AuthModal({
       setForgotPasswordMode(false);
       setForgotEmail('');
       setForgotEmailSent(false);
+      setRegisterEmailSent(false);
       setRegisterName('');
       setRegisterEmail('');
       setRegisterPassword('');
@@ -155,7 +157,7 @@ export default function AuthModal({
       });
 
       if (success) {
-        onClose();
+        setRegisterEmailSent(true);
       }
     } catch {
       setAuthAlert({ message: 'Ошибка при регистрации', type: 'error' });
@@ -306,6 +308,28 @@ export default function AuthModal({
                   className="text-indigo-600 hover:text-indigo-800 p-0 h-auto font-medium"
                 >
                   Нет аккаунта? Зарегистрироваться
+                </Button>
+              </div>
+            </div>
+          ) : registerEmailSent ? (
+            <div className="space-y-3 sm:space-y-4">
+              <div className="text-center py-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Проверьте почту</h3>
+                <p className="text-gray-600 mb-2">
+                  На адрес <strong>{registerEmail}</strong> отправлено письмо с ссылкой для подтверждения.
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Проверьте папку &quot;Спам&quot;, если письмо не пришло.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="w-full"
+                >
+                  Вернуться на главную
                 </Button>
               </div>
             </div>

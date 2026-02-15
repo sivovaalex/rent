@@ -1,10 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { safeUser, errorResponse, successResponse } from '@/lib/api-utils';
-import { signToken } from '@/lib/jwt';
+import { errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, registerSchema } from '@/lib/validations';
+import { sendEmailVerificationEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,17 +35,32 @@ export async function POST(request: NextRequest) {
         phone,
         passwordHash,
         role,
+        emailVerified: false,
       },
     });
 
-    // Generate JWT token
-    const token = await signToken({
-      userId: user.id,
-      email: user.email || '',
-      role: user.role,
+    // Generate email verification token (24h expiry)
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.emailVerificationToken.create({
+      data: {
+        email,
+        token,
+        expiresAt,
+      },
     });
 
-    return successResponse({ success: true, user: safeUser(user), token });
+    // Send verification email (non-blocking)
+    sendEmailVerificationEmail(email, token, name).catch((err) => {
+      console.error('[REGISTER] Failed to send verification email:', err);
+    });
+
+    return successResponse({
+      success: true,
+      message: 'Регистрация успешна! Проверьте почту для подтверждения email.',
+      emailVerificationRequired: true,
+    });
   } catch (error) {
     console.error('POST /auth/register Error:', error);
     return errorResponse('Ошибка сервера', 500);

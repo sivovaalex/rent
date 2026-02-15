@@ -74,12 +74,16 @@ export async function setupMockApi(page: Page, currentUser: MockUser = mockUsers
     }
   });
 
-  // Register: POST /api/auth/register
+  // Register: POST /api/auth/register — returns emailVerificationRequired
   await page.route('**/api/auth/register', (route) => {
     route.fulfill({
-      status: 201,
+      status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ user: currentUser, token: 'mock-jwt-token' }),
+      body: JSON.stringify({
+        success: true,
+        message: 'Регистрация успешна! Проверьте почту для подтверждения email.',
+        emailVerificationRequired: true,
+      }),
     });
   });
 

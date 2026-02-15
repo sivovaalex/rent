@@ -70,7 +70,9 @@ test.describe('Аутентификация', () => {
     await registerBtn.scrollIntoViewIfNeeded();
     await registerBtn.click();
 
-    await expect(page.getByText('Иван Арендатор').first()).toBeVisible({ timeout: 15000 });
+    // После регистрации показывается экран "Проверьте почту"
+    await expect(page.getByText('Проверьте почту')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('renter@test.com')).toBeVisible();
   });
 
   test('показывает ошибку при несовпадающих паролях', async ({ page }) => {
