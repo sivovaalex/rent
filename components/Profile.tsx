@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2, BookOpen, ChevronRight, TrendingUp, DollarSign, Clock, ShieldCheck } from 'lucide-react';
+import { Star, CheckCircle, AlertCircle, Shield, Settings, MessageSquare, Loader2, BookOpen, ChevronRight, TrendingUp, DollarSign, Clock, ShieldCheck, Lock } from 'lucide-react';
+import { getAuthHeaders } from '@/hooks/use-auth';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import TrustBadges, { TrustScore } from './TrustBadges';
 import type { User, UserRole, AlertType, ApprovalMode, Review } from '@/types';
@@ -40,6 +41,50 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
     currentUser?.defaultApprovalThreshold || 4.0
   );
   const [savingApproval, setSavingApproval] = useState(false);
+
+  // Change password
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!newPassword || !currentPassword) {
+      showAlert('Заполните все поля', 'error');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showAlert('Новый пароль должен содержать минимум 6 символов', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showAlert('Пароли не совпадают', 'error');
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Пароль успешно изменён', 'success');
+        setShowPasswordForm(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        showAlert(data.error || 'Ошибка при смене пароля', 'error');
+      }
+    } catch {
+      showAlert('Ошибка при смене пароля', 'error');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   // Reviews about me
   const [myReviews, setMyReviews] = useState<Review[]>([]);
@@ -435,9 +480,95 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
       </CardContent>
     </Card>
 
+    {/* Сменить пароль */}
+    <Card className="mt-6">
+      <CardContent className="p-4 sm:p-6">
+        {!showPasswordForm ? (
+          <button
+            onClick={() => setShowPasswordForm(true)}
+            className="flex items-center gap-4 group w-full text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-gray-200 transition-colors">
+              <Lock className="w-5 h-5 text-gray-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+                Сменить пароль
+              </h3>
+              <p className="text-sm text-gray-500">
+                Изменить пароль для входа в аккаунт
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
+          </button>
+        ) : (
+          <div className="space-y-4">
+            <h3 className="font-medium flex items-center gap-2">
+              <Lock className="w-4 h-4" />
+              Сменить пароль
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="currentPassword">Текущий пароль</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Введите текущий пароль"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newPassword">Новый пароль</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Минимум 6 символов"
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Подтверждение пароля</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Повторите новый пароль"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleChangePassword}
+                disabled={savingPassword}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                {savingPassword ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Сохранение...</>
+                ) : 'Сохранить'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
     {/* Настройки уведомлений */}
     <div className="mt-6">
-      <NotificationSettings />
+      <NotificationSettings userRole={currentUser?.role} />
     </div>
 
     {/* Руководство пользователя */}

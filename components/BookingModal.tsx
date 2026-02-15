@@ -323,18 +323,26 @@ export default function BookingModal({
               <span className="font-medium text-sm">{formatPrice(calculateCommissionAmount())} ₽</span>
             </div>
 
-            <div className="pt-2 border-t space-y-1">
+            <div className="pt-2 border-t space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-indigo-700 text-sm font-semibold">Оплата онлайн (комиссия):</span>
-                <span className="font-bold text-lg text-indigo-600">
-                  {formatPrice(calculateCommissionAmount())} ₽
+                <span className="text-gray-900 font-semibold">Итого:</span>
+                <span className="font-bold text-lg text-gray-900">
+                  {formatPrice(calculateRentalPrice() + item.deposit + calculateCommissionAmount())} ₽
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 text-sm">При встрече (аренда + залог):</span>
-                <span className="font-medium text-sm">
-                  {formatPrice(calculateRentalPrice() + item.deposit)} ₽
-                </span>
+              <div className="ml-3 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-indigo-700 text-sm font-medium">Оплата онлайн (комиссия):</span>
+                  <span className="font-semibold text-sm text-indigo-600">
+                    {formatPrice(calculateCommissionAmount())} ₽
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">При встрече (аренда + залог):</span>
+                  <span className="font-medium text-sm">
+                    {formatPrice(calculateRentalPrice() + item.deposit)} ₽
+                  </span>
+                </div>
               </div>
             </div>
 

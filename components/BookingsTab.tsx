@@ -1,12 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import { SkeletonList } from '@/components/ui/spinner';
 import type { User, Booking, AlertType, ReviewType } from '@/types';
@@ -32,6 +33,45 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   const [isRejecting, setIsRejecting] = useState(false);
   const [isPaying, setIsPaying] = useState<string | null>(null);
   const [isConfirmingHandover, setIsConfirmingHandover] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+
+  const filteredBookings = useMemo(() => {
+    let result = [...bookings];
+    if (statusFilter !== 'all') {
+      result = result.filter(b => b.status === statusFilter);
+    }
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+    return result;
+  }, [bookings, statusFilter, sortOrder]);
+
+  const cancelBooking = async (bookingId: string) => {
+    if (!confirm('Вы уверены, что хотите отменить бронирование?')) return;
+    setIsCancelling(bookingId);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/cancel`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Бронирование отменено', 'success');
+        loadBookings();
+      } else {
+        showAlert(data.error || 'Ошибка при отмене', 'error');
+      }
+    } catch {
+      showAlert('Ошибка при отмене бронирования', 'error');
+    } finally {
+      setIsCancelling(null);
+    }
+  };
 
   useEffect(() => {
     if (currentUser) {
@@ -248,8 +288,37 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
   return (
     <div className="space-y-6">
+      {/* Фильтры и сортировка */}
+      <div className="flex flex-wrap gap-2">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Статус" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Все статусы</SelectItem>
+            <SelectItem value="pending_approval">Ожидает одобрения</SelectItem>
+            <SelectItem value="pending_payment">Ожидает оплаты</SelectItem>
+            <SelectItem value="paid">Оплачено</SelectItem>
+            <SelectItem value="active">Активно</SelectItem>
+            <SelectItem value="completed">Завершено</SelectItem>
+            <SelectItem value="cancelled">Отменено</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
+          <SelectTrigger className="w-[160px]">
+            <ArrowUpDown className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Сортировка" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Сначала новые</SelectItem>
+            <SelectItem value="oldest">Сначала старые</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid grid-cols-1 gap-4">
-        {bookings.map((booking) => {
+        {filteredBookings.map((booking) => {
           const startDate = booking.startDate ?? booking.start_date;
           const endDate = booking.endDate ?? booking.end_date;
           const rentalPrice = booking.rentalPrice ?? booking.rental_price ?? 0;
@@ -398,6 +467,23 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                   </Button>
                 )}
 
+                {/* Cancel booking (renter or owner, in pending statuses) */}
+                {(booking.status === 'pending_approval' || booking.status === 'pending_payment') &&
+                  (renterId === currentUser?._id || ownerId === currentUser?._id) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => cancelBooking(booking._id)}
+                    disabled={isCancelling === booking._id}
+                  >
+                    {isCancelling === booking._id
+                      ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Отмена...</>
+                      : <><XCircle className="w-4 h-4 mr-1" />Отменить</>
+                    }
+                  </Button>
+                )}
+
                 {/* Renter: Pay commission */}
                 {booking.status === 'pending_payment' && renterId === currentUser?._id && (
                   <Button
@@ -480,10 +566,12 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
         })}
       </div>
 
-      {bookings.length === 0 && (
+      {filteredBookings.length === 0 && (
         <div className="text-center py-12">
           <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500">У вас пока нет бронирований</p>
+          <p className="text-gray-500">
+            {statusFilter !== 'all' ? 'Нет бронирований с выбранным статусом' : 'У вас пока нет бронирований'}
+          </p>
         </div>
       )}
 

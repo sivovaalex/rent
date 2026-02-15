@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, MessageCircle, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, User as UserIcon, Search } from 'lucide-react';
 import { SkeletonList } from '@/components/ui/spinner';
 import type { User, AlertType, ChatMessage, ChatConversation } from '@/types';
 
@@ -40,7 +40,17 @@ export default function ChatTab({
 }: ChatTabProps) {
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [chatSearch, setChatSearch] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const filteredConversations = useMemo(() => {
+    if (!chatSearch.trim()) return conversations;
+    const q = chatSearch.toLowerCase();
+    return conversations.filter(c =>
+      c.otherUser?.name?.toLowerCase().includes(q) ||
+      c.itemTitle?.toLowerCase().includes(q)
+    );
+  }, [conversations, chatSearch]);
 
   useEffect(() => {
     loadConversations();
@@ -110,7 +120,18 @@ export default function ChatTab({
           </Card>
         ) : (
           <div className="space-y-2">
-            {conversations.map((conv) => (
+            {conversations.length > 3 && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={chatSearch}
+                  onChange={(e) => setChatSearch(e.target.value)}
+                  placeholder="Поиск по имени или лоту..."
+                  className="pl-9"
+                />
+              </div>
+            )}
+            {filteredConversations.map((conv) => (
               <Card
                 key={conv.bookingId}
                 className="cursor-pointer hover:bg-gray-50 transition-colors"

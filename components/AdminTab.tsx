@@ -1,12 +1,14 @@
 'use client';
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
@@ -57,6 +59,37 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const [historyLoading, setHistoryLoading] = useState(false);
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [verificationSearch, setVerificationSearch] = useState('');
+  const [usersSearch, setUsersSearch] = useState('');
+  const [usersRoleFilter, setUsersRoleFilter] = useState<string>('all');
+
+  const filteredPendingUsers = useMemo(() => {
+    if (!verificationSearch.trim()) return pendingUsers;
+    const q = verificationSearch.toLowerCase();
+    return pendingUsers.filter(u => u.name?.toLowerCase().includes(q) || u.phone?.includes(q));
+  }, [pendingUsers, verificationSearch]);
+
+  const filteredPendingItems = useMemo(() => {
+    if (!verificationSearch.trim()) return pendingItems;
+    const q = verificationSearch.toLowerCase();
+    return pendingItems.filter(i => i.title?.toLowerCase().includes(q) || i.owner_name?.toLowerCase().includes(q));
+  }, [pendingItems, verificationSearch]);
+
+  const filteredAllUsers = useMemo(() => {
+    let result = allUsers;
+    if (usersRoleFilter !== 'all') {
+      result = result.filter(u => u.role === usersRoleFilter);
+    }
+    if (usersSearch.trim()) {
+      const q = usersSearch.toLowerCase();
+      result = result.filter(u =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.includes(q)
+      );
+    }
+    return result;
+  }, [allUsers, usersSearch, usersRoleFilter]);
 
   const loadVerificationHistory = async () => {
     if (!currentUser || currentUser.role !== 'admin') return;
@@ -363,8 +396,19 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                 <CardTitle>Верификация пользователей</CardTitle>
               </CardHeader>
               <CardContent>
+                {(pendingUsers.length > 3 || pendingItems.length > 3) && (
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      value={verificationSearch}
+                      onChange={(e) => setVerificationSearch(e.target.value)}
+                      placeholder="Поиск по имени, телефону или лоту..."
+                      className="pl-9"
+                    />
+                  </div>
+                )}
                 <div className="space-y-4">
-                  {pendingUsers.map((user) => (
+                  {filteredPendingUsers.map((user) => (
                     <div key={user._id} className="p-4 border rounded-lg space-y-3">
                       <div className="flex items-start justify-between">
                         <div>
@@ -484,7 +528,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {pendingItems.map((item) => (
+                  {filteredPendingItems.map((item) => (
                     <div key={item._id} className="flex items-start justify-between p-4 border rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium">{item.title}</p>
@@ -547,6 +591,29 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
               </div>
               <Card>
                 <CardContent>
+                  <div className="flex flex-wrap gap-2 mb-4 pt-4">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        value={usersSearch}
+                        onChange={(e) => setUsersSearch(e.target.value)}
+                        placeholder="Поиск по имени, email, телефону..."
+                        className="pl-9"
+                      />
+                    </div>
+                    <Select value={usersRoleFilter} onValueChange={setUsersRoleFilter}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Роль" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все роли</SelectItem>
+                        <SelectItem value="renter">Арендатор</SelectItem>
+                        <SelectItem value="owner">Арендодатель</SelectItem>
+                        <SelectItem value="moderator">Модератор</SelectItem>
+                        <SelectItem value="admin">Админ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {isLoading ? (
                     <SkeletonTable rows={5} />
                   ) : (
@@ -565,7 +632,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {allUsers.map((user) => (
+                            {filteredAllUsers.map((user) => (
                               <TableRow key={user._id}>
                                 <TableCell className="font-medium">{user.name}</TableCell>
                                 <TableCell>{user.email}</TableCell>

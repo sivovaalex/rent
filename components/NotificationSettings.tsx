@@ -30,7 +30,11 @@ const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '
 const VK_BOT_URL = process.env.NEXT_PUBLIC_VK_BOT_URL || 'https://vk.com/im?sel=-123456789';
 const VK_BOT_NAME = process.env.NEXT_PUBLIC_VK_BOT_NAME || 'Арендол';
 
-export function NotificationSettings() {
+interface NotificationSettingsProps {
+  userRole?: string;
+}
+
+export function NotificationSettings({ userRole }: NotificationSettingsProps) {
   const [settings, setSettings] = useState<NotificationSettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -309,25 +313,27 @@ export function NotificationSettings() {
           </div>
         )}
 
-        {/* Booking request notifications toggle */}
-        <div className="flex items-start justify-between rounded-lg border p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-lg bg-amber-100 p-2">
-              <Bell className="h-5 w-5 text-amber-600" />
+        {/* Booking request notifications toggle — only for owners/admins */}
+        {userRole !== 'renter' && (
+          <div className="flex items-start justify-between rounded-lg border p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-amber-100 p-2">
+                <Bell className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <Label className="text-base font-medium">Запросы на бронирование</Label>
+                <p className="text-sm text-muted-foreground">
+                  Уведомления о новых запросах аренды ваших лотов
+                </p>
+              </div>
             </div>
-            <div>
-              <Label className="text-base font-medium">Запросы на бронирование</Label>
-              <p className="text-sm text-muted-foreground">
-                Уведомления о новых запросах аренды ваших лотов
-              </p>
-            </div>
+            <Switch
+              checked={settings.notifyBookingRequests}
+              onCheckedChange={(checked) => updateSetting('notifyBookingRequests', checked)}
+              disabled={saving}
+            />
           </div>
-          <Switch
-            checked={settings.notifyBookingRequests}
-            onCheckedChange={(checked) => updateSetting('notifyBookingRequests', checked)}
-            disabled={saving}
-          />
-        </div>
+        )}
 
         {/* Email notifications */}
         <div className="flex items-start justify-between rounded-lg border p-4">
