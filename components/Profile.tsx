@@ -233,6 +233,9 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
             <div className="flex items-center gap-2 mt-1">
               <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
               <span className="text-2xl font-bold">{currentUser?.rating?.toFixed(2) || '5.00'}</span>
+              {(currentUser?.completedDeals ?? 0) === 0 && (
+                <span className="text-xs text-gray-400">(нет отзывов)</span>
+              )}
             </div>
           </div>
 
@@ -243,7 +246,10 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
               <TrustBadges badges={currentUser?.trustBadges} />
               <div className="text-xs text-gray-500 space-y-0.5">
                 <p>Успешных сделок: {currentUser?.completedDeals ?? 0}</p>
-                <p>Подтверждение: {currentUser?.confirmationRate ?? 0}%</p>
+                <p>Подтверждение: {(currentUser?.completedDeals ?? 0) + (currentUser?.cancelledDeals ?? 0) > 0
+                  ? `${currentUser?.confirmationRate ?? 0}%`
+                  : '—'
+                }</p>
                 {currentUser?.avgResponseMinutes != null && (
                   <p>Ср. время ответа: {currentUser.avgResponseMinutes < 60
                     ? `${Math.round(currentUser.avgResponseMinutes)} мин`

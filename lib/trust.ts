@@ -97,9 +97,10 @@ export async function recalculateTrust(userId: string) {
       });
 
   const totalDeals = completedDeals + cancelledDeals;
+  // No deals = no cancellations = perfect record (100%), not 0%
   const confirmationRate = totalDeals > 0
     ? Math.round((completedDeals / totalDeals) * 100)
-    : 0;
+    : 100;
 
   // Average response time (from chat messages)
   // Calculate as average time between first renter message and first owner reply per booking

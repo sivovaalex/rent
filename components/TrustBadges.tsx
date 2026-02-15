@@ -30,7 +30,7 @@ export default function TrustBadges({ badges, trustScore, compact = false }: Tru
   if (!badges || badges.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-2">
       {badges.map((badgeKey) => {
         const def = TRUST_BADGES[badgeKey];
         if (!def) return null;
@@ -53,7 +53,7 @@ export default function TrustBadges({ badges, trustScore, compact = false }: Tru
           <span
             key={badgeKey}
             title={def.description}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${colorClass}`}
           >
             {Icon && <Icon className="w-3 h-3" />}
             {def.label}

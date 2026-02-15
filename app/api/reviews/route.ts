@@ -122,18 +122,26 @@ export async function POST(request: NextRequest) {
       return errorResponse('Лот не найден', 400);
     }
 
-    // Create review
-    const review = await prisma.review.create({
-      data: {
-        bookingId: booking_id,
-        itemId: item_id,
-        userId: authResult.userId,
-        rating,
-        text: text.trim(),
-        photos: photos || [],
-        type,
-      },
-    });
+    // Create review (with P2002 duplicate handling)
+    let review;
+    try {
+      review = await prisma.review.create({
+        data: {
+          bookingId: booking_id,
+          itemId: item_id,
+          userId: authResult.userId,
+          rating,
+          text: text.trim(),
+          photos: photos || [],
+          type,
+        },
+      });
+    } catch (createError: any) {
+      if (createError?.code === 'P2002') {
+        return errorResponse('Вы уже оставили отзыв для этого бронирования', 400);
+      }
+      throw createError;
+    }
 
     // Update ratings based on type
     try {

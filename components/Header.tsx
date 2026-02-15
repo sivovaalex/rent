@@ -46,16 +46,16 @@ export default function Header({
             <h1 className="text-2xl font-bold text-indigo-600 hidden sm:block">Арендол</h1>
           </div>
           {cityName && (
-            <div className="flex items-center gap-1 text-sm text-gray-600 ml-3">
+            <div className="hidden sm:flex items-center gap-1 text-sm text-gray-600 ml-3">
               <MapPin className="w-4 h-4" />
               <span>{cityName}</span>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 sm:gap-3">
           {currentUser ? (
             <>
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <User className="w-5 h-5 text-gray-600" />
                 <div>
                   <p className="text-sm font-medium">{currentUser.name}</p>
@@ -89,12 +89,12 @@ export default function Header({
                   )}
                 </button>
               )}
-              <Button variant="outline" size="sm" onClick={onLogout}>
+              <Button variant="outline" size="sm" onClick={onLogout} className="text-xs sm:text-sm px-2 sm:px-3">
                 Выйти
               </Button>
             </>
           ) : (
-            <Button onClick={() => onOpenAuth('login')}>Войти</Button>
+            <Button onClick={() => onOpenAuth('login')} size="sm">Войти</Button>
           )}
         </div>
       </div>
