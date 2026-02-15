@@ -21,7 +21,12 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    const safeUsers = users.map(safeUser);
+    const safeUsers = users.map((user) => ({
+      ...safeUser(user),
+      // Include sensitive fields for admin view
+      inn: user.inn,
+      ogrn: user.ogrn,
+    }));
 
     return successResponse({ users: safeUsers });
   } catch (error) {

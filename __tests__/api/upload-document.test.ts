@@ -169,4 +169,154 @@ describe('POST /api/auth/upload-document', () => {
       'image/png'
     );
   });
+
+  // ==================== Owner Type Tests ====================
+
+  it('should save ownerType as individual by default', async () => {
+    mockAuth('user-1');
+
+    (uploadBase64File as any).mockResolvedValue({
+      success: true,
+      url: 'https://storage.supabase.co/documents/test.jpg',
+      path: 'test.jpg',
+    });
+
+    prismaMock.user.update.mockResolvedValue({} as any);
+
+    const response = await POST(createRequest({
+      document_type: 'passport',
+      document_data: 'data:image/jpeg;base64,/9j/fakedata',
+    }) as any);
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        ownerType: 'individual',
+        companyName: null,
+        inn: null,
+        ogrn: null,
+      }),
+    });
+  });
+
+  it('should save IP owner type with INN and OGRN', async () => {
+    mockAuth('user-1');
+
+    (uploadBase64File as any).mockResolvedValue({
+      success: true,
+      url: 'https://storage.supabase.co/documents/test.jpg',
+      path: 'test.jpg',
+    });
+
+    prismaMock.user.update.mockResolvedValue({} as any);
+
+    const response = await POST(createRequest({
+      document_type: 'passport',
+      document_data: 'data:image/jpeg;base64,/9j/fakedata',
+      owner_type: 'ip',
+      company_name: 'ИП Иванов',
+      inn: '123456789012',
+      ogrn: '315000000000000',
+    }) as any);
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        ownerType: 'ip',
+        companyName: 'ИП Иванов',
+        inn: '123456789012',
+        ogrn: '315000000000000',
+      }),
+    });
+  });
+
+  it('should save legal_entity owner type with INN, OGRN and company name', async () => {
+    mockAuth('user-1');
+
+    (uploadBase64File as any).mockResolvedValue({
+      success: true,
+      url: 'https://storage.supabase.co/documents/test.jpg',
+      path: 'test.jpg',
+    });
+
+    prismaMock.user.update.mockResolvedValue({} as any);
+
+    const response = await POST(createRequest({
+      document_type: 'passport',
+      document_data: 'data:image/jpeg;base64,/9j/fakedata',
+      owner_type: 'legal_entity',
+      company_name: 'ООО Тест',
+      inn: '1234567890',
+      ogrn: '1230000000000',
+    }) as any);
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        ownerType: 'legal_entity',
+        companyName: 'ООО Тест',
+        inn: '1234567890',
+        ogrn: '1230000000000',
+      }),
+    });
+  });
+
+  it('should return 400 for IP without INN', async () => {
+    mockAuth('user-1');
+
+    const response = await POST(createRequest({
+      document_type: 'passport',
+      document_data: 'data:image/jpeg;base64,/9j/fakedata',
+      owner_type: 'ip',
+      ogrn: '315000000000000',
+    }) as any);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('should return 400 for legal_entity without OGRN', async () => {
+    mockAuth('user-1');
+
+    const response = await POST(createRequest({
+      document_type: 'passport',
+      document_data: 'data:image/jpeg;base64,/9j/fakedata',
+      owner_type: 'legal_entity',
+      inn: '1234567890',
+    }) as any);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('should not save INN/OGRN for individual type', async () => {
+    mockAuth('user-1');
+
+    (uploadBase64File as any).mockResolvedValue({
+      success: true,
+      url: 'https://storage.supabase.co/documents/test.jpg',
+      path: 'test.jpg',
+    });
+
+    prismaMock.user.update.mockResolvedValue({} as any);
+
+    const response = await POST(createRequest({
+      document_type: 'passport',
+      document_data: 'data:image/jpeg;base64,/9j/fakedata',
+      owner_type: 'individual',
+      inn: '123456789012',
+      ogrn: '315000000000000',
+    }) as any);
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        ownerType: 'individual',
+        inn: null,
+        ogrn: null,
+      }),
+    });
+  });
 });

@@ -40,7 +40,16 @@ export const registerSchema = z.object({
 export const uploadDocumentSchema = z.object({
   document_type: z.enum(['passport', 'driver_license', 'other']),
   document_data: z.string().min(1, 'Документ не может быть пустым'),
-});
+  owner_type: z.enum(['individual', 'ip', 'legal_entity']).optional(),
+  company_name: z.string().optional(),
+  inn: z.string().optional(),
+  ogrn: z.string().optional(),
+}).refine((data) => {
+  if (data.owner_type === 'ip' || data.owner_type === 'legal_entity') {
+    return !!data.inn && !!data.ogrn;
+  }
+  return true;
+}, { message: 'ИНН и ОГРН обязательны для ИП и юр. лиц' });
 
 // Types
 export type SendSmsInput = z.infer<typeof sendSmsSchema>;

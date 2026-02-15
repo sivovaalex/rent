@@ -69,6 +69,12 @@ enum ApprovalMode {
   verified_only
 }
 
+enum OwnerType {
+  individual
+  ip
+  legal_entity
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -99,6 +105,12 @@ model User {
   verifiedAt          DateTime?          @map("verified_at")
   verifiedBy          String?            @map("verified_by")
   rejectionReason     String?            @map("rejection_reason")
+
+  // Owner type (individual / ip / legal_entity)
+  ownerType           OwnerType?         @map("owner_type")
+  companyName         String?            @map("company_name")
+  inn                 String?
+  ogrn                String?
 
   // Trust metrics (cached, recalculated on events)
   trustScore          Float              @default(0) @map("trust_score")
