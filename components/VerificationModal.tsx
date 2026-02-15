@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Upload, X, Loader2, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Shield, Upload, X, Loader2, CheckCircle, AlertCircle, FileText, Building2 } from 'lucide-react';
 import type { User } from '@/types';
 
 interface VerificationModalProps {
@@ -16,6 +17,13 @@ interface VerificationModalProps {
 }
 
 type DocumentType = 'passport' | 'driver_license' | 'other';
+type OwnerTypeValue = 'individual' | 'ip' | 'legal_entity';
+
+const OWNER_TYPE_LABELS: Record<OwnerTypeValue, string> = {
+  individual: 'Физическое лицо',
+  ip: 'Индивидуальный предприниматель',
+  legal_entity: 'Юридическое лицо (ООО)',
+};
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   passport: 'Паспорт',
@@ -26,6 +34,10 @@ const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function VerificationModal({ isOpen, onClose, currentUser, onSuccess }: VerificationModalProps) {
+  const [ownerType, setOwnerType] = useState<OwnerTypeValue>('individual');
+  const [companyName, setCompanyName] = useState('');
+  const [inn, setInn] = useState('');
+  const [ogrn, setOgrn] = useState('');
   const [documentType, setDocumentType] = useState<DocumentType | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -34,7 +46,13 @@ export default function VerificationModal({ isOpen, onClose, currentUser, onSucc
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isBusinessType = ownerType === 'ip' || ownerType === 'legal_entity';
+
   const resetForm = () => {
+    setOwnerType('individual');
+    setCompanyName('');
+    setInn('');
+    setOgrn('');
     setDocumentType('');
     setFile(null);
     setPreview(null);
@@ -87,6 +105,14 @@ export default function VerificationModal({ isOpen, onClose, currentUser, onSucc
       setError('Загрузите фото документа');
       return;
     }
+    if (isBusinessType && !inn.trim()) {
+      setError('Укажите ИНН');
+      return;
+    }
+    if (isBusinessType && !ogrn.trim()) {
+      setError('Укажите ОГРН');
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -110,6 +136,12 @@ export default function VerificationModal({ isOpen, onClose, currentUser, onSucc
         body: JSON.stringify({
           document_type: documentType,
           document_data: base64,
+          owner_type: ownerType,
+          ...(isBusinessType ? {
+            company_name: companyName.trim() || undefined,
+            inn: inn.trim(),
+            ogrn: ogrn.trim(),
+          } : {}),
         }),
       });
 
@@ -159,6 +191,60 @@ export default function VerificationModal({ isOpen, onClose, currentUser, onSucc
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Owner type select */}
+            <div className="space-y-2">
+              <Label>Тип арендодателя</Label>
+              <Select
+                value={ownerType}
+                onValueChange={(val) => setOwnerType(val as OwnerTypeValue)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите тип" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Физическое лицо</SelectItem>
+                  <SelectItem value="ip">Индивидуальный предприниматель</SelectItem>
+                  <SelectItem value="legal_entity">Юридическое лицо (ООО)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Business fields (IP / Legal entity) */}
+            {isBusinessType && (
+              <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Building2 className="w-4 h-4" />
+                  {ownerType === 'ip' ? 'Данные ИП' : 'Данные юр. лица'}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Название {ownerType === 'ip' ? 'ИП' : 'компании'}</Label>
+                  <Input
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder={ownerType === 'ip' ? 'ИП Иванов И.И.' : 'ООО «Компания»'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">ИНН *</Label>
+                  <Input
+                    value={inn}
+                    onChange={(e) => setInn(e.target.value.replace(/\D/g, ''))}
+                    placeholder={ownerType === 'ip' ? '123456789012' : '1234567890'}
+                    maxLength={12}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">{ownerType === 'ip' ? 'ОГРНИП' : 'ОГРН'} *</Label>
+                  <Input
+                    value={ogrn}
+                    onChange={(e) => setOgrn(e.target.value.replace(/\D/g, ''))}
+                    placeholder={ownerType === 'ip' ? '315000000000000' : '1230000000000'}
+                    maxLength={15}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Document type select */}
             <div className="space-y-2">
               <Label>Тип документа</Label>
@@ -235,7 +321,7 @@ export default function VerificationModal({ isOpen, onClose, currentUser, onSucc
             <Button
               className="w-full"
               onClick={handleSubmit}
-              disabled={isSubmitting || !documentType || !file}
+              disabled={isSubmitting || !documentType || !file || (isBusinessType && (!inn.trim() || !ogrn.trim()))}
             >
               {isSubmitting ? (
                 <>

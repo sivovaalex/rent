@@ -31,6 +31,7 @@ async function getUser(id: string) {
       isVerified: true,
       createdAt: true,
       role: true,
+      ownerType: true,
       trustScore: true,
       completedDeals: true,
       confirmationRate: true,
@@ -91,6 +92,11 @@ export default async function UserProfilePage({ params }: PageProps) {
                   <h1 className="text-2xl font-bold">{user.name}</h1>
                   {user.isVerified && (
                     <ShieldCheck className="w-5 h-5 text-blue-600" />
+                  )}
+                  {user.ownerType && user.ownerType !== 'individual' && (
+                    <Badge variant="secondary" className="text-xs">
+                      {user.ownerType === 'ip' ? 'ИП' : 'Юр. лицо'}
+                    </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">

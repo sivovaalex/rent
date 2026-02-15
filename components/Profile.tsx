@@ -219,12 +219,19 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
           <div>
             <Label>Роль</Label>
             <div className="mt-1 flex items-center justify-between">
-              <p className="text-lg font-medium">
-                {currentUser?.role === 'renter' && 'Арендатор'}
-                {currentUser?.role === 'owner' && 'Арендодатель'}
-                {currentUser?.role === 'moderator' && 'Модератор'}
-                {currentUser?.role === 'admin' && 'Администратор'}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-medium">
+                  {currentUser?.role === 'renter' && 'Арендатор'}
+                  {currentUser?.role === 'owner' && 'Арендодатель'}
+                  {currentUser?.role === 'moderator' && 'Модератор'}
+                  {currentUser?.role === 'admin' && 'Администратор'}
+                </p>
+                {currentUser?.ownerType && currentUser.ownerType !== 'individual' && (
+                  <Badge variant="outline" className="text-xs">
+                    {currentUser.ownerType === 'ip' ? 'ИП' : 'Юр. лицо'}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 

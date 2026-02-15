@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search } from 'lucide-react';
+import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search, Building2 } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
@@ -461,6 +461,18 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                             <p className="text-xs text-gray-500 mt-1">
                               <FileText className="w-3 h-3 inline mr-1" />
                               {user.document_type === 'passport' ? 'Паспорт' : user.document_type === 'driver_license' ? 'Вод. удостоверение' : 'Другой документ'}
+                            </p>
+                          )}
+                          {(user as any).owner_type && (user as any).owner_type !== 'individual' && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              <Building2 className="w-3 h-3 inline mr-1" />
+                              {(user as any).owner_type === 'ip' ? 'ИП' : 'Юр. лицо'}
+                              {(user as any).company_name && ` — ${(user as any).company_name}`}
+                            </p>
+                          )}
+                          {((user as any).inn || (user as any).ogrn) && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              ИНН: {(user as any).inn || '—'} | ОГРН: {(user as any).ogrn || '—'}
                             </p>
                           )}
                           <p className="text-xs text-gray-500 mt-1">

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const validation = await validateBody(request, uploadDocumentSchema);
     if (!validation.success) return validation.error;
 
-    const { document_type, document_data } = validation.data;
+    const { document_type, document_data, owner_type, company_name, inn, ogrn } = validation.data;
 
     // Determine content type from base64 data
     let contentType = 'image/jpeg';
@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       return errorResponse('Ошибка загрузки документа', 500);
     }
 
+    const isBusinessType = owner_type === 'ip' || owner_type === 'legal_entity';
+
     await prisma.user.update({
       where: { id: authResult.userId },
       data: {
@@ -38,6 +40,10 @@ export async function POST(request: NextRequest) {
         documentType: document_type,
         verificationStatus: 'pending',
         verificationSubmittedAt: new Date(),
+        ownerType: owner_type || 'individual',
+        companyName: isBusinessType ? (company_name || null) : null,
+        inn: isBusinessType ? (inn || null) : null,
+        ogrn: isBusinessType ? (ogrn || null) : null,
       },
     });
 

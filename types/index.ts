@@ -22,6 +22,7 @@ export type RentalType = PrismaRentalType;
 export type BookingStatus = 'pending_approval' | 'pending_payment' | 'paid' | 'active' | 'completed' | 'cancelled';
 export type ReviewType = 'renter_review' | 'owner_review';
 export type ApprovalMode = 'auto_approve' | 'manual' | 'rating_based' | 'verified_only';
+export type OwnerType = 'individual' | 'ip' | 'legal_entity';
 
 // ==================== CLIENT TYPES ====================
 // These types are used on the client side with camelCase naming
@@ -60,12 +61,19 @@ export interface User {
   verificationSubmittedAt?: Date | string | null;
   documentType?: string | null;
   documentPath?: string | null;
+  // Owner type
+  ownerType?: OwnerType | null;
+  companyName?: string | null;
+  inn?: string | null;
+  ogrn?: string | null;
   // Legacy snake_case aliases (deprecated, use camelCase)
   is_verified?: boolean;
   verification_status?: VerificationStatus;
   verification_submitted_at?: Date | string | null;
   document_type?: string | null;
   document_path?: string | null;
+  owner_type?: OwnerType | null;
+  company_name?: string | null;
 }
 
 /**
