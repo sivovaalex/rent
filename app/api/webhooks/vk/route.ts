@@ -19,9 +19,8 @@ export async function POST(request: NextRequest) {
     const event: VKCallbackEvent = await request.json();
 
     // Verify secret if configured
-    console.log('[VK WEBHOOK] Received event type:', event.type, 'secret:', event.secret ? `"${event.secret}"` : 'undefined', 'expected:', process.env.VK_SECRET_KEY ? `"${process.env.VK_SECRET_KEY}"` : 'undefined');
     if (!verifyVkSecret(event.secret)) {
-      console.warn('[VK WEBHOOK] Invalid secret key, received:', JSON.stringify(event.secret), 'expected:', JSON.stringify(process.env.VK_SECRET_KEY));
+      console.warn('[VK WEBHOOK] Invalid secret key');
       return new NextResponse('Invalid secret', { status: 401 });
     }
 
