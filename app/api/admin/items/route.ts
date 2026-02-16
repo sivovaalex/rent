@@ -10,23 +10,30 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 1), 200);
+    const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
 
     const where: any = {};
     if (status === 'pending') {
       where.status = 'pending';
     }
 
-    const items = await prisma.item.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        owner: { select: { id: true, name: true, phone: true } },
-      },
-    });
+    const [items, total] = await Promise.all([
+      prisma.item.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+        include: {
+          owner: { select: { id: true, name: true, phone: true } },
+        },
+      }),
+      prisma.item.count({ where }),
+    ]);
 
     const transformedItems = items.map(transformItem);
 
-    return successResponse({ items: transformedItems });
+    return successResponse({ items: transformedItems, total, limit, offset });
   } catch (error) {
     console.error('GET /admin/items Error:', error);
     return errorResponse('Ошибка сервера', 500);

@@ -10,16 +10,23 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 1), 200);
+    const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
 
     const where: any = {};
     if (status === 'pending') {
       where.verificationStatus = 'pending';
     }
 
-    const users = await prisma.user.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.user.count({ where }),
+    ]);
 
     const safeUsers = users.map((user) => ({
       ...safeUser(user),
@@ -28,7 +35,7 @@ export async function GET(request: NextRequest) {
       ogrn: user.ogrn,
     }));
 
-    return successResponse({ users: safeUsers });
+    return successResponse({ users: safeUsers, total, limit, offset });
   } catch (error) {
     console.error('GET /admin/users Error:', error);
     return errorResponse('Ошибка сервера', 500);

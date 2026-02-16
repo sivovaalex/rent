@@ -46,10 +46,13 @@ interface AdminTabProps {
   pendingItems: PendingItem[];
   stats: AdminStats | null;
   allUsers: User[];
+  allUsersTotal: number;
   isLoading?: boolean;
+  isLoadingMore?: boolean;
+  loadMoreUsers: () => Promise<void>;
 }
 
-export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, isLoading }: AdminTabProps) {
+export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, allUsersTotal, isLoading, isLoadingMore, loadMoreUsers }: AdminTabProps) {
   const [adminSubTab, setAdminSubTab] = useState('stats');
   const [showAdminUserModal, setShowAdminUserModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -709,6 +712,14 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         <div className="text-center py-8">
                           <Users className="w-12 h-12 mx-auto text-gray-400" />
                           <p className="text-gray-500 mt-2">Пользователи не найдены</p>
+                        </div>
+                      )}
+                      {allUsers.length < allUsersTotal && (
+                        <div className="text-center py-4">
+                          <Button variant="outline" onClick={loadMoreUsers} disabled={isLoadingMore}>
+                            {isLoadingMore && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Загрузить ещё ({allUsers.length} из {allUsersTotal})
+                          </Button>
                         </div>
                       )}
                     </>

@@ -289,9 +289,9 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   return (
     <div className="space-y-6">
       {/* Фильтры и сортировка */}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Статус" />
           </SelectTrigger>
@@ -306,7 +306,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
           </SelectContent>
         </Select>
         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <ArrowUpDown className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Сортировка" />
           </SelectTrigger>
@@ -488,11 +488,11 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                     size="sm"
                     onClick={() => payCommission(booking._id)}
                     disabled={isPaying === booking._id}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-xs sm:text-sm"
                   >
                     {isPaying === booking._id
                       ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Переход к оплате...</>
-                      : <><CreditCard className="w-4 h-4 mr-1" />Оплатить комиссию</>
+                      : <><CreditCard className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Оплатить комиссию</span><span className="sm:hidden">Оплатить</span></>
                     }
                   </Button>
                 )}
@@ -504,7 +504,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                       size="sm"
                       onClick={() => approveBooking(booking._id)}
                       disabled={isApproving === booking._id}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />
                       {isApproving === booking._id ? 'Одобрение...' : 'Одобрить'}
@@ -513,7 +513,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                       size="sm"
                       variant="destructive"
                       onClick={() => openRejectModal(booking._id)}
-                      className="flex-1"
+                      className="flex-1 text-xs sm:text-sm"
                     >
                       <XCircle className="w-4 h-4 mr-1" />
                       Отклонить

@@ -44,6 +44,18 @@ export function getCategoryAttributes(category: string): CategoryAttribute[] {
   return CATEGORY_ATTRIBUTES[category] ?? [];
 }
 
+// ==================== CATEGORY SUBCATEGORIES ====================
+
+export type CategoryKey = 'stream' | 'electronics' | 'clothes' | 'sports' | 'tools';
+
+export const CATEGORY_SUBCATEGORIES: Record<CategoryKey, string[]> = {
+  stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
+  electronics: ['Телефоны', 'Ноутбуки', 'Планшеты', 'Фотоаппараты', 'Аудиотехника'],
+  clothes: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
+  sports: ['Велосипеды', 'Лыжи', 'Сноуборды', 'Спортивные залы', 'Инвентарь'],
+  tools: ['Строительные', 'Садовые', 'Ручные инструменты', 'Электроинструменты', 'Измерительные приборы'],
+};
+
 // ==================== PRICING ====================
 
 // Commission rate (15%)

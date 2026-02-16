@@ -165,8 +165,26 @@ export default function BookingModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (!bookingForm.rental_type) {
+      setDateError('Пожалуйста, выберите тип аренды');
+      return;
+    }
+
     if (!bookingForm.start_date || !bookingForm.end_date) {
       setDateError('Пожалуйста, выберите период аренды');
+      return;
+    }
+
+    const start = new Date(bookingForm.start_date);
+    const end = new Date(bookingForm.end_date);
+    if (end < start) {
+      setDateError('Дата окончания должна быть позже даты начала');
+      return;
+    }
+
+    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (bookingForm.rental_type === 'day' && diffDays > 30) {
+      setDateError('Максимальный срок аренды — 30 дней');
       return;
     }
 
@@ -226,7 +244,7 @@ export default function BookingModal({
               </div>
             </div>
 
-            <div className="border rounded-lg p-2 sm:p-4 overflow-x-auto">
+            <div className="border rounded-lg p-2 sm:p-4 overflow-x-auto" aria-label="Календарь выбора дат аренды">
               <Calendar
                 selectRange={true}
                 value={selectedDates.length > 0 ? [selectedDates[0], selectedDates[selectedDates.length - 1]] : undefined}
@@ -241,7 +259,7 @@ export default function BookingModal({
             </div>
 
             {dateError && (
-              <p className="text-red-500 text-sm">{dateError}</p>
+              <p className="text-red-500 text-sm" role="alert">{dateError}</p>
             )}
 
             <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
@@ -259,6 +277,7 @@ export default function BookingModal({
                   variant={bookingForm.rental_type === 'day' ? 'default' : 'outline'}
                   onClick={() => setBookingForm({ ...bookingForm, rental_type: 'day' as RentalType })}
                   className="flex flex-col items-center justify-center h-16 sm:h-24 p-2 sm:p-3"
+                  aria-pressed={bookingForm.rental_type === 'day'}
                 >
                   <span className="font-medium text-xs sm:text-sm">Посуточная</span>
                   <span className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -270,6 +289,7 @@ export default function BookingModal({
                   variant={bookingForm.rental_type === 'month' ? 'default' : 'outline'}
                   onClick={() => setBookingForm({ ...bookingForm, rental_type: 'month' as RentalType })}
                   className="flex flex-col items-center justify-center h-16 sm:h-24 p-2 sm:p-3"
+                  aria-pressed={bookingForm.rental_type === 'month'}
                 >
                   <span className="font-medium text-xs sm:text-sm">Долгосрочная</span>
                   <span className="text-xs sm:text-sm text-gray-500 mt-1">

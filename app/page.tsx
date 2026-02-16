@@ -93,7 +93,7 @@ export default function App() {
 
   const { bookings, isLoading: bookingsLoading, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
 
-  const { pendingUsers, pendingItems, allUsers, stats, isLoading: adminLoading, loadAdminData } = useAdmin({
+  const { pendingUsers, pendingItems, allUsers, allUsersTotal, stats, isLoading: adminLoading, isLoadingMore: adminLoadingMore, loadAdminData, loadMoreUsers } = useAdmin({
     currentUser,
     onShowAlert: showAlert,
   });
@@ -392,7 +392,10 @@ export default function App() {
                   pendingItems={pendingItems}
                   stats={stats}
                   allUsers={allUsers}
+                  allUsersTotal={allUsersTotal}
                   isLoading={adminLoading}
+                  isLoadingMore={adminLoadingMore}
+                  loadMoreUsers={loadMoreUsers}
                 />
               </TabsContent>
             )}
