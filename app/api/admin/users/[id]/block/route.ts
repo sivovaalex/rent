@@ -39,14 +39,36 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return errorResponse('Нельзя заблокировать администратора', 400);
     }
 
-    await prisma.user.update({
-      where: { id: targetUserId },
-      data: {
-        isBlocked: blocked,
-        blockReason: blocked ? reason : null,
-        blockedAt: blocked ? new Date() : null,
-        blockedBy: blocked ? authResult.userId : null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          isBlocked: blocked,
+          blockReason: blocked ? reason : null,
+          blockedAt: blocked ? new Date() : null,
+          blockedBy: blocked ? authResult.userId : null,
+        },
+      });
+
+      if (blocked) {
+        // Cascade: hide all approved items
+        await tx.item.updateMany({
+          where: { ownerId: targetUserId, status: 'approved' },
+          data: { status: 'draft' },
+        });
+
+        // Cascade: cancel pending bookings where user is renter or owner
+        await tx.booking.updateMany({
+          where: {
+            OR: [
+              { renterId: targetUserId },
+              { item: { ownerId: targetUserId } },
+            ],
+            status: { in: ['pending_approval', 'pending_payment'] },
+          },
+          data: { status: 'cancelled', rejectionReason: 'Аккаунт пользователя заблокирован' },
+        });
+      }
     });
 
     return successResponse({ success: true });

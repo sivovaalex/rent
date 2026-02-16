@@ -101,7 +101,7 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
     setLoadingReviews(true);
     try {
       const res = await fetch(`/api/reviews?userId=${currentUser._id}&type=owner_review`, {
-        headers: { 'x-user-id': currentUser._id },
+        headers: getAuthHeaders(),
       });
       if (res.ok) {
         const data = await res.json();
@@ -124,10 +124,7 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
     try {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           defaultApprovalMode: approvalMode,
           defaultApprovalThreshold: approvalThreshold,
@@ -152,10 +149,7 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
     try {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ name })
       });
 

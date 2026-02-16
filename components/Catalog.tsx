@@ -15,6 +15,7 @@ import BookingModal from './BookingModal';
 import { MapView } from './MapView';
 import { AddressSuggest } from './AddressSuggest';
 import { SkeletonCard } from '@/components/ui/spinner';
+import { getAuthHeaders } from '@/hooks/use-auth';
 import type { User, Item, ItemStatus, Category, BookingForm, AlertType, ApprovalMode } from '@/types';
 import { getCategoryAttributes } from '@/lib/constants';
 
@@ -492,7 +493,7 @@ export default function Catalog({
                   try {
                     const res = await fetch(`/api/items/${item._id}`, {
                       method: 'DELETE',
-                      headers: { 'x-user-id': currentUser._id }
+                      headers: getAuthHeaders()
                     });
                     if (res.ok) {
                       showAlert('Лот удален');
@@ -511,7 +512,7 @@ export default function Catalog({
                 try {
                   await fetch(`/api/items/${item._id}/publish`, {
                     method: 'POST',
-                    headers: { 'x-user-id': currentUser._id }
+                    headers: getAuthHeaders()
                   });
                   showAlert('Лот опубликован');
                   loadItems();
@@ -524,7 +525,7 @@ export default function Catalog({
                 try {
                   await fetch(`/api/items/${item._id}/unpublish`, {
                     method: 'POST',
-                    headers: { 'x-user-id': currentUser._id }
+                    headers: getAuthHeaders()
                   });
                   showAlert('Лот снят с публикации');
                   loadItems();
@@ -614,10 +615,7 @@ export default function Catalog({
             if (selectedItem) {
               const res = await fetch(`/api/items/${selectedItem._id}`, {
                 method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-user-id': currentUser._id
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(itemData)
               });
               const data = await res.json();
@@ -636,10 +634,7 @@ export default function Catalog({
             } else {
               const res = await fetch('/api/items', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-user-id': currentUser._id
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(itemData)
               });
               const data = await res.json();

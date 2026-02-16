@@ -1,6 +1,10 @@
 /// <reference types="vitest/globals" />
 import '@testing-library/jest-dom';
 
+// Set required env vars for tests
+process.env.JWT_SECRET = 'test-jwt-secret-for-vitest';
+process.env.ENCRYPTION_KEY = 'test-encryption-key-for-vitest';
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

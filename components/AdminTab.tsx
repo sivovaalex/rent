@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search, Building2 } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
+import { getAuthHeaders } from '@/hooks/use-auth';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
 interface AdminStats {
@@ -143,13 +144,9 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
 
     setVerifyingUserId(userId);
     try {
-      const token = localStorage.getItem('auth_token');
       const res = await fetch(`/api/admin/users/${userId}/verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': currentUser._id }),
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ action, ...(reason ? { reason } : {}) })
       });
       if (res.ok) {
@@ -174,10 +171,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     try {
       const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('auth_token') ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : { 'x-user-id': currentUser._id })
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status, rejection_reason })
       });
       if (res.ok) {
@@ -215,10 +209,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     try {
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('auth_token') ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : { 'x-user-id': currentUser._id })
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newAdminUser)
       });
       const data = await res.json();

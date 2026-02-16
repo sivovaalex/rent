@@ -15,8 +15,11 @@ export function generateSMSCode(): string {
 /** Encrypt document data with AES-256-CBC */
 export function encryptDocument(data: string): string {
   const algorithm = 'aes-256-cbc';
+  if (!process.env.ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
   const key = crypto.scryptSync(
-    process.env.ENCRYPTION_KEY || 'default-secret-key-change-me',
+    process.env.ENCRYPTION_KEY,
     crypto.randomBytes(16).toString('hex'),
     32
   );
@@ -41,14 +44,13 @@ export function successResponse<T>(data: T, status: number = 200) {
 
 // ==================== AUTH HELPERS ====================
 
-/** Get user ID from JWT token or fallback to x-user-id header */
+/** Get user ID from JWT token */
 export async function getUserIdFromToken(request: Request): Promise<string | null> {
   const authHeader = request.headers.get('authorization');
   const token = extractTokenFromHeader(authHeader);
 
   if (!token) {
-    // Fallback to x-user-id for backward compatibility during migration
-    return request.headers.get('x-user-id');
+    return null;
   }
 
   const payload = await verifyToken(token);

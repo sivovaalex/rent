@@ -1,15 +1,27 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { uploadBase64File, deleteFile, BUCKETS, generateFilePath } from '@/lib/supabase/storage';
+import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB base64
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-
   try {
-    const { type, data, userId, itemId } = body;
+    const authResult = await requireAuth(request);
+    if ('error' in authResult) return authResult.error;
 
-    if (!type || !data || !userId) {
-      return NextResponse.json({ error: 'Недостаточно данных для загрузки' }, { status: 400 });
+    const body = await request.json();
+    const { type, data, itemId } = body;
+    const userId = authResult.userId;
+
+    if (!type || !data) {
+      return errorResponse('Недостаточно данных для загрузки', 400);
+    }
+
+    // Validate file size (base64 string length)
+    if (data.length > MAX_FILE_SIZE) {
+      return errorResponse('Файл слишком большой (максимум 10 МБ)', 400);
     }
 
     let bucket: string;
@@ -29,7 +41,7 @@ export async function POST(request: NextRequest) {
         filePath = generateFilePath('', userId);
         break;
       default:
-        return NextResponse.json({ error: 'Неподдерживаемый тип загрузки' }, { status: 400 });
+        return errorResponse('Неподдерживаемый тип загрузки', 400);
     }
 
     // Determine content type from base64 data
@@ -42,32 +54,34 @@ export async function POST(request: NextRequest) {
       contentType = 'image/gif';
     }
 
+    if (!ALLOWED_TYPES.includes(contentType)) {
+      return errorResponse('Недопустимый тип файла', 400);
+    }
+
     const result = await uploadBase64File(bucket, filePath, data, contentType);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || 'Ошибка загрузки' }, { status: 500 });
+      return errorResponse(result.error || 'Ошибка загрузки', 500);
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       path: result.url,
       storagePath: result.path
     });
   } catch (error) {
     console.error('Ошибка загрузки файла:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    return errorResponse('Ошибка сервера', 500);
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  const body = await request.json();
-
   try {
-    const { path: filePath, userId, storagePath } = body;
+    const authResult = await requireAuth(request);
+    if ('error' in authResult) return authResult.error;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Недостаточно данных для удаления' }, { status: 400 });
-    }
+    const body = await request.json();
+    const { path: filePath, storagePath } = body;
 
     // If storagePath is provided, use it directly
     // Otherwise, try to extract from the URL
@@ -83,14 +97,14 @@ export async function DELETE(request: NextRequest) {
 
         const result = await deleteFile(bucket as typeof BUCKETS.ITEMS, pathToDelete);
         if (!result.success) {
-          return NextResponse.json({ error: result.error }, { status: 500 });
+          return errorResponse(result.error || 'Ошибка удаления', 500);
         }
       }
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse({ success: true });
   } catch (error) {
     console.error('Ошибка удаления файла:', error);
-    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
+    return errorResponse('Ошибка сервера', 500);
   }
 }

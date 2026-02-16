@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       }
     } else {
       where.status = 'approved';
+      // Hide items from blocked owners
+      where.owner = { isBlocked: false };
     }
 
     // City filter (by address text)

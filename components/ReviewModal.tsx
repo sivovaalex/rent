@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Star, AlertCircle, ImageIcon, X, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getAuthHeaders } from '@/hooks/use-auth';
 import type { User, Booking, Item, ReviewType } from '@/types';
 
 interface ReviewModalProps {
@@ -143,10 +144,7 @@ export default function ReviewModal({ isOpen, onClose, booking, currentUser, onS
 
       const res = await fetch('/api/reviews', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           booking_id: booking._id,
           item_id: booking.item_id || booking.itemId || booking.item?._id,

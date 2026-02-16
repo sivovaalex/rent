@@ -23,13 +23,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const authResult = await requireAuth(request);
     if ('error' in authResult) return authResult.error;
 
-    const item = await prisma.item.findUnique({ where: { id: itemId } });
+    const item = await prisma.item.findUnique({
+      where: { id: itemId },
+      include: { owner: { select: { isBlocked: true } } },
+    });
 
     if (!item) {
       return errorResponse('Лот не найден', 404);
     }
 
     if (item.status !== 'approved') {
+      return errorResponse('Лот недоступен для бронирования', 400);
+    }
+
+    if (item.owner.isBlocked) {
       return errorResponse('Лот недоступен для бронирования', 400);
     }
 

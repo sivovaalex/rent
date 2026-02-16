@@ -138,6 +138,18 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return errorResponse('Доступ запрещён', 403);
     }
 
+    // Check for active bookings before deletion
+    const activeBookings = await prisma.booking.count({
+      where: {
+        itemId: id,
+        status: { in: ['pending_approval', 'pending_payment', 'paid', 'active'] },
+      },
+    });
+
+    if (activeBookings > 0) {
+      return errorResponse('Нельзя удалить лот с активными бронированиями', 400);
+    }
+
     await prisma.item.delete({ where: { id } });
 
     return successResponse({ success: true });
