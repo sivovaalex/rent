@@ -101,12 +101,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (data.approval_mode !== undefined) updateData.approvalMode = data.approval_mode;
     if (data.approval_threshold !== undefined) updateData.approvalThreshold = data.approval_threshold;
 
+    // Re-moderation: if content fields changed on approved item → send back to pending
+    const contentFieldsChanged = !!(data.title || data.description || data.photos);
+    const needsReModeration = item.status === 'approved' && contentFieldsChanged;
+
+    if (needsReModeration) {
+      updateData.status = 'pending';
+    }
+
     await prisma.item.update({
       where: { id },
       data: updateData,
     });
 
-    return successResponse({ success: true });
+    return successResponse({ success: true, reModeration: needsReModeration });
   } catch (error) {
     console.error('PATCH /items/[id] Error:', error);
     return errorResponse('Ошибка сервера', 500);

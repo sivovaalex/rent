@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart, MapPin, List, Loader2 } from 'lucide-react';
+import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart, MapPin, List, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Slider } from '@/components/ui/slider';
 import ItemCard from './ItemCard';
 import ItemDetailModal from './ItemDetailModal';
@@ -621,7 +622,7 @@ export default function Catalog({
               });
               const data = await res.json();
               if (data.success) {
-                showAlert('Лот обновлен');
+                showAlert(data.reModeration ? 'Лот обновлён и отправлен на повторную модерацию' : 'Лот обновлён');
                 setShowItemModal(false);
                 setSelectedItem(null);
                 loadItems();
@@ -855,6 +856,15 @@ function NewItemModal({ isOpen, onClose, item, currentUser, onSubmit, cityName }
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-4 sm:p-6">
           <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{item ? 'Редактировать лот' : 'Создать лот'}</h2>
+
+          {item && item.status === 'approved' && (
+            <Alert className="mb-4 border-yellow-200 bg-yellow-50">
+              <AlertCircle className="w-4 h-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800 text-sm">
+                Изменение названия, описания или фото отправит лот на повторную модерацию.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="space-y-3 sm:space-y-4">
             <div>
