@@ -73,3 +73,25 @@ test.describe('Каталог и поиск', () => {
     await expect(page.locator('[role="tab"]:has-text("Каталог")').first()).toHaveAttribute('data-state', 'active', { timeout: 5000 });
   });
 });
+
+test.describe('Редактирование лота — повторная модерация', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupMockApi(page, mockUsers.owner);
+    await loginViaLocalStorage(page, mockUsers.owner);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('text=Мария Владелец')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('предупреждение о модерации при редактировании approved-лота', async ({ page }) => {
+    // Wait for items to load
+    await expect(page.locator('text=Камера Sony A7III')).toBeVisible({ timeout: 10000 });
+
+    // Click edit button on the first item
+    const editButton = page.locator('button:has-text("Редактировать")').first();
+    await editButton.click();
+
+    // Modal should open with the warning
+    await expect(page.locator('text=Редактировать лот')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Изменение названия, описания или фото отправит лот на повторную модерацию')).toBeVisible({ timeout: 3000 });
+  });
+});
