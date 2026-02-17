@@ -46,6 +46,11 @@ interface CatalogProps {
   showFavoritesOnly?: boolean;
   setShowFavoritesOnly?: (show: boolean) => void;
   favoriteIds?: Set<string>;
+  // Price
+  priceMin: string;
+  setPriceMin: (value: string) => void;
+  priceMax: string;
+  setPriceMax: (value: string) => void;
   // Geo
   nearLat?: number | null;
   nearLon?: number | null;
@@ -119,6 +124,10 @@ export default function Catalog({
   showFavoritesOnly = false,
   setShowFavoritesOnly,
   favoriteIds,
+  priceMin,
+  setPriceMin,
+  priceMax,
+  setPriceMax,
   nearLat,
   nearLon,
   radius = 10,
@@ -344,6 +353,10 @@ export default function Catalog({
         radius={radius}
         setNearLocation={setNearLocation}
         setRadius={setRadius}
+        priceMin={priceMin}
+        setPriceMin={setPriceMin}
+        priceMax={priceMax}
+        setPriceMax={setPriceMax}
         showFavoritesOnly={showFavoritesOnly}
         setShowFavoritesOnly={setShowFavoritesOnly}
         favoriteIds={favoriteIds}

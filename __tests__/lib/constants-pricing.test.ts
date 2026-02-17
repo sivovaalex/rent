@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   withCommission,
+  withoutCommission,
   calculateCommission,
   formatPrice,
   COMMISSION_RATE,
@@ -75,6 +76,35 @@ describe('formatPrice', () => {
 
   it('rounds to 2 decimal places', () => {
     expect(formatPrice(999.999)).toBe('1000');
+  });
+});
+
+describe('withoutCommission', () => {
+  it('reverses withCommission for round prices', () => {
+    // 1150 / 1.15 = 1000
+    expect(withoutCommission(1150)).toBe(1000);
+  });
+
+  it('reverses withCommission for 3450', () => {
+    // 3450 / 1.15 = 3000
+    expect(withoutCommission(3450)).toBe(3000);
+  });
+
+  it('reverses withCommission for 575', () => {
+    // 575 / 1.15 = 500
+    expect(withoutCommission(575)).toBe(500);
+  });
+
+  it('handles zero', () => {
+    expect(withoutCommission(0)).toBe(0);
+  });
+
+  it('roundtrip: withoutCommission(withCommission(x)) ≈ x', () => {
+    const testPrices = [100, 500, 1000, 3000, 50000];
+    testPrices.forEach((price) => {
+      const roundtrip = withoutCommission(withCommission(price));
+      expect(Math.abs(roundtrip - price)).toBeLessThanOrEqual(0.01);
+    });
   });
 });
 

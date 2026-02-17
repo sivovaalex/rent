@@ -89,6 +89,10 @@ export default function App() {
     setNearLocation,
     setRadius,
     setCityName,
+    priceMin,
+    priceMax,
+    setPriceMin,
+    setPriceMax,
   } = useItems({ currentUser, onShowAlert: showAlert });
 
   const { bookings, isLoading: bookingsLoading, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
@@ -306,6 +310,10 @@ export default function App() {
                 showFavoritesOnly={showFavoritesOnly}
                 setShowFavoritesOnly={setShowFavoritesOnly}
                 favoriteIds={favoriteIds}
+                priceMin={priceMin}
+                setPriceMin={setPriceMin}
+                priceMax={priceMax}
+                setPriceMax={setPriceMax}
                 nearLat={nearLat}
                 nearLon={nearLon}
                 radius={radius}

@@ -36,6 +36,11 @@ interface CatalogFiltersProps {
   radius?: number;
   setNearLocation?: (lat: number | null, lon: number | null) => void;
   setRadius?: (radius: number) => void;
+  // Price
+  priceMin: string;
+  setPriceMin: (value: string) => void;
+  priceMax: string;
+  setPriceMax: (value: string) => void;
   // Favorites
   showFavoritesOnly: boolean;
   setShowFavoritesOnly?: (show: boolean) => void;
@@ -67,6 +72,10 @@ const CatalogFilters = React.memo(function CatalogFilters({
   radius = 10,
   setNearLocation,
   setRadius,
+  priceMin,
+  setPriceMin,
+  priceMax,
+  setPriceMax,
   showFavoritesOnly,
   setShowFavoritesOnly,
   favoriteIds,
@@ -168,6 +177,29 @@ const CatalogFilters = React.memo(function CatalogFilters({
               <SelectItem value="rating">Рейтинг</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
+            <Input
+              type="number"
+              placeholder="Цена от"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              onKeyUp={(e) => e.key === 'Enter' && loadItems()}
+              className="w-full sm:w-[100px] text-xs sm:text-sm"
+              min={0}
+              aria-label="Цена от"
+            />
+            <span className="text-gray-400 text-xs">–</span>
+            <Input
+              type="number"
+              placeholder="до"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              onKeyUp={(e) => e.key === 'Enter' && loadItems()}
+              className="w-full sm:w-[100px] text-xs sm:text-sm"
+              min={0}
+              aria-label="Цена до"
+            />
+          </div>
           {categoryFilter !== 'all' && (
             <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
               <SelectTrigger className="w-full col-span-2 sm:w-[180px] text-xs sm:text-sm">
@@ -246,7 +278,7 @@ const CatalogFilters = React.memo(function CatalogFilters({
               )}
             </Button>
           )}
-          {(searchQuery || categoryFilter !== 'all' || showFavoritesOnly || Object.keys(attributeFilters).length > 0) && (
+          {(searchQuery || categoryFilter !== 'all' || showFavoritesOnly || priceMin || priceMax || Object.keys(attributeFilters).length > 0) && (
             <Button
               variant="ghost"
               size="sm"
@@ -256,6 +288,8 @@ const CatalogFilters = React.memo(function CatalogFilters({
                 setCategoryFilter('all');
                 setSubCategoryFilter('all');
                 setAttributeFilters({});
+                setPriceMin('');
+                setPriceMax('');
                 if (setShowFavoritesOnly) setShowFavoritesOnly(false);
               }}
             >

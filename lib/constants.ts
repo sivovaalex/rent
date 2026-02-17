@@ -74,6 +74,15 @@ export function withCommission(price: number): number {
 }
 
 /**
+ * Convert price with commission back to base price
+ * @param priceWithCommission - price including commission
+ * @returns base price, rounded to 2 decimal places
+ */
+export function withoutCommission(priceWithCommission: number): number {
+  return Math.round((priceWithCommission / COMMISSION_MULTIPLIER) * 100) / 100;
+}
+
+/**
  * Calculate commission amount
  * @param price - base price
  * @returns commission amount, rounded to 2 decimal places

@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import type { Item, User, BookingForm } from '@/types';
 import { getAuthHeaders } from './use-auth';
+import { withoutCommission } from '@/lib/constants';
 
 interface UseItemsOptions {
   currentUser: User | null;
@@ -19,6 +20,8 @@ interface CatalogFilters {
   nearLon: number | null;
   radius: number;
   cityName: string;
+  priceMin: string;
+  priceMax: string;
 }
 
 export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
@@ -37,6 +40,8 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     nearLon: null,
     radius: 10,
     cityName: '',
+    priceMin: '',
+    priceMax: '',
   });
 
   // Booking modal state
@@ -64,6 +69,16 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
         if (filters.showAllStatuses) {
           params.append('show_all_statuses', 'true');
         }
+      }
+
+      // Price filter (user enters price with commission, API expects base price)
+      if (filters.priceMin) {
+        const min = parseFloat(filters.priceMin);
+        if (!isNaN(min) && min > 0) params.append('minPrice', String(withoutCommission(min)));
+      }
+      if (filters.priceMax) {
+        const max = parseFloat(filters.priceMax);
+        if (!isNaN(max) && max > 0) params.append('maxPrice', String(withoutCommission(max)));
       }
 
       // City filter
@@ -180,6 +195,14 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     setFilters(prev => ({ ...prev, cityName: value }));
   }, []);
 
+  const setPriceMin = useCallback((value: string) => {
+    setFilters(prev => ({ ...prev, priceMin: value }));
+  }, []);
+
+  const setPriceMax = useCallback((value: string) => {
+    setFilters(prev => ({ ...prev, priceMax: value }));
+  }, []);
+
   return {
     items,
     isLoading,
@@ -206,6 +229,11 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     // City
     cityName: filters.cityName,
     setCityName,
+    // Price
+    priceMin: filters.priceMin,
+    priceMax: filters.priceMax,
+    setPriceMin,
+    setPriceMax,
     // Booking modal
     selectedItem,
     setSelectedItem,
