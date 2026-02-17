@@ -93,6 +93,10 @@ export default function App() {
     priceMax,
     setPriceMin,
     setPriceMax,
+    availableFrom,
+    availableTo,
+    setAvailableFrom,
+    setAvailableTo,
   } = useItems({ currentUser, onShowAlert: showAlert });
 
   const { bookings, isLoading: bookingsLoading, loadBookings } = useBookings({ currentUser, onShowAlert: showAlert });
@@ -314,6 +318,10 @@ export default function App() {
                 setPriceMin={setPriceMin}
                 priceMax={priceMax}
                 setPriceMax={setPriceMax}
+                availableFrom={availableFrom}
+                setAvailableFrom={setAvailableFrom}
+                availableTo={availableTo}
+                setAvailableTo={setAvailableTo}
                 nearLat={nearLat}
                 nearLon={nearLon}
                 radius={radius}

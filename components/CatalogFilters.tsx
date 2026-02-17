@@ -41,6 +41,11 @@ interface CatalogFiltersProps {
   setPriceMin: (value: string) => void;
   priceMax: string;
   setPriceMax: (value: string) => void;
+  // Date availability
+  availableFrom: string;
+  setAvailableFrom: (value: string) => void;
+  availableTo: string;
+  setAvailableTo: (value: string) => void;
   // Favorites
   showFavoritesOnly: boolean;
   setShowFavoritesOnly?: (show: boolean) => void;
@@ -76,6 +81,10 @@ const CatalogFilters = React.memo(function CatalogFilters({
   setPriceMin,
   priceMax,
   setPriceMax,
+  availableFrom,
+  setAvailableFrom,
+  availableTo,
+  setAvailableTo,
   showFavoritesOnly,
   setShowFavoritesOnly,
   favoriteIds,
@@ -200,6 +209,25 @@ const CatalogFilters = React.memo(function CatalogFilters({
               aria-label="Цена до"
             />
           </div>
+          <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
+            <Input
+              type="date"
+              value={availableFrom}
+              onChange={(e) => setAvailableFrom(e.target.value)}
+              className="w-full sm:w-[130px] text-xs sm:text-sm"
+              aria-label="Свободно с"
+              min={new Date().toISOString().split('T')[0]}
+            />
+            <span className="text-gray-400 text-xs">–</span>
+            <Input
+              type="date"
+              value={availableTo}
+              onChange={(e) => setAvailableTo(e.target.value)}
+              className="w-full sm:w-[130px] text-xs sm:text-sm"
+              aria-label="Свободно по"
+              min={availableFrom || new Date().toISOString().split('T')[0]}
+            />
+          </div>
           {categoryFilter !== 'all' && (
             <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
               <SelectTrigger className="w-full col-span-2 sm:w-[180px] text-xs sm:text-sm">
@@ -278,7 +306,7 @@ const CatalogFilters = React.memo(function CatalogFilters({
               )}
             </Button>
           )}
-          {(searchQuery || categoryFilter !== 'all' || showFavoritesOnly || priceMin || priceMax || Object.keys(attributeFilters).length > 0) && (
+          {(searchQuery || categoryFilter !== 'all' || showFavoritesOnly || priceMin || priceMax || availableFrom || availableTo || Object.keys(attributeFilters).length > 0) && (
             <Button
               variant="ghost"
               size="sm"
@@ -290,6 +318,8 @@ const CatalogFilters = React.memo(function CatalogFilters({
                 setAttributeFilters({});
                 setPriceMin('');
                 setPriceMax('');
+                setAvailableFrom('');
+                setAvailableTo('');
                 if (setShowFavoritesOnly) setShowFavoritesOnly(false);
               }}
             >

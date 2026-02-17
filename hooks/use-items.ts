@@ -22,6 +22,8 @@ interface CatalogFilters {
   cityName: string;
   priceMin: string;
   priceMax: string;
+  availableFrom: string;
+  availableTo: string;
 }
 
 export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
@@ -42,6 +44,8 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     cityName: '',
     priceMin: '',
     priceMax: '',
+    availableFrom: '',
+    availableTo: '',
   });
 
   // Booking modal state
@@ -79,6 +83,12 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
       if (filters.priceMax) {
         const max = parseFloat(filters.priceMax);
         if (!isNaN(max) && max > 0) params.append('maxPrice', String(withoutCommission(max)));
+      }
+
+      // Date availability filter
+      if (filters.availableFrom && filters.availableTo) {
+        params.append('availableFrom', filters.availableFrom);
+        params.append('availableTo', filters.availableTo);
       }
 
       // City filter
@@ -203,6 +213,14 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     setFilters(prev => ({ ...prev, priceMax: value }));
   }, []);
 
+  const setAvailableFrom = useCallback((value: string) => {
+    setFilters(prev => ({ ...prev, availableFrom: value }));
+  }, []);
+
+  const setAvailableTo = useCallback((value: string) => {
+    setFilters(prev => ({ ...prev, availableTo: value }));
+  }, []);
+
   return {
     items,
     isLoading,
@@ -234,6 +252,11 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
     priceMax: filters.priceMax,
     setPriceMin,
     setPriceMax,
+    // Date availability
+    availableFrom: filters.availableFrom,
+    availableTo: filters.availableTo,
+    setAvailableFrom,
+    setAvailableTo,
     // Booking modal
     selectedItem,
     setSelectedItem,

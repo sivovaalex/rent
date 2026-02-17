@@ -64,6 +64,19 @@ export async function GET(request: NextRequest) {
       if (maxPrice) where.pricePerDay.lte = parseFloat(maxPrice);
     }
 
+    // Date availability filter — exclude items with overlapping active bookings
+    const availableFrom = url.searchParams.get('availableFrom');
+    const availableTo = url.searchParams.get('availableTo');
+    if (availableFrom && availableTo) {
+      where.bookings = {
+        none: {
+          status: { in: ['pending_approval', 'pending_payment', 'paid', 'active'] },
+          startDate: { lte: new Date(availableTo) },
+          endDate: { gte: new Date(availableFrom) },
+        },
+      };
+    }
+
     // Geo filter — bounding box pre-filter
     const lat = url.searchParams.get('lat');
     const lon = url.searchParams.get('lon');

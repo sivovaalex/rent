@@ -51,6 +51,11 @@ interface CatalogProps {
   setPriceMin: (value: string) => void;
   priceMax: string;
   setPriceMax: (value: string) => void;
+  // Date availability
+  availableFrom: string;
+  setAvailableFrom: (value: string) => void;
+  availableTo: string;
+  setAvailableTo: (value: string) => void;
   // Geo
   nearLat?: number | null;
   nearLon?: number | null;
@@ -128,6 +133,10 @@ export default function Catalog({
   setPriceMin,
   priceMax,
   setPriceMax,
+  availableFrom,
+  setAvailableFrom,
+  availableTo,
+  setAvailableTo,
   nearLat,
   nearLon,
   radius = 10,
@@ -357,6 +366,10 @@ export default function Catalog({
         setPriceMin={setPriceMin}
         priceMax={priceMax}
         setPriceMax={setPriceMax}
+        availableFrom={availableFrom}
+        setAvailableFrom={setAvailableFrom}
+        availableTo={availableTo}
+        setAvailableTo={setAvailableTo}
         showFavoritesOnly={showFavoritesOnly}
         setShowFavoritesOnly={setShowFavoritesOnly}
         favoriteIds={favoriteIds}
