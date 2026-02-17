@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown } from 'lucide-react';
+import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown, RefreshCw } from 'lucide-react';
 import ReviewModal from './ReviewModal';
+import BookingModal from './BookingModal';
 import { SkeletonList } from '@/components/ui/spinner';
-import type { User, Booking, AlertType, ReviewType } from '@/types';
+import type { User, Booking, Item, BookingForm, AlertType, ReviewType } from '@/types';
 import { getAuthHeaders } from '@/hooks/use-auth';
 
 interface BookingsTabProps {
@@ -36,6 +37,53 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+
+  // Rent again state
+  const [showRentAgainModal, setShowRentAgainModal] = useState(false);
+  const [rentAgainItem, setRentAgainItem] = useState<Item | null>(null);
+  const [rentAgainBlockedDates, setRentAgainBlockedDates] = useState<string[]>([]);
+  const [rentAgainForm, setRentAgainForm] = useState<BookingForm>({
+    start_date: '', end_date: '', rental_type: 'day', is_insured: false,
+  });
+
+  const handleRentAgain = async (item: Item) => {
+    setRentAgainItem(item);
+    setRentAgainForm({ start_date: '', end_date: '', rental_type: 'day', is_insured: false });
+    try {
+      const res = await fetch(`/api/items/${item._id}/blocked-booking-dates`);
+      const data = await res.json();
+      setRentAgainBlockedDates(res.ok ? (data.dates || []) : []);
+    } catch {
+      setRentAgainBlockedDates([]);
+    }
+    setShowRentAgainModal(true);
+  };
+
+  const handleRentAgainSubmit = async () => {
+    if (!currentUser || !rentAgainItem) return;
+    try {
+      const res = await fetch(`/api/items/${rentAgainItem._id}/book`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(rentAgainForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.paymentUrl) {
+          window.location.href = data.paymentUrl;
+          return;
+        }
+        showAlert(data.message || 'Бронирование создано!');
+        setShowRentAgainModal(false);
+        setRentAgainItem(null);
+        loadBookings().catch(() => {});
+      } else {
+        showAlert(data.error || 'Ошибка бронирования', 'error');
+      }
+    } catch {
+      showAlert('Ошибка бронирования', 'error');
+    }
+  };
 
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
@@ -528,6 +576,19 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                   </Button>
                 )}
 
+                {/* Renter: Rent again (completed bookings) */}
+                {booking.status === 'completed' && renterId === currentUser?._id && booking.item && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-1"
+                    onClick={() => handleRentAgain(booking.item!)}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Арендовать снова
+                  </Button>
+                )}
+
                 {/* Renter: leave review on item */}
                 {renterId === currentUser?._id && (
                   renterReview ? (
@@ -581,6 +642,18 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
           currentUser={currentUser}
           onSubmit={handleReviewSubmit}
           reviewType={reviewType}
+        />
+      )}
+
+      {showRentAgainModal && rentAgainItem && (
+        <BookingModal
+          isOpen={showRentAgainModal}
+          onClose={() => { setShowRentAgainModal(false); setRentAgainItem(null); }}
+          item={rentAgainItem}
+          bookingForm={rentAgainForm}
+          setBookingForm={setRentAgainForm}
+          blockedBookingDates={rentAgainBlockedDates}
+          onSubmit={handleRentAgainSubmit}
         />
       )}
 
