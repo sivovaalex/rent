@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Star, ArrowLeft, MapPin, Share2, ExternalLink } from 'lucide-react';
 import TrustBadges from '@/components/TrustBadges';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import SimilarItems from '@/components/SimilarItems';
 import { formatPrice } from '@/lib/constants';
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -225,6 +226,12 @@ export default function ItemPageClient({ item }: ItemPageClientProps) {
             </Card>
           </div>
         </div>
+
+        {item.status === 'approved' && (
+          <div className="mt-6">
+            <SimilarItems itemId={item._id} />
+          </div>
+        )}
       </div>
     </div>
   );

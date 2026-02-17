@@ -132,6 +132,19 @@ export async function setupMockApi(page: Page, currentUser: MockUser = mockUsers
     });
   });
 
+  await page.route('**/api/items/*/similar**', (route) => {
+    // Return other items as similar
+    const url = route.request().url();
+    const match = url.match(/\/api\/items\/(item-\d+)\/similar/);
+    const currentId = match?.[1];
+    const similar = mockItems.filter((i) => i._id !== currentId).slice(0, 4);
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: similar }),
+    });
+  });
+
   // === BOOKINGS ===
   await page.route(/\/api\/bookings(\?.*)?$/, (route) => {
     route.fulfill({

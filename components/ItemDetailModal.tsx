@@ -9,6 +9,7 @@ import { getCategoryAttributes, withCommission, formatPrice } from '@/lib/consta
 import ReviewList from './ReviewList';
 import TrustBadges from './TrustBadges';
 import AvailabilityCalendar from './AvailabilityCalendar';
+import SimilarItems from './SimilarItems';
 import { Loader } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
@@ -275,6 +276,10 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                 onReply={console.log}
               />
             </div>
+
+            {item.status === 'approved' && (
+              <SimilarItems itemId={item._id} onViewItem={(id) => { window.location.href = `/item/${id}`; }} />
+            )}
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
               {currentUser && item.owner_id !== currentUser._id && item.status === 'approved' && (
