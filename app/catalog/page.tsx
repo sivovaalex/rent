@@ -107,7 +107,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     </Badge>
                     <h2 className="font-semibold line-clamp-2">{item.title}</h2>
                     <p className="text-lg font-bold text-indigo-600">
-                      {item.pricePerDay.toLocaleString('ru-RU')} ₽<span className="text-sm text-gray-500 font-normal">/день</span>
+                      {Number(item.pricePerDay).toLocaleString('ru-RU')} ₽<span className="text-sm text-gray-500 font-normal">/день</span>
                     </p>
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <span>{item.owner.name}</span>

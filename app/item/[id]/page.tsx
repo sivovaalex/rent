@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const categoryName = CATEGORY_NAMES[item.category] || item.category;
   const description = item.description.slice(0, 160);
-  const title = `${item.title} — аренда ${item.pricePerDay} ₽/день | Арендол`;
+  const title = `${item.title} — аренда ${Number(item.pricePerDay)} ₽/день | Арендол`;
 
   return {
     title,
@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: item.photos.length > 0 ? [item.photos[0]] : undefined,
     },
     other: {
-      'product:price:amount': String(item.pricePerDay),
+      'product:price:amount': String(Number(item.pricePerDay)),
       'product:price:currency': 'RUB',
       'product:category': categoryName,
     },
@@ -86,9 +86,9 @@ export default async function ItemPage({ params }: PageProps) {
     description: item.description,
     category: item.category,
     subcategory: item.subcategory,
-    pricePerDay: item.pricePerDay,
-    pricePerMonth: item.pricePerMonth,
-    deposit: item.deposit,
+    pricePerDay: Number(item.pricePerDay),
+    pricePerMonth: Number(item.pricePerMonth),
+    deposit: Number(item.deposit),
     address: item.address,
     photos: item.photos,
     attributes: item.attributes as Record<string, string | number | boolean> | undefined,
@@ -105,8 +105,8 @@ export default async function ItemPage({ params }: PageProps) {
     owner_rating: item.owner.rating,
     owner_phone: item.owner.phone,
     owner_id: item.ownerId,
-    price_per_day: item.pricePerDay,
-    price_per_month: item.pricePerMonth,
+    price_per_day: Number(item.pricePerDay),
+    price_per_month: Number(item.pricePerMonth),
     reviews: item.reviews.map((r) => ({
       _id: r.id,
       rating: r.rating,
@@ -125,17 +125,20 @@ export default async function ItemPage({ params }: PageProps) {
 
   const categoryName = CATEGORY_NAMES[item.category] || item.category;
 
+  // Strip HTML tags for defense-in-depth in JSON-LD
+  const stripHtml = (str: string) => str.replace(/<[^>]*>/g, '');
+
   // SEO structured data (JSON-LD)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: item.title,
-    description: item.description,
+    name: stripHtml(item.title),
+    description: stripHtml(item.description),
     image: item.photos,
     category: categoryName,
     offers: {
       '@type': 'Offer',
-      price: item.pricePerDay,
+      price: Number(item.pricePerDay),
       priceCurrency: 'RUB',
       availability: 'https://schema.org/InStock',
     },

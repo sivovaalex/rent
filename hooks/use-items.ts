@@ -102,6 +102,7 @@ export function useItems({ currentUser, onShowAlert }: UseItemsOptions) {
       }
     } catch (error) {
       console.error('Ошибка загрузки заблокированных дат:', error);
+      setBlockedBookingDates([]);
     }
   }, []);
 

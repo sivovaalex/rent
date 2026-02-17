@@ -1,12 +1,21 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { safeUser, errorResponse, successResponse } from '@/lib/api-utils';
 import { validateBody, verifySmsSchema } from '@/lib/validations';
+import { authRateLimiter, rateLimitResponse, getClientIP } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip = getClientIP(request);
+    const ipCheck = authRateLimiter.check(`sms-verify:${ip}`);
+    if (!ipCheck.success) {
+      return rateLimitResponse(ipCheck.resetTime);
+    }
+
     const validation = await validateBody(request, verifySmsSchema);
     if (!validation.success) return validation.error;
 
@@ -19,7 +28,10 @@ export async function POST(request: NextRequest) {
       return errorResponse('Код не найден. Запросите новый код.', 400);
     }
 
-    if (smsRecord.code !== code) {
+    // Timing-safe comparison to prevent timing attacks
+    const codeMatch = smsRecord.code.length === code.length &&
+      crypto.timingSafeEqual(Buffer.from(smsRecord.code), Buffer.from(code));
+    if (!codeMatch) {
       return errorResponse('Неверный код', 400);
     }
 

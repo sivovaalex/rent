@@ -145,10 +145,10 @@ describe('runNotificationCron', () => {
       .mockResolvedValueOnce([{ id: 'admin-1' }, { id: 'admin-2' }])
       .mockResolvedValueOnce([]); // no pending users
 
-    // Pending item
-    prismaMock.item.findMany.mockResolvedValue([
-      { id: 'item-1', title: 'Pending Item' },
-    ]);
+    // Pending item (first call returns data, second returns [] to break cursor loop)
+    prismaMock.item.findMany
+      .mockResolvedValueOnce([{ id: 'item-1', title: 'Pending Item' }])
+      .mockResolvedValueOnce([]);
 
     // Batch create slots
     prismaMock.notificationLog.createMany.mockResolvedValue({ count: 2 });
@@ -184,7 +184,7 @@ describe('runNotificationCron', () => {
     tomorrow.setHours(12, 0, 0, 0);
 
     prismaMock.booking.findMany
-      .mockResolvedValueOnce([ // return reminders
+      .mockResolvedValueOnce([ // return reminders — batch 1
         {
           id: 'booking-1',
           renterId: 'renter-1',
@@ -192,7 +192,8 @@ describe('runNotificationCron', () => {
           renter: { id: 'renter-1', name: 'Иван' },
         },
       ])
-      .mockResolvedValueOnce([]); // review reminders
+      .mockResolvedValueOnce([]) // return reminders — batch 2 (break loop)
+      .mockResolvedValueOnce([]); // review reminders (break loop)
 
     // Claim slots succeed
     prismaMock.notificationLog.create.mockResolvedValue({ id: 'log-1' });
@@ -210,8 +211,8 @@ describe('runNotificationCron', () => {
     prismaMock.user.findMany.mockResolvedValue([]);
 
     prismaMock.booking.findMany
-      .mockResolvedValueOnce([]) // return reminders
-      .mockResolvedValueOnce([ // review reminders
+      .mockResolvedValueOnce([]) // return reminders (break loop)
+      .mockResolvedValueOnce([ // review reminders — batch 1
         {
           id: 'booking-1',
           renterId: 'renter-1',
@@ -219,7 +220,8 @@ describe('runNotificationCron', () => {
           renter: { id: 'renter-1' },
           reviews: [], // no reviews at all
         },
-      ]);
+      ])
+      .mockResolvedValueOnce([]); // review reminders — batch 2 (break loop)
 
     prismaMock.notificationLog.create.mockResolvedValue({ id: 'log-1' });
 
@@ -235,8 +237,8 @@ describe('runNotificationCron', () => {
     prismaMock.user.findMany.mockResolvedValue([]);
 
     prismaMock.booking.findMany
-      .mockResolvedValueOnce([]) // return
-      .mockResolvedValueOnce([ // review
+      .mockResolvedValueOnce([]) // return (break loop)
+      .mockResolvedValueOnce([ // review — batch 1
         {
           id: 'booking-1',
           renterId: 'renter-1',
@@ -247,7 +249,8 @@ describe('runNotificationCron', () => {
             { type: 'owner_review', userId: 'owner-1' },
           ],
         },
-      ]);
+      ])
+      .mockResolvedValueOnce([]); // review — batch 2 (break loop)
 
     const result = await runNotificationCron();
 

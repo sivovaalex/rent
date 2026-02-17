@@ -8,7 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 const JWT_ISSUER = 'arenda-pro';
 const JWT_AUDIENCE = 'arenda-pro-users';
-const JWT_EXPIRATION = '7d';
+const JWT_EXPIRATION = '24h';
 
 export interface TokenPayload extends JWTPayload {
   userId: string;

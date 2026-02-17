@@ -82,16 +82,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return errorResponse('Выбранные даты уже заняты', 400);
     }
 
-    // Calculate prices
+    // Calculate prices (convert Decimal to number for arithmetic)
     let rentalPrice = 0;
     if (rental_type === 'day') {
-      rentalPrice = item.pricePerDay * days;
+      rentalPrice = Number(item.pricePerDay) * days;
     } else if (rental_type === 'month') {
       const months = Math.ceil(days / 30);
-      rentalPrice = item.pricePerMonth * months;
+      rentalPrice = Number(item.pricePerMonth) * months;
     }
 
-    const deposit = item.deposit;
+    const deposit = Number(item.deposit);
     const commission = Math.round(rentalPrice * COMMISSION_RATE * 100) / 100;
     const insurance = is_insured ? Math.round(rentalPrice * 0.10 * 100) / 100 : 0;
     const total = Math.round((rentalPrice + deposit + commission + insurance) * 100) / 100;

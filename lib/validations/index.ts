@@ -7,6 +7,7 @@ export * from './items';
 export * from './bookings';
 export * from './reviews';
 export * from './profile';
+export * from './chat';
 
 // Validation helper
 export type ValidationResult<T> =

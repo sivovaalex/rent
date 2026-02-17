@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       try {
         const payment = await createPayment({
-          amount: booking.commission,
+          amount: Number(booking.commission),
           bookingId: booking.id,
           description: `Комиссия за аренду: ${booking.item!.title}`,
         });
@@ -66,12 +66,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           data: { yookassaPaymentId: payment.id },
         });
 
-        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'initiated', amount: booking.commission, provider: 'yookassa', metadata: { paymentId: payment.id, trigger: 'approve' } });
+        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'initiated', amount: Number(booking.commission), provider: 'yookassa', metadata: { paymentId: payment.id, trigger: 'approve' } });
 
         // Notify renter: approved, please pay commission
         notifyPaymentRequired(booking.renterId, {
           itemTitle: booking.item!.title,
-          commission: booking.commission,
+          commission: Number(booking.commission),
           paymentUrl: payment.confirmation?.confirmation_url || '',
         }).catch(console.error);
 
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           paymentUrl: payment.confirmation?.confirmation_url,
         });
       } catch (paymentError) {
-        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'failed', amount: booking.commission, provider: 'yookassa', metadata: { error: String(paymentError), trigger: 'approve' } });
+        logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'failed', amount: Number(booking.commission), provider: 'yookassa', metadata: { error: String(paymentError), trigger: 'approve' } });
         console.error('YooKassa payment creation failed on approve:', paymentError);
         // Revert to pending_approval so owner can try again
         await prisma.booking.update({
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         },
       });
 
-      logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'mock', amount: booking.commission, provider: 'mock', metadata: { trigger: 'approve' } });
+      logPayment({ userId: booking.renterId, bookingId: booking.id, action: 'mock', amount: Number(booking.commission), provider: 'mock', metadata: { trigger: 'approve' } });
 
       notifyBookingApproved(booking.renterId, {
         itemTitle: booking.item!.title,

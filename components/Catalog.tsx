@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, Package, Zap, Camera, Shirt, Dumbbell, Hammer } from 'lucide-react';
@@ -140,6 +140,25 @@ export default function Catalog({
   });
   const [attributeFilters, setAttributeFilters] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const blockedDatesAbortRef = useRef<AbortController | null>(null);
+
+  const loadBlockedDates = useCallback((itemId: string) => {
+    blockedDatesAbortRef.current?.abort();
+    const controller = new AbortController();
+    blockedDatesAbortRef.current = controller;
+
+    setBlockedBookingDates([]);
+    fetch(`/api/items/${itemId}/blocked-booking-dates`, { signal: controller.signal })
+      .then(res => res.json())
+      .then(data => {
+        if (data.dates) setBlockedBookingDates(data.dates);
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load blocked dates');
+        }
+      });
+  }, [setBlockedBookingDates]);
 
   // Sync item modal ↔ hash
   const openItemDetail = useCallback((itemId: string) => {
@@ -243,15 +262,8 @@ export default function Catalog({
     }
     setSelectedItem(item);
     setShowBookingModal(true);
-    setBlockedBookingDates([]);
-    fetch(`/api/items/${item._id}/blocked-booking-dates`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.dates) {
-          setBlockedBookingDates(data.dates);
-        }
-      });
-  }, [currentUser, showAlert, setSelectedItem, setShowBookingModal, setBlockedBookingDates]);
+    loadBlockedDates(item._id);
+  }, [currentUser, showAlert, setSelectedItem, setShowBookingModal, loadBlockedDates]);
 
   const handleEdit = useCallback((item: Item) => {
     setSelectedItem(item);
@@ -401,14 +413,7 @@ export default function Catalog({
           setSelectedItem(item);
           setShowBookingModal(true);
           setShowItemDetailModal(false);
-          setBlockedBookingDates([]);
-          fetch(`/api/items/${item._id}/blocked-booking-dates`)
-            .then(res => res.json())
-            .then(data => {
-              if (data.dates) {
-                setBlockedBookingDates(data.dates);
-              }
-            });
+          loadBlockedDates(item._id);
         }}
       />
 

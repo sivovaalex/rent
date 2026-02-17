@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import {
   handleTelegramMessage,
@@ -19,13 +20,18 @@ const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook secret if configured
-    if (TELEGRAM_WEBHOOK_SECRET) {
-      const secretHeader = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
-      if (secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
-        console.warn('[TELEGRAM WEBHOOK] Invalid secret token');
-        return NextResponse.json({ ok: false }, { status: 401 });
-      }
+    // Verify webhook secret (required)
+    if (!TELEGRAM_WEBHOOK_SECRET) {
+      console.error('[TELEGRAM WEBHOOK] TELEGRAM_WEBHOOK_SECRET not configured');
+      return NextResponse.json({ ok: false, error: 'Webhook not configured' }, { status: 500 });
+    }
+
+    const secretHeader = request.headers.get('X-Telegram-Bot-Api-Secret-Token') || '';
+    const secretValid = secretHeader.length === TELEGRAM_WEBHOOK_SECRET.length &&
+      crypto.timingSafeEqual(Buffer.from(secretHeader), Buffer.from(TELEGRAM_WEBHOOK_SECRET));
+    if (!secretValid) {
+      console.warn('[TELEGRAM WEBHOOK] Invalid secret token');
+      return NextResponse.json({ ok: false }, { status: 401 });
     }
 
     const update: TelegramUpdate = await request.json();

@@ -62,7 +62,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       const data = await res.json();
       if (res.ok) {
         showAlert('Бронирование отменено', 'success');
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error || 'Ошибка при отмене', 'error');
       }
@@ -75,7 +75,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
   useEffect(() => {
     if (currentUser) {
-      loadBookings();
+      loadBookings().catch(() => {});
     }
   }, [currentUser, loadBookings]);
 
@@ -91,7 +91,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       const data = await res.json();
       if (res.ok) {
         showAlert('Возврат подтверждён! Залог возвращён.');
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -116,7 +116,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
         } else {
           showAlert('Бронирование одобрено!', 'success');
         }
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -166,7 +166,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
         } else {
           showAlert('Подтверждение сохранено. Ожидается подтверждение другой стороны.', 'success');
         }
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -197,7 +197,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       if (res.ok) {
         showAlert('Бронирование отклонено', 'success');
         setShowRejectModal(false);
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -243,7 +243,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
   const handleReviewSubmit = () => {
     showAlert('Отзыв успешно отправлен!', 'success');
-    loadBookings();
+    loadBookings().catch(() => {});
   };
 
   const getStatusLabel = (status: Booking['status']) => {

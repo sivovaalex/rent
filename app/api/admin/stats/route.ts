@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const totalRevenue = revenueAgg._sum.commission || 0;
+    const totalRevenue = Number(revenueAgg._sum.commission) || 0;
 
     return successResponse({
       totalUsers,
