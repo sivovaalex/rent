@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { Star, MapPin } from 'lucide-react';
+import { withCommission } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -107,7 +108,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     </Badge>
                     <h2 className="font-semibold line-clamp-2">{item.title}</h2>
                     <p className="text-lg font-bold text-indigo-600">
-                      {Number(item.pricePerDay).toLocaleString('ru-RU')} ₽<span className="text-sm text-gray-500 font-normal">/день</span>
+                      {withCommission(Number(item.pricePerDay)).toLocaleString('ru-RU')} ₽<span className="text-sm text-gray-500 font-normal">/день</span>
                     </p>
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <span>{item.owner.name}</span>

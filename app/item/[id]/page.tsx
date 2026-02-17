@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import ItemPageClient from './ItemPageClient';
+import { withCommission } from '@/lib/constants';
 
 const CATEGORY_NAMES: Record<string, string> = {
   electronics: 'Электроника',
@@ -45,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const categoryName = CATEGORY_NAMES[item.category] || item.category;
   const description = item.description.slice(0, 160);
-  const title = `${item.title} — аренда ${Number(item.pricePerDay)} ₽/день | Арендол`;
+  const title = `${item.title} — аренда ${withCommission(Number(item.pricePerDay))} ₽/день | Арендол`;
 
   return {
     title,
@@ -65,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: item.photos.length > 0 ? [item.photos[0]] : undefined,
     },
     other: {
-      'product:price:amount': String(Number(item.pricePerDay)),
+      'product:price:amount': String(withCommission(Number(item.pricePerDay))),
       'product:price:currency': 'RUB',
       'product:category': categoryName,
     },
@@ -86,8 +87,8 @@ export default async function ItemPage({ params }: PageProps) {
     description: item.description,
     category: item.category,
     subcategory: item.subcategory,
-    pricePerDay: Number(item.pricePerDay),
-    pricePerMonth: Number(item.pricePerMonth),
+    pricePerDay: withCommission(Number(item.pricePerDay)),
+    pricePerMonth: withCommission(Number(item.pricePerMonth)),
     deposit: Number(item.deposit),
     address: item.address,
     photos: item.photos,
@@ -105,8 +106,8 @@ export default async function ItemPage({ params }: PageProps) {
     owner_rating: item.owner.rating,
     owner_phone: item.owner.phone,
     owner_id: item.ownerId,
-    price_per_day: Number(item.pricePerDay),
-    price_per_month: Number(item.pricePerMonth),
+    price_per_day: withCommission(Number(item.pricePerDay)),
+    price_per_month: withCommission(Number(item.pricePerMonth)),
     reviews: item.reviews.map((r) => ({
       _id: r.id,
       rating: r.rating,
@@ -138,7 +139,7 @@ export default async function ItemPage({ params }: PageProps) {
     category: categoryName,
     offers: {
       '@type': 'Offer',
-      price: Number(item.pricePerDay),
+      price: withCommission(Number(item.pricePerDay)),
       priceCurrency: 'RUB',
       availability: 'https://schema.org/InStock',
     },

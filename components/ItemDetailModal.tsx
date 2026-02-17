@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart, MapPin } from 'lucide-react';
 import { YandexMap } from './YandexMap';
-import { getCategoryAttributes } from '@/lib/constants';
+import { getCategoryAttributes, withCommission, formatPrice } from '@/lib/constants';
 import ReviewList from './ReviewList';
 import TrustBadges from './TrustBadges';
 import { Loader } from '@/components/ui/spinner';
@@ -190,13 +190,13 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                     {item.price_per_day && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Цена за день:</span>
-                        <span className="font-bold text-lg">{item.price_per_day} ₽</span>
+                        <span className="font-bold text-lg">{formatPrice(withCommission(item.price_per_day))} ₽</span>
                       </div>
                     )}
                     {item.price_per_month && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Цена за месяц:</span>
-                        <span className="font-bold text-lg">{item.price_per_month} ₽</span>
+                        <span className="font-bold text-lg">{formatPrice(withCommission(item.price_per_month))} ₽</span>
                       </div>
                     )}
                     <div className="flex justify-between">

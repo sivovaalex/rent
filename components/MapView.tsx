@@ -5,6 +5,7 @@ import { YandexMap, MapMarker } from './YandexMap';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Category, Item } from '@/types';
+import { withCommission } from '@/lib/constants';
 const CATEGORY_LABELS: Record<string, string> = {
   stream: 'Стрим-оборудование',
   electronics: 'Электроника',
@@ -32,7 +33,7 @@ export function MapView({ items, onItemClick, userLocation, radiusKm }: MapViewP
     if (priceMax) {
       const max = parseFloat(priceMax);
       if (!isNaN(max)) {
-        result = result.filter((item) => item.pricePerDay <= max);
+        result = result.filter((item) => withCommission(item.pricePerDay) <= max);
       }
     }
     return result;
@@ -44,8 +45,8 @@ export function MapView({ items, onItemClick, userLocation, radiusKm }: MapViewP
       lat: item.latitude!,
       lng: item.longitude!,
       title: item.title,
-      price: item.pricePerDay,
-      priceMonth: item.pricePerMonth,
+      price: withCommission(item.pricePerDay),
+      priceMonth: item.pricePerMonth ? withCommission(item.pricePerMonth) : undefined,
       deposit: item.deposit,
       photo: item.photos?.[0] || undefined,
       category: item.category,
