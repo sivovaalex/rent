@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, ArrowLeft, MapPin, Share2, ExternalLink } from 'lucide-react';
 import TrustBadges from '@/components/TrustBadges';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { formatPrice } from '@/lib/constants';
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -191,6 +192,12 @@ export default function ItemPageClient({ item }: ItemPageClientProps) {
                 <Link href="/#catalog" className="block">
                   <Button className="w-full mt-2">Войти и забронировать</Button>
                 </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <AvailabilityCalendar itemId={item._id} />
               </CardContent>
             </Card>
 

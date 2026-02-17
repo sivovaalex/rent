@@ -128,7 +128,7 @@ export async function setupMockApi(page: Page, currentUser: MockUser = mockUsers
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ blockedDates: [] }),
+      body: JSON.stringify({ dates: [] }),
     });
   });
 

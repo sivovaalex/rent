@@ -8,6 +8,7 @@ import { YandexMap } from './YandexMap';
 import { getCategoryAttributes, withCommission, formatPrice } from '@/lib/constants';
 import ReviewList from './ReviewList';
 import TrustBadges from './TrustBadges';
+import AvailabilityCalendar from './AvailabilityCalendar';
 import { Loader } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
@@ -205,6 +206,10 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                     </div>
                   </div>
                 </div>
+
+                {item.status === 'approved' && (
+                  <AvailabilityCalendar itemId={item._id} />
+                )}
 
                 <div>
                   <h3 className="font-semibold mb-2">Владелец</h3>
