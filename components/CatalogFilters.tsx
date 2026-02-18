@@ -123,8 +123,8 @@ const CatalogFilters = React.memo(function CatalogFilters({
         )}
       </div>
 
-      {/* Search + selects */}
-      <div className="flex flex-col gap-2 sm:gap-4">
+      {/* Search + filters */}
+      <div className="flex flex-col gap-3 sm:gap-4">
         <Input
           placeholder="Поиск..."
           value={searchQuery}
@@ -132,201 +132,241 @@ const CatalogFilters = React.memo(function CatalogFilters({
           onKeyUp={(e) => e.key === 'Enter' && loadItems()}
           className="w-full text-sm sm:text-base"
         />
-        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4">
-          <Select value={categoryFilter} onValueChange={(value) => {
-            setCategoryFilter(value);
-            setSubCategoryFilter('all');
-            setAttributeFilters({});
-          }}>
-            <SelectTrigger className="w-full sm:w-[180px] text-xs sm:text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все категории</SelectItem>
-              <SelectItem value="stream">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  <span className="hidden sm:inline">Стрим-</span>оборудование
-                </div>
-              </SelectItem>
-              <SelectItem value="electronics">
-                <div className="flex items-center gap-2">
-                  <Camera className="w-4 h-4" />
-                  Электроника
-                </div>
-              </SelectItem>
-              <SelectItem value="clothes">
-                <div className="flex items-center gap-2">
-                  <Shirt className="w-4 h-4" />
-                  Одежда
-                </div>
-              </SelectItem>
-              <SelectItem value="sports">
-                <div className="flex items-center gap-2">
-                  <Dumbbell className="w-4 h-4" />
-                  Спорт
-                </div>
-              </SelectItem>
-              <SelectItem value="tools">
-                <div className="flex items-center gap-2">
-                  <Hammer className="w-4 h-4" />
-                  Инструменты
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-[140px] text-xs sm:text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Новые</SelectItem>
-              <SelectItem value="price_asc">Цена ↑</SelectItem>
-              <SelectItem value="price_desc">Цена ↓</SelectItem>
-              <SelectItem value="rating">Рейтинг</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
-            <Input
-              type="number"
-              placeholder="Цена от"
-              value={priceMin}
-              onChange={(e) => setPriceMin(e.target.value)}
-              onKeyUp={(e) => e.key === 'Enter' && loadItems()}
-              className="w-full sm:w-[100px] text-xs sm:text-sm"
-              min={0}
-              aria-label="Цена от"
-            />
-            <span className="text-gray-400 text-xs">–</span>
-            <Input
-              type="number"
-              placeholder="до"
-              value={priceMax}
-              onChange={(e) => setPriceMax(e.target.value)}
-              onKeyUp={(e) => e.key === 'Enter' && loadItems()}
-              className="w-full sm:w-[100px] text-xs sm:text-sm"
-              min={0}
-              aria-label="Цена до"
-            />
-          </div>
-          <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
-            <Input
-              type="date"
-              placeholder="Свободно с"
-              value={availableFrom}
-              onChange={(e) => setAvailableFrom(e.target.value)}
-              className="w-full sm:w-[130px] text-xs sm:text-sm"
-              aria-label="Свободно с"
-              min={new Date().toISOString().split('T')[0]}
-            />
-            <span className="text-gray-400 text-xs">–</span>
-            <Input
-              type="date"
-              placeholder="до"
-              value={availableTo}
-              onChange={(e) => setAvailableTo(e.target.value)}
-              className="w-full sm:w-[130px] text-xs sm:text-sm"
-              aria-label="Свободно по"
-              min={availableFrom || new Date().toISOString().split('T')[0]}
-            />
-          </div>
-          {categoryFilter !== 'all' && (
-            <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
-              <SelectTrigger className="w-full col-span-2 sm:w-[180px] text-xs sm:text-sm">
-                <SelectValue placeholder="Подкатегория" />
+        <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-x-3 gap-y-3 sm:gap-4 items-end">
+          {/* Sort */}
+          <div className="col-span-1">
+            <Label className="text-[10px] text-gray-400 mb-1 block">Сортировка</Label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-[140px] text-xs sm:text-sm">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все подкатегории</SelectItem>
-                {CATEGORY_SUBCATEGORIES[categoryFilter as CategoryKey]?.map((subcat) => (
-                  <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
-                ))}
+                <SelectItem value="newest">Новые</SelectItem>
+                <SelectItem value="price_asc">Цена ↑</SelectItem>
+                <SelectItem value="price_desc">Цена ↓</SelectItem>
+                <SelectItem value="rating">Рейтинг</SelectItem>
               </SelectContent>
             </Select>
-          )}
-          <Button onClick={loadItems} className="col-span-2 sm:col-span-1 text-sm">Поиск</Button>
-          {/* View toggle */}
-          <div className="flex gap-1 border rounded-md p-0.5">
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-8 px-2"
-              onClick={() => setViewMode('list')}
-              aria-label="Списком"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'map' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-8 px-2"
-              onClick={() => setViewMode('map')}
-              aria-label="На карте"
-            >
-              <MapPin className="w-4 h-4" />
-            </Button>
           </div>
-          {/* Near me button */}
+
+          {/* Category */}
+          <div className="col-span-1">
+            <Label className="text-[10px] text-gray-400 mb-1 block">Категория</Label>
+            <Select value={categoryFilter} onValueChange={(value) => {
+              setCategoryFilter(value);
+              setSubCategoryFilter('all');
+              setAttributeFilters({});
+            }}>
+              <SelectTrigger className="w-full sm:w-[180px] text-xs sm:text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все категории</SelectItem>
+                <SelectItem value="stream">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    <span className="hidden sm:inline">Стрим-</span>оборудование
+                  </div>
+                </SelectItem>
+                <SelectItem value="electronics">
+                  <div className="flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Электроника
+                  </div>
+                </SelectItem>
+                <SelectItem value="clothes">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="w-4 h-4" />
+                    Одежда
+                  </div>
+                </SelectItem>
+                <SelectItem value="sports">
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="w-4 h-4" />
+                    Спорт
+                  </div>
+                </SelectItem>
+                <SelectItem value="tools">
+                  <div className="flex items-center gap-2">
+                    <Hammer className="w-4 h-4" />
+                    Инструменты
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Subcategory — right after category */}
+          {categoryFilter !== 'all' && (
+            <div className="col-span-1">
+              <Label className="text-[10px] text-gray-400 mb-1 block">Подкатегория</Label>
+              <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-[180px] text-xs sm:text-sm">
+                  <SelectValue placeholder="Подкатегория" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все подкатегории</SelectItem>
+                  {CATEGORY_SUBCATEGORIES[categoryFilter as CategoryKey]?.map((subcat) => (
+                    <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Price range */}
+          <div className="col-span-2 sm:col-span-1">
+            <Label className="text-[10px] text-gray-400 mb-1 block">Цена, ₽/день</Label>
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                placeholder="от"
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+                onKeyUp={(e) => e.key === 'Enter' && loadItems()}
+                className="w-full sm:w-[100px] text-xs sm:text-sm"
+                min={0}
+                aria-label="Цена от"
+              />
+              <span className="text-gray-400 text-xs">–</span>
+              <Input
+                type="number"
+                placeholder="до"
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+                onKeyUp={(e) => e.key === 'Enter' && loadItems()}
+                className="w-full sm:w-[100px] text-xs sm:text-sm"
+                min={0}
+                aria-label="Цена до"
+              />
+            </div>
+          </div>
+
+          {/* Date availability */}
+          <div className="col-span-2 sm:col-span-1">
+            <Label className="text-[10px] text-gray-400 mb-1 block">Свободно в даты</Label>
+            <div className="flex items-center gap-1">
+              <Input
+                type="date"
+                value={availableFrom}
+                onChange={(e) => setAvailableFrom(e.target.value)}
+                className="w-full sm:w-[130px] text-xs sm:text-sm"
+                aria-label="Свободно с"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <span className="text-gray-400 text-xs">–</span>
+              <Input
+                type="date"
+                value={availableTo}
+                onChange={(e) => setAvailableTo(e.target.value)}
+                className="w-full sm:w-[130px] text-xs sm:text-sm"
+                aria-label="Свободно по"
+                min={availableFrom || new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+
+          {/* Action buttons row */}
+          <div className="col-span-2 sm:col-span-1 flex items-end">
+            <Button onClick={loadItems} className="w-full sm:w-auto text-sm">Поиск</Button>
+          </div>
+
+          {/* View toggle */}
+          <div className="flex items-end">
+            <div className="flex gap-1 border rounded-md p-0.5">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setViewMode('list')}
+                aria-label="Списком"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'map' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setViewMode('map')}
+                aria-label="На карте"
+              >
+                <MapPin className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Near me */}
           {setNearLocation && (
-            <Button
-              variant={nearLat !== null && nearLat !== undefined ? 'default' : 'outline'}
-              className="col-span-2 sm:col-span-1 text-sm"
-              disabled={geoLoading}
-              onClick={() => {
-                if (nearLat !== null && nearLat !== undefined) {
-                  setNearLocation(null, null);
-                  loadItems();
-                } else {
-                  setGeoLoading(true);
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      setNearLocation(pos.coords.latitude, pos.coords.longitude);
-                      setGeoLoading(false);
-                    },
-                    () => {
-                      showAlert('Не удалось определить местоположение. Разрешите доступ к геолокации.', 'error');
-                      setGeoLoading(false);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000 }
-                  );
-                }
-              }}
-            >
-              {geoLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MapPin className="w-4 h-4 mr-1" />}
-              {nearLat !== null && nearLat !== undefined ? 'Сбросить' : 'Рядом со мной'}
-            </Button>
+            <div className="col-span-2 sm:col-span-1 flex items-end">
+              <Button
+                variant={nearLat !== null && nearLat !== undefined ? 'default' : 'outline'}
+                className="w-full sm:w-auto text-sm"
+                disabled={geoLoading}
+                onClick={() => {
+                  if (nearLat !== null && nearLat !== undefined) {
+                    setNearLocation(null, null);
+                    loadItems();
+                  } else {
+                    setGeoLoading(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setNearLocation(pos.coords.latitude, pos.coords.longitude);
+                        setGeoLoading(false);
+                      },
+                      () => {
+                        showAlert('Не удалось определить местоположение. Разрешите доступ к геолокации.', 'error');
+                        setGeoLoading(false);
+                      },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }
+                }}
+              >
+                {geoLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MapPin className="w-4 h-4 mr-1" />}
+                {nearLat !== null && nearLat !== undefined ? 'Сбросить' : 'Рядом со мной'}
+              </Button>
+            </div>
           )}
+
+          {/* Favorites */}
           {currentUser && setShowFavoritesOnly && (
-            <Button
-              variant={showFavoritesOnly ? 'default' : 'outline'}
-              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className="col-span-2 sm:col-span-1 text-sm"
-            >
-              <Heart className={`w-4 h-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-              Избранное
-              {favoriteIds && favoriteIds.size > 0 && (
-                <span className="ml-1 text-xs">({favoriteIds.size})</span>
-              )}
-            </Button>
+            <div className="col-span-2 sm:col-span-1 flex items-end">
+              <Button
+                variant={showFavoritesOnly ? 'default' : 'outline'}
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className="w-full sm:w-auto text-sm"
+              >
+                <Heart className={`w-4 h-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                Избранное
+                {favoriteIds && favoriteIds.size > 0 && (
+                  <span className="ml-1 text-xs">({favoriteIds.size})</span>
+                )}
+              </Button>
+            </div>
           )}
+
+          {/* Reset */}
           {(searchQuery || categoryFilter !== 'all' || showFavoritesOnly || priceMin || priceMax || availableFrom || availableTo || Object.keys(attributeFilters).length > 0) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="col-span-2 sm:col-span-1 text-sm text-red-500 hover:text-red-600"
-              onClick={() => {
-                setSearchQuery('');
-                setCategoryFilter('all');
-                setSubCategoryFilter('all');
-                setAttributeFilters({});
-                setPriceMin('');
-                setPriceMax('');
-                setAvailableFrom('');
-                setAvailableTo('');
-                if (setShowFavoritesOnly) setShowFavoritesOnly(false);
-              }}
-            >
-              Сбросить все фильтры
-            </Button>
+            <div className="col-span-2 sm:col-span-1 flex items-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm text-red-500 hover:text-red-600"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCategoryFilter('all');
+                  setSubCategoryFilter('all');
+                  setAttributeFilters({});
+                  setPriceMin('');
+                  setPriceMax('');
+                  setAvailableFrom('');
+                  setAvailableTo('');
+                  if (setShowFavoritesOnly) setShowFavoritesOnly(false);
+                }}
+              >
+                Сбросить все фильтры
+              </Button>
+            </div>
           )}
         </div>
       </div>
