@@ -250,7 +250,7 @@ const CatalogFilters = React.memo(function CatalogFilters({
                 type="date"
                 value={availableFrom}
                 onChange={(e) => setAvailableFrom(e.target.value)}
-                className="w-full sm:w-[130px] text-xs sm:text-sm"
+                className="w-full text-xs sm:text-sm"
                 aria-label="Свободно с"
                 min={new Date().toISOString().split('T')[0]}
               />
@@ -259,7 +259,7 @@ const CatalogFilters = React.memo(function CatalogFilters({
                 type="date"
                 value={availableTo}
                 onChange={(e) => setAvailableTo(e.target.value)}
-                className="w-full sm:w-[130px] text-xs sm:text-sm"
+                className="w-full text-xs sm:text-sm"
                 aria-label="Свободно по"
                 min={availableFrom || new Date().toISOString().split('T')[0]}
               />
