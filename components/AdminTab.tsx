@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search, Building2 } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
+import { getAuthHeaders } from '@/hooks/use-auth';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
 interface AdminStats {
@@ -45,10 +46,13 @@ interface AdminTabProps {
   pendingItems: PendingItem[];
   stats: AdminStats | null;
   allUsers: User[];
+  allUsersTotal: number;
   isLoading?: boolean;
+  isLoadingMore?: boolean;
+  loadMoreUsers: () => Promise<void>;
 }
 
-export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, isLoading }: AdminTabProps) {
+export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, allUsersTotal, isLoading, isLoadingMore, loadMoreUsers }: AdminTabProps) {
   const [adminSubTab, setAdminSubTab] = useState('stats');
   const [showAdminUserModal, setShowAdminUserModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -143,13 +147,9 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
 
     setVerifyingUserId(userId);
     try {
-      const token = localStorage.getItem('auth_token');
       const res = await fetch(`/api/admin/users/${userId}/verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': currentUser._id }),
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ action, ...(reason ? { reason } : {}) })
       });
       if (res.ok) {
@@ -174,10 +174,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     try {
       const res = await fetch(`/api/admin/items/${itemId}/moderate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('auth_token') ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : { 'x-user-id': currentUser._id })
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status, rejection_reason })
       });
       if (res.ok) {
@@ -215,10 +212,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
     try {
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('auth_token') ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : { 'x-user-id': currentUser._id })
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newAdminUser)
       });
       const data = await res.json();
@@ -718,6 +712,14 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                         <div className="text-center py-8">
                           <Users className="w-12 h-12 mx-auto text-gray-400" />
                           <p className="text-gray-500 mt-2">Пользователи не найдены</p>
+                        </div>
+                      )}
+                      {allUsers.length < allUsersTotal && (
+                        <div className="text-center py-4">
+                          <Button variant="outline" onClick={loadMoreUsers} disabled={isLoadingMore}>
+                            {isLoadingMore && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Загрузить ещё ({allUsers.length} из {allUsersTotal})
+                          </Button>
                         </div>
                       )}
                     </>

@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown } from 'lucide-react';
+import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown, RefreshCw } from 'lucide-react';
 import ReviewModal from './ReviewModal';
+import BookingModal from './BookingModal';
 import { SkeletonList } from '@/components/ui/spinner';
-import type { User, Booking, AlertType, ReviewType } from '@/types';
+import type { User, Booking, Item, BookingForm, AlertType, ReviewType } from '@/types';
 import { getAuthHeaders } from '@/hooks/use-auth';
 
 interface BookingsTabProps {
@@ -37,6 +38,53 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
+  // Rent again state
+  const [showRentAgainModal, setShowRentAgainModal] = useState(false);
+  const [rentAgainItem, setRentAgainItem] = useState<Item | null>(null);
+  const [rentAgainBlockedDates, setRentAgainBlockedDates] = useState<string[]>([]);
+  const [rentAgainForm, setRentAgainForm] = useState<BookingForm>({
+    start_date: '', end_date: '', rental_type: 'day', is_insured: false,
+  });
+
+  const handleRentAgain = async (item: Item) => {
+    setRentAgainItem(item);
+    setRentAgainForm({ start_date: '', end_date: '', rental_type: 'day', is_insured: false });
+    try {
+      const res = await fetch(`/api/items/${item._id}/blocked-booking-dates`);
+      const data = await res.json();
+      setRentAgainBlockedDates(res.ok ? (data.dates || []) : []);
+    } catch {
+      setRentAgainBlockedDates([]);
+    }
+    setShowRentAgainModal(true);
+  };
+
+  const handleRentAgainSubmit = async () => {
+    if (!currentUser || !rentAgainItem) return;
+    try {
+      const res = await fetch(`/api/items/${rentAgainItem._id}/book`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(rentAgainForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.paymentUrl) {
+          window.location.href = data.paymentUrl;
+          return;
+        }
+        showAlert(data.message || 'Бронирование создано!');
+        setShowRentAgainModal(false);
+        setRentAgainItem(null);
+        loadBookings().catch(() => {});
+      } else {
+        showAlert(data.error || 'Ошибка бронирования', 'error');
+      }
+    } catch {
+      showAlert('Ошибка бронирования', 'error');
+    }
+  };
+
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
     if (statusFilter !== 'all') {
@@ -62,7 +110,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       const data = await res.json();
       if (res.ok) {
         showAlert('Бронирование отменено', 'success');
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error || 'Ошибка при отмене', 'error');
       }
@@ -75,7 +123,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
   useEffect(() => {
     if (currentUser) {
-      loadBookings();
+      loadBookings().catch(() => {});
     }
   }, [currentUser, loadBookings]);
 
@@ -91,7 +139,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       const data = await res.json();
       if (res.ok) {
         showAlert('Возврат подтверждён! Залог возвращён.');
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -116,7 +164,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
         } else {
           showAlert('Бронирование одобрено!', 'success');
         }
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -166,7 +214,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
         } else {
           showAlert('Подтверждение сохранено. Ожидается подтверждение другой стороны.', 'success');
         }
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -197,7 +245,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
       if (res.ok) {
         showAlert('Бронирование отклонено', 'success');
         setShowRejectModal(false);
-        loadBookings();
+        loadBookings().catch(() => {});
       } else {
         showAlert(data.error, 'error');
       }
@@ -243,7 +291,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
 
   const handleReviewSubmit = () => {
     showAlert('Отзыв успешно отправлен!', 'success');
-    loadBookings();
+    loadBookings().catch(() => {});
   };
 
   const getStatusLabel = (status: Booking['status']) => {
@@ -289,9 +337,9 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   return (
     <div className="space-y-6">
       {/* Фильтры и сортировка */}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Статус" />
           </SelectTrigger>
@@ -306,7 +354,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
           </SelectContent>
         </Select>
         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <ArrowUpDown className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Сортировка" />
           </SelectTrigger>
@@ -488,11 +536,11 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                     size="sm"
                     onClick={() => payCommission(booking._id)}
                     disabled={isPaying === booking._id}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-xs sm:text-sm"
                   >
                     {isPaying === booking._id
                       ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Переход к оплате...</>
-                      : <><CreditCard className="w-4 h-4 mr-1" />Оплатить комиссию</>
+                      : <><CreditCard className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Оплатить комиссию</span><span className="sm:hidden">Оплатить</span></>
                     }
                   </Button>
                 )}
@@ -504,7 +552,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                       size="sm"
                       onClick={() => approveBooking(booking._id)}
                       disabled={isApproving === booking._id}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />
                       {isApproving === booking._id ? 'Одобрение...' : 'Одобрить'}
@@ -513,7 +561,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                       size="sm"
                       variant="destructive"
                       onClick={() => openRejectModal(booking._id)}
-                      className="flex-1"
+                      className="flex-1 text-xs sm:text-sm"
                     >
                       <XCircle className="w-4 h-4 mr-1" />
                       Отклонить
@@ -525,6 +573,19 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
                 {booking.status === 'active' && ownerId === currentUser?._id && (
                   <Button size="sm" onClick={() => confirmReturn(booking._id)} className="flex-1">
                     Подтвердить возврат
+                  </Button>
+                )}
+
+                {/* Renter: Rent again (completed bookings) */}
+                {booking.status === 'completed' && renterId === currentUser?._id && booking.item && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-1"
+                    onClick={() => handleRentAgain(booking.item!)}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Арендовать снова
                   </Button>
                 )}
 
@@ -581,6 +642,18 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
           currentUser={currentUser}
           onSubmit={handleReviewSubmit}
           reviewType={reviewType}
+        />
+      )}
+
+      {showRentAgainModal && rentAgainItem && (
+        <BookingModal
+          isOpen={showRentAgainModal}
+          onClose={() => { setShowRentAgainModal(false); setRentAgainItem(null); }}
+          item={rentAgainItem}
+          bookingForm={rentAgainForm}
+          setBookingForm={setRentAgainForm}
+          blockedBookingDates={rentAgainBlockedDates}
+          onSubmit={handleRentAgainSubmit}
         />
       )}
 

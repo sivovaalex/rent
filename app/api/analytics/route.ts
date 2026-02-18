@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       const d = b.createdAt;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (key in revenueMap) {
-        revenueMap[key] += b.rentalPrice;
+        revenueMap[key] += Number(b.rentalPrice);
       }
     }
   }
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     }
     itemBookingCount[b.itemId].count++;
     if (b.status === 'paid' || b.status === 'active' || b.status === 'completed') {
-      itemBookingCount[b.itemId].revenue += b.rentalPrice;
+      itemBookingCount[b.itemId].revenue += Number(b.rentalPrice);
     }
   }
 
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
   // Суммарные показатели
   const totalRevenue = bookings
     .filter(b => b.status === 'paid' || b.status === 'active' || b.status === 'completed')
-    .reduce((sum, b) => sum + b.rentalPrice, 0);
+    .reduce((sum, b) => sum + Number(b.rentalPrice), 0);
 
   const currentActive = bookings.filter(b => b.status === 'active').length;
 

@@ -6,6 +6,7 @@ import { Star, MapPin, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import TrustBadges, { TrustScore } from '@/components/TrustBadges';
+import { withCommission } from '@/lib/constants';
 
 const CATEGORY_NAMES: Record<string, string> = {
   electronics: 'Электроника',
@@ -146,7 +147,7 @@ export default async function UserProfilePage({ params }: PageProps) {
                     <Badge variant="secondary" className="text-xs">{CATEGORY_NAMES[item.category] || item.category}</Badge>
                     <h3 className="font-semibold line-clamp-2">{item.title}</h3>
                     <p className="text-lg font-bold text-indigo-600">
-                      {item.pricePerDay.toLocaleString('ru-RU')} ₽<span className="text-sm text-gray-500 font-normal">/день</span>
+                      {withCommission(Number(item.pricePerDay)).toLocaleString('ru-RU')} ₽<span className="text-sm text-gray-500 font-normal">/день</span>
                     </p>
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                       <MapPin className="w-3 h-3" />

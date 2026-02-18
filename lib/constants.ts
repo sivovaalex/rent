@@ -44,6 +44,18 @@ export function getCategoryAttributes(category: string): CategoryAttribute[] {
   return CATEGORY_ATTRIBUTES[category] ?? [];
 }
 
+// ==================== CATEGORY SUBCATEGORIES ====================
+
+export type CategoryKey = 'stream' | 'electronics' | 'clothes' | 'sports' | 'tools';
+
+export const CATEGORY_SUBCATEGORIES: Record<CategoryKey, string[]> = {
+  stream: ['Микрофоны', 'Камеры', 'Освещение', 'Звуковое оборудование', 'Триподы'],
+  electronics: ['Телефоны', 'Ноутбуки', 'Планшеты', 'Фотоаппараты', 'Аудиотехника'],
+  clothes: ['Верхняя одежда', 'Обувь', 'Аксессуары', 'Спортивная одежда', 'Одежда для мероприятий'],
+  sports: ['Велосипеды', 'Лыжи', 'Сноуборды', 'Спортивные залы', 'Инвентарь'],
+  tools: ['Строительные', 'Садовые', 'Ручные инструменты', 'Электроинструменты', 'Измерительные приборы'],
+};
+
 // ==================== PRICING ====================
 
 // Commission rate (15%)
@@ -59,6 +71,15 @@ export const COMMISSION_MULTIPLIER = 1 + COMMISSION_RATE;
  */
 export function withCommission(price: number): number {
   return Math.round(price * COMMISSION_MULTIPLIER * 100) / 100;
+}
+
+/**
+ * Convert price with commission back to base price
+ * @param priceWithCommission - price including commission
+ * @returns base price, rounded to 2 decimal places
+ */
+export function withoutCommission(priceWithCommission: number): number {
+  return Math.round((priceWithCommission / COMMISSION_MULTIPLIER) * 100) / 100;
 }
 
 /**

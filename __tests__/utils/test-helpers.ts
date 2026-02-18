@@ -37,15 +37,10 @@ export function createAuthenticatedRequest(
     token?: string;
   } = {}
 ): Request {
-  const { userId = 'test-user-id', token, ...rest } = options;
+  const { userId = 'test-user-id', token = 'mock-jwt-token', ...rest } = options;
   const headers = { ...rest.headers };
 
-  if (token) {
-    headers['authorization'] = `Bearer ${token}`;
-  } else {
-    // Fallback to x-user-id for backward compatibility
-    headers['x-user-id'] = userId;
-  }
+  headers['authorization'] = `Bearer ${token}`;
 
   return createMockRequest({ ...rest, headers });
 }

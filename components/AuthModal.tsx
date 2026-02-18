@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import type { AlertState, RegisterData, UserRole } from '@/types';
 import { REGISTRATION_CONSENT_LINKS, LEGAL_LINKS } from '@/lib/constants/legal-links';
+import { validateEmail, validatePassword, validatePhone, validateName } from '@/lib/validations/client';
 
 interface AuthModalProps {
   showAuth: boolean;
@@ -74,10 +75,10 @@ export default function AuthModal({
   }, [showAuth, setAuthAlert]);
 
   const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) {
-      setAuthAlert({ message: 'Пожалуйста, заполните все поля', type: 'error' });
-      return;
-    }
+    const emailErr = validateEmail(loginEmail);
+    if (emailErr) { setAuthAlert({ message: emailErr, type: 'error' }); return; }
+    const passErr = validatePassword(loginPassword);
+    if (passErr) { setAuthAlert({ message: passErr, type: 'error' }); return; }
 
     setIsLoading(true);
     try {
@@ -131,10 +132,14 @@ export default function AuthModal({
   };
 
   const handleRegister = async () => {
-    if (!registerName || !registerEmail || !registerPassword || !registerPhone) {
-      setAuthAlert({ message: 'Пожалуйста, заполните все обязательные поля', type: 'error' });
-      return;
-    }
+    const nameErr = validateName(registerName);
+    if (nameErr) { setAuthAlert({ message: nameErr, type: 'error' }); return; }
+    const emailErr = validateEmail(registerEmail);
+    if (emailErr) { setAuthAlert({ message: emailErr, type: 'error' }); return; }
+    const phoneErr = validatePhone(registerPhone);
+    if (phoneErr) { setAuthAlert({ message: phoneErr, type: 'error' }); return; }
+    const passErr = validatePassword(registerPassword);
+    if (passErr) { setAuthAlert({ message: passErr, type: 'error' }); return; }
 
     if (registerPassword !== registerConfirmPassword) {
       setAuthAlert({ message: 'Пароли не совпадают', type: 'error' });

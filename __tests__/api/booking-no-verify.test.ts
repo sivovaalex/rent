@@ -99,6 +99,7 @@ describe('POST /api/items/[id]/book - no verification required', () => {
       deposit: 5000,
       title: 'Test Item',
       photos: [],
+      owner: { isBlocked: false },
     });
 
     prismaMock.booking.findMany.mockResolvedValue([]);

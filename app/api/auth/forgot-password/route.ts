@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { sendPasswordResetEmail } from '@/lib/email';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
+import { authRateLimiter, rateLimitResponse, getClientIP } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/forgot-password
@@ -11,6 +12,13 @@ import crypto from 'crypto';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip = getClientIP(request);
+    const ipCheck = authRateLimiter.check(`forgot-password:${ip}`);
+    if (!ipCheck.success) {
+      return rateLimitResponse(ipCheck.resetTime);
+    }
+
     const body = await request.json();
     const { email } = body;
 

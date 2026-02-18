@@ -1,5 +1,6 @@
 'use client';
 import { useState, useCallback } from 'react';
+import { getAuthHeaders } from '@/hooks/use-auth';
 import type { Booking, User } from '@/types';
 
 interface UseBookingsOptions {
@@ -17,7 +18,7 @@ export function useBookings({ currentUser, onShowAlert }: UseBookingsOptions) {
     setIsLoading(true);
     try {
       const res = await fetch('/api/bookings', {
-        headers: { 'x-user-id': currentUser._id },
+        headers: getAuthHeaders(),
       });
       const data = await res.json();
 
@@ -38,10 +39,7 @@ export function useBookings({ currentUser, onShowAlert }: UseBookingsOptions) {
     try {
       const res = await fetch(`/api/bookings/${bookingId}/confirm-return`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser._id,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({}),
       });
       const data = await res.json();

@@ -7,6 +7,7 @@ export * from './items';
 export * from './bookings';
 export * from './reviews';
 export * from './profile';
+export * from './chat';
 
 // Validation helper
 export type ValidationResult<T> =
@@ -77,20 +78,3 @@ export function validateQuery<T>(
   return { success: true, data: result.data };
 }
 
-// Auth helper - extract user ID from headers
-export function getUserId(request: Request): string | null {
-  return request.headers.get('x-user-id');
-}
-
-export function requireAuth(request: Request): { userId: string } | { error: NextResponse } {
-  const userId = getUserId(request);
-  if (!userId) {
-    return {
-      error: NextResponse.json(
-        { error: 'Требуется авторизация' },
-        { status: 401 }
-      ),
-    };
-  }
-  return { userId };
-}

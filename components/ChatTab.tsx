@@ -142,7 +142,7 @@ export default function ChatTab({
                     {/* Аватар */}
                     <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                       {conv.otherUser.photo ? (
-                        <img src={conv.otherUser.photo} alt="" className="w-12 h-12 rounded-full object-cover" />
+                        <img src={conv.otherUser.photo} alt={conv.otherUser.name} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
                         <UserIcon className="w-6 h-6 text-indigo-600" />
                       )}
@@ -169,7 +169,7 @@ export default function ChatTab({
 
                     {/* Непрочитанные */}
                     {conv.unreadCount > 0 && (
-                      <Badge className="bg-indigo-600 text-white flex-shrink-0">
+                      <Badge className="bg-indigo-600 text-white flex-shrink-0" aria-label={conv.unreadCount + " непрочитанных"}>
                         {conv.unreadCount}
                       </Badge>
                     )}
@@ -190,12 +190,12 @@ export default function ChatTab({
       <Card className="rounded-b-none">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onCloseChat}>
+            <Button variant="ghost" size="icon" onClick={onCloseChat} aria-label="Вернуться к списку чатов">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
               {chatMeta?.otherUser.photo ? (
-                <img src={chatMeta.otherUser.photo} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <img src={chatMeta.otherUser.photo} alt={chatMeta.otherUser.name} className="w-10 h-10 rounded-full object-cover" />
               ) : (
                 <UserIcon className="w-5 h-5 text-indigo-600" />
               )}
@@ -209,7 +209,7 @@ export default function ChatTab({
       </Card>
 
       {/* Сообщения */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 border-x px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto bg-gray-50 border-x px-4 py-3 space-y-3" role="log" aria-live="polite" aria-label="Сообщения чата">
         {isLoadingMessages ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-400">Загрузка...</p>
@@ -263,6 +263,7 @@ export default function ChatTab({
               disabled={!messageText.trim() || isSending}
               size="icon"
               className="bg-indigo-600 hover:bg-indigo-700"
+              aria-label="Отправить сообщение"
             >
               <Send className="w-4 h-4" />
             </Button>

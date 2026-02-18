@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       }
     } else {
       where.status = 'approved';
+      // Hide items from blocked owners
+      where.owner = { isBlocked: false };
     }
 
     // City filter (by address text)
@@ -60,6 +62,19 @@ export async function GET(request: NextRequest) {
       where.pricePerDay = {};
       if (minPrice) where.pricePerDay.gte = parseFloat(minPrice);
       if (maxPrice) where.pricePerDay.lte = parseFloat(maxPrice);
+    }
+
+    // Date availability filter — exclude items with overlapping active bookings
+    const availableFrom = url.searchParams.get('availableFrom');
+    const availableTo = url.searchParams.get('availableTo');
+    if (availableFrom && availableTo) {
+      where.bookings = {
+        none: {
+          status: { in: ['pending_approval', 'pending_payment', 'paid', 'active'] },
+          startDate: { lte: new Date(availableTo) },
+          endDate: { gte: new Date(availableFrom) },
+        },
+      };
     }
 
     // Geo filter — bounding box pre-filter

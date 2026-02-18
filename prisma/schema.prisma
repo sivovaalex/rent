@@ -154,6 +154,8 @@ model User {
   verificationActions VerificationHistory[] @relation("VerificationAdmin")
   paymentLogs         PaymentLog[]
 
+  @@index([isBlocked])
+  @@index([verificationStatus])
   @@map("users")
 }
 
@@ -164,9 +166,9 @@ model Item {
   subcategory     String?
   title           String
   description     String
-  pricePerDay     Float       @map("price_per_day")
-  pricePerMonth   Float       @map("price_per_month")
-  deposit         Float
+  pricePerDay     Decimal     @map("price_per_day")
+  pricePerMonth   Decimal     @map("price_per_month")
+  deposit         Decimal
   address         String
   latitude        Float?
   longitude       Float?
@@ -210,17 +212,17 @@ model Booking {
   startDate     DateTime      @map("start_date")
   endDate       DateTime      @map("end_date")
   rentalType    RentalType    @map("rental_type")
-  rentalPrice   Float         @map("rental_price")
-  deposit       Float
-  commission    Float
-  insurance     Float         @default(0)
-  totalPrice    Float         @map("total_price")
-  prepayment    Float
+  rentalPrice   Decimal       @map("rental_price")
+  deposit       Decimal
+  commission    Decimal
+  insurance     Decimal       @default(0)
+  totalPrice    Decimal       @map("total_price")
+  prepayment    Decimal
   isInsured     Boolean       @default(false) @map("is_insured")
   status        BookingStatus @default(pending_payment)
   depositStatus String?       @map("deposit_status")
   paymentId     String?       @map("payment_id")
-  yookassaPaymentId String?   @map("yookassa_payment_id")
+  yookassaPaymentId String?   @unique @map("yookassa_payment_id")
 
   // Handover confirmations (Model B: deposit & remainder exchanged in person)
   depositConfirmedByRenter  Boolean   @default(false) @map("deposit_confirmed_by_renter")

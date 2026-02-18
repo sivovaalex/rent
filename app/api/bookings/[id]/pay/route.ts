@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     try {
       const payment = await createPayment({
-        amount: booking.commission,
+        amount: Number(booking.commission),
         bookingId: booking.id,
         description: `Комиссия за аренду: ${booking.item?.title || 'Лот'}`,
       });
@@ -46,14 +46,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
         data: { yookassaPaymentId: payment.id },
       });
 
-      logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'initiated', amount: booking.commission, provider: 'yookassa', metadata: { paymentId: payment.id, trigger: 'retry_pay' } });
+      logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'initiated', amount: Number(booking.commission), provider: 'yookassa', metadata: { paymentId: payment.id, trigger: 'retry_pay' } });
 
       return successResponse({
         success: true,
         paymentUrl: payment.confirmation?.confirmation_url,
       });
     } catch (paymentError) {
-      logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'failed', amount: booking.commission, provider: 'yookassa', metadata: { error: String(paymentError), trigger: 'retry_pay' } });
+      logPayment({ userId: authResult.userId, bookingId: booking.id, action: 'failed', amount: Number(booking.commission), provider: 'yookassa', metadata: { error: String(paymentError), trigger: 'retry_pay' } });
       console.error('POST /bookings/[id]/pay Error:', paymentError);
       return errorResponse('Ошибка создания платежа', 500);
     }

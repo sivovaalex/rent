@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, errorResponse, successResponse } from '@/lib/api-utils';
+import { validateBody, chatMessageSchema } from '@/lib/validations';
+import { apiRateLimiter, rateLimitResponse, getClientIP } from '@/lib/rate-limit';
 import { inlineChatUnreadCheck } from '@/lib/cron/inline-checks';
 
 interface RouteParams {
@@ -20,8 +22,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: {
-      item: { select: { ownerId: true, title: true, photos: true, owner: { select: { id: true, name: true, photo: true } } } },
-      renter: { select: { id: true, name: true, photo: true } },
+      item: { select: { ownerId: true, title: true, photos: true, owner: { select: { id: true, name: true, photo: true, isBlocked: true } } } },
+      renter: { select: { id: true, name: true, photo: true, isBlocked: true } },
     },
   });
 
@@ -34,6 +36,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   if (!isRenter && !isOwner) {
     return errorResponse('Нет доступа к этому чату', 403);
+  }
+
+  // Check if other participant is blocked
+  const otherBlocked = isOwner ? booking.renter.isBlocked : booking.item.owner.isBlocked;
+  if (otherBlocked) {
+    return errorResponse('Чат недоступен: другой участник заблокирован', 403);
   }
 
   // Загрузить сообщения
@@ -89,7 +97,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   // Проверить участие в бронировании
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { item: { select: { ownerId: true } } },
+    include: {
+      item: { select: { ownerId: true } },
+      renter: { select: { isBlocked: true } },
+    },
   });
 
   if (!booking) {
@@ -100,16 +111,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return errorResponse('Нет доступа к этому чату', 403);
   }
 
-  const body = await request.json();
-  const text = body.text?.trim();
-
-  if (!text || text.length === 0) {
-    return errorResponse('Сообщение не может быть пустым');
+  // Check if other participant is blocked
+  const isPostOwner = booking.item.ownerId === userId;
+  if (isPostOwner) {
+    // Owner sending — check if renter is blocked
+    if (booking.renter.isBlocked) {
+      return errorResponse('Чат недоступен: другой участник заблокирован', 403);
+    }
+  } else {
+    // Renter sending — need to check if owner is blocked
+    const owner = await prisma.user.findUnique({
+      where: { id: booking.item.ownerId },
+      select: { isBlocked: true },
+    });
+    if (owner?.isBlocked) {
+      return errorResponse('Чат недоступен: другой участник заблокирован', 403);
+    }
   }
 
-  if (text.length > 2000) {
-    return errorResponse('Сообщение слишком длинное (макс. 2000 символов)');
+  // Rate limit by user
+  const ip = getClientIP(request);
+  const rateLimitResult = apiRateLimiter.check(`chat:${userId}:${ip}`);
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult.resetTime);
   }
+
+  // Validate message body via Zod
+  const validation = await validateBody(request, chatMessageSchema);
+  if (!validation.success) return validation.error;
+  const { text } = validation.data;
 
   const message = await prisma.message.create({
     data: {

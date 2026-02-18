@@ -139,3 +139,56 @@ code {
     @apply bg-background text-foreground;
     }
 }
+
+/* Availability calendar styles */
+.availability-calendar .react-calendar {
+  width: 100%;
+  border: none;
+  border-radius: 0.5rem;
+  font-family: inherit;
+  background: transparent;
+}
+.availability-calendar .react-calendar__tile {
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  padding: 0.5em 0.25em;
+}
+.availability-calendar .react-calendar__tile:hover {
+  background: #f3f4f6;
+}
+.availability-calendar .react-calendar__tile--now {
+  background: #eef2ff;
+  font-weight: 600;
+}
+.availability-calendar .availability-free {
+  background: #dcfce7;
+  color: #166534;
+}
+.availability-calendar .availability-free:hover {
+  background: #bbf7d0;
+}
+.availability-calendar .availability-blocked {
+  background: #fee2e2;
+  color: #991b1b;
+  text-decoration: line-through;
+}
+.availability-calendar .availability-blocked:hover {
+  background: #fecaca;
+}
+.availability-calendar .react-calendar__navigation button {
+  font-size: 0.9rem;
+  border-radius: 0.25rem;
+}
+.availability-calendar .react-calendar__month-view__weekdays {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Hide scrollbar for horizontal scroll containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

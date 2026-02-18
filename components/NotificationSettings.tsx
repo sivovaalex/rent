@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, MessageCircle, Send, Loader2, Check, X, ExternalLink, Bell, BellOff } from 'lucide-react';
-import { isPushSupported, subscribeToPush, unsubscribeFromPush, getSubscription, registerServiceWorker } from '@/lib/push-client';
+import { isPushConfigured, subscribeToPush, unsubscribeFromPush, getSubscription, registerServiceWorker } from '@/lib/push-client';
 
 interface NotificationSettingsData {
   email: string | null;
@@ -42,9 +42,10 @@ export function NotificationSettings({ userRole }: NotificationSettingsProps) {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Push states
-  const [pushSupported] = useState(() => isPushSupported());
+  const [pushSupported] = useState(() => isPushConfigured());
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
 
   // Link code states
   const [telegramCode, setTelegramCode] = useState('');
@@ -245,46 +246,77 @@ export function NotificationSettings({ userRole }: NotificationSettingsProps) {
                   </p>
                 </div>
               </div>
-              <Button
-                variant={pushSubscribed ? 'outline' : 'default'}
-                size="sm"
-                disabled={pushLoading}
-                onClick={async () => {
-                  setPushLoading(true);
-                  try {
-                    if (pushSubscribed) {
-                      const ok = await unsubscribeFromPush();
-                      if (ok) {
-                        setPushSubscribed(false);
-                        setSuccess('Push-уведомления отключены');
+              <div className="flex items-center gap-2">
+                {pushSubscribed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={testLoading}
+                    onClick={async () => {
+                      setTestLoading(true);
+                      setError(null);
+                      try {
+                        const res = await fetch('/api/push/test', {
+                          method: 'POST',
+                          headers: getAuthHeaders(),
+                        });
+                        if (!res.ok) {
+                          const d = await res.json().catch(() => ({}));
+                          throw new Error(d.error || 'Не удалось отправить');
+                        }
+                        setSuccess('Тестовое уведомление отправлено — проверьте браузер');
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Ошибка теста');
+                      } finally {
+                        setTestLoading(false);
+                        setTimeout(() => { setSuccess(null); setError(null); }, 5000);
                       }
-                    } else {
-                      const sub = await subscribeToPush();
-                      if (sub) {
+                    }}
+                  >
+                    {testLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Проверить'}
+                  </Button>
+                )}
+                <Button
+                  variant={pushSubscribed ? 'outline' : 'default'}
+                  size="sm"
+                  disabled={pushLoading}
+                  onClick={async () => {
+                    setPushLoading(true);
+                    setError(null);
+                    try {
+                      if (pushSubscribed) {
+                        const ok = await unsubscribeFromPush();
+                        if (ok) {
+                          setPushSubscribed(false);
+                          setSuccess('Push-уведомления отключены');
+                          fetchSettings();
+                        }
+                      } else {
+                        const sub = await subscribeToPush();
                         setPushSubscribed(true);
                         setSuccess('Push-уведомления включены');
                         fetchSettings();
-                      } else {
-                        setError('Не удалось включить push. Проверьте разрешения браузера.');
+                        // Suppress unused var warning
+                        void sub;
                       }
+                      setTimeout(() => { setSuccess(null); }, 3000);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Ошибка при настройке push');
+                      setTimeout(() => setError(null), 7000);
+                    } finally {
+                      setPushLoading(false);
                     }
-                    setTimeout(() => { setSuccess(null); setError(null); }, 3000);
-                  } catch {
-                    setError('Ошибка при настройке push');
-                    setTimeout(() => setError(null), 5000);
-                  } finally {
-                    setPushLoading(false);
-                  }
-                }}
-              >
-                {pushLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : pushSubscribed ? (
-                  <><BellOff className="h-4 w-4 mr-1" /> Отключить</>
-                ) : (
-                  <><Bell className="h-4 w-4 mr-1" /> Включить</>
-                )}
-              </Button>
+                  }}
+                >
+                  {pushLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : pushSubscribed ? (
+                    <><BellOff className="h-4 w-4 mr-1" /> Отключить</>
+                  ) : (
+                    <><Bell className="h-4 w-4 mr-1" /> Включить</>
+                  )}
+                </Button>
+              </div>
             </div>
 
             {pushSubscribed && settings && (

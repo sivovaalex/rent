@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Package, Zap, Camera, Shirt, Dumbbell, Hammer, Heart, MapPin } from 'lucide-react';
 import { YandexMap } from './YandexMap';
-import { getCategoryAttributes } from '@/lib/constants';
+import { getCategoryAttributes, withCommission, formatPrice } from '@/lib/constants';
 import ReviewList from './ReviewList';
 import TrustBadges from './TrustBadges';
+import AvailabilityCalendar from './AvailabilityCalendar';
+import SimilarItems from './SimilarItems';
 import { Loader } from '@/components/ui/spinner';
 import type { User, Item, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
@@ -190,13 +192,13 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                     {item.price_per_day && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Цена за день:</span>
-                        <span className="font-bold text-lg">{item.price_per_day} ₽</span>
+                        <span className="font-bold text-lg">{formatPrice(withCommission(item.price_per_day))} ₽</span>
                       </div>
                     )}
                     {item.price_per_month && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Цена за месяц:</span>
-                        <span className="font-bold text-lg">{item.price_per_month} ₽</span>
+                        <span className="font-bold text-lg">{formatPrice(withCommission(item.price_per_month))} ₽</span>
                       </div>
                     )}
                     <div className="flex justify-between">
@@ -205,6 +207,10 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                     </div>
                   </div>
                 </div>
+
+                {item.status === 'approved' && (
+                  <AvailabilityCalendar itemId={item._id} />
+                )}
 
                 <div>
                   <h3 className="font-semibold mb-2">Владелец</h3>
@@ -270,6 +276,10 @@ export default function ItemDetailModal({ isOpen, onClose, itemId, currentUser, 
                 onReply={console.log}
               />
             </div>
+
+            {item.status === 'approved' && (
+              <SimilarItems itemId={item._id} onViewItem={(id) => { window.location.href = `/item/${id}`; }} />
+            )}
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
               {currentUser && item.owner_id !== currentUser._id && item.status === 'approved' && (

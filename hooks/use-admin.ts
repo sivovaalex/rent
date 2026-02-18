@@ -29,8 +29,10 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsersTotal, setAllUsersTotal] = useState(0);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const loadAdminData = useCallback(async () => {
     if (!currentUser) return;
@@ -43,7 +45,7 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
         fetch('/api/admin/users?status=pending', { headers }),
         fetch('/api/admin/items?status=pending', { headers }),
         fetch('/api/admin/stats', { headers }),
-        fetch('/api/admin/users/all', { headers }),
+        fetch('/api/admin/users/all?limit=50&offset=0', { headers }),
       ]);
 
       const usersData = await usersRes.json();
@@ -56,6 +58,7 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
       if (statsRes.ok) setStats(statsData);
       if (allUsersRes.ok && currentUser?.role === 'admin') {
         setAllUsers(allUsersData.users || []);
+        setAllUsersTotal(allUsersData.total || 0);
       }
     } catch (error) {
       console.error('Ошибка загрузки данных админки:', error);
@@ -115,6 +118,26 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
     }
   }, [currentUser, onShowAlert, loadAdminData]);
 
+  const loadMoreUsers = useCallback(async () => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    setIsLoadingMore(true);
+    try {
+      const headers = getAuthHeaders();
+      const offset = allUsers.length;
+      const res = await fetch(`/api/admin/users/all?limit=50&offset=${offset}`, { headers });
+      const data = await res.json();
+      if (res.ok) {
+        setAllUsers((prev) => [...prev, ...(data.users || [])]);
+        setAllUsersTotal(data.total || 0);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки пользователей:', error);
+      onShowAlert?.('Ошибка загрузки пользователей', 'error');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [currentUser, allUsers.length, onShowAlert]);
+
   const blockUser = useCallback(async (userId: string, isBlocked: boolean): Promise<boolean> => {
     if (!currentUser) return false;
 
@@ -144,9 +167,12 @@ export function useAdmin({ currentUser, onShowAlert }: UseAdminOptions) {
     pendingUsers,
     pendingItems,
     allUsers,
+    allUsersTotal,
     stats,
     isLoading,
+    isLoadingMore,
     loadAdminData,
+    loadMoreUsers,
     verifyUser,
     moderateItem,
     blockUser,

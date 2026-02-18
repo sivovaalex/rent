@@ -13,6 +13,8 @@ import {
 } from '@/lib/notifications';
 import { autoRejectExpiredBookings } from '@/lib/approval';
 
+const BATCH_SIZE = 100;
+
 interface CronResult {
   chatUnread: number;
   moderationReminders: number;
@@ -158,16 +160,23 @@ export async function processModerationReminders(): Promise<number> {
 
   const adminIds = admins.map(a => a.id);
 
-  // Pending items older than 30 min
-  const pendingItems = await prisma.item.findMany({
-    where: {
-      status: 'pending',
-      createdAt: { lte: thirtyMinAgo },
-    },
-    select: { id: true, title: true },
-  });
+  // Pending items older than 30 min — process in batches
+  let itemCursor: string | undefined;
+  while (true) {
+    const pendingItems = await prisma.item.findMany({
+      where: {
+        status: 'pending',
+        createdAt: { lte: thirtyMinAgo },
+      },
+      select: { id: true, title: true },
+      take: BATCH_SIZE,
+      orderBy: { id: 'asc' },
+      ...(itemCursor ? { skip: 1, cursor: { id: itemCursor } } : {}),
+    });
 
-  if (pendingItems.length > 0) {
+    if (pendingItems.length === 0) break;
+    itemCursor = pendingItems[pendingItems.length - 1].id;
+
     // Batch: find already-sent notifications (1 query instead of N×M)
     const existingItemLogs = await prisma.notificationLog.findMany({
       where: {
@@ -213,16 +222,23 @@ export async function processModerationReminders(): Promise<number> {
     }
   }
 
-  // Pending user verifications older than 30 min
-  const pendingUsers = await prisma.user.findMany({
-    where: {
-      verificationStatus: 'pending',
-      verificationSubmittedAt: { lte: thirtyMinAgo, not: null },
-    },
-    select: { id: true, name: true },
-  });
+  // Pending user verifications older than 30 min — process in batches
+  let userCursor: string | undefined;
+  while (true) {
+    const pendingUsers = await prisma.user.findMany({
+      where: {
+        verificationStatus: 'pending',
+        verificationSubmittedAt: { lte: thirtyMinAgo, not: null },
+      },
+      select: { id: true, name: true },
+      take: BATCH_SIZE,
+      orderBy: { id: 'asc' },
+      ...(userCursor ? { skip: 1, cursor: { id: userCursor } } : {}),
+    });
 
-  if (pendingUsers.length > 0) {
+    if (pendingUsers.length === 0) break;
+    userCursor = pendingUsers[pendingUsers.length - 1].id;
+
     // Batch: find already-sent notifications (1 query instead of N×M)
     const existingUserLogs = await prisma.notificationLog.findMany({
       where: {
@@ -281,52 +297,62 @@ async function processReturnReminders(): Promise<number> {
   const tomorrowEnd = new Date(tomorrowStart);
   tomorrowEnd.setHours(23, 59, 59, 999);
 
-  const bookings = await prisma.booking.findMany({
-    where: {
-      status: 'active',
-      endDate: {
-        gte: tomorrowStart,
-        lte: tomorrowEnd,
+  // Process in batches to handle any number of bookings
+  let cursor: string | undefined;
+  while (true) {
+    const bookings = await prisma.booking.findMany({
+      where: {
+        status: 'active',
+        endDate: {
+          gte: tomorrowStart,
+          lte: tomorrowEnd,
+        },
       },
-    },
-    include: {
-      item: { select: { ownerId: true, title: true } },
-      renter: { select: { id: true, name: true } },
-    },
-  });
+      include: {
+        item: { select: { ownerId: true, title: true } },
+        renter: { select: { id: true, name: true } },
+      },
+      take: BATCH_SIZE,
+      orderBy: { id: 'asc' },
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    });
 
-  for (const booking of bookings) {
-    // Notify renter
-    const shouldNotifyRenter = await claimNotificationSlot(
-      'booking',
-      booking.id,
-      'rental_return_reminder',
-      booking.renterId
-    );
-    if (shouldNotifyRenter) {
-      await notifyRentalReturnReminder(booking.renterId, {
-        bookingId: booking.id,
-        itemTitle: booking.item.title,
-        isOwner: false,
-      }).catch(console.error);
-      sent++;
-    }
+    if (bookings.length === 0) break;
+    cursor = bookings[bookings.length - 1].id;
 
-    // Notify owner
-    const shouldNotifyOwner = await claimNotificationSlot(
-      'booking',
-      booking.id,
-      'rental_return_reminder',
-      booking.item.ownerId
-    );
-    if (shouldNotifyOwner) {
-      await notifyRentalReturnReminder(booking.item.ownerId, {
-        bookingId: booking.id,
-        itemTitle: booking.item.title,
-        renterName: booking.renter.name,
-        isOwner: true,
-      }).catch(console.error);
-      sent++;
+    for (const booking of bookings) {
+      // Notify renter
+      const shouldNotifyRenter = await claimNotificationSlot(
+        'booking',
+        booking.id,
+        'rental_return_reminder',
+        booking.renterId
+      );
+      if (shouldNotifyRenter) {
+        await notifyRentalReturnReminder(booking.renterId, {
+          bookingId: booking.id,
+          itemTitle: booking.item.title,
+          isOwner: false,
+        }).catch(console.error);
+        sent++;
+      }
+
+      // Notify owner
+      const shouldNotifyOwner = await claimNotificationSlot(
+        'booking',
+        booking.id,
+        'rental_return_reminder',
+        booking.item.ownerId
+      );
+      if (shouldNotifyOwner) {
+        await notifyRentalReturnReminder(booking.item.ownerId, {
+          bookingId: booking.id,
+          itemTitle: booking.item.title,
+          renterName: booking.renter.name,
+          isOwner: true,
+        }).catch(console.error);
+        sent++;
+      }
     }
   }
 
@@ -339,60 +365,70 @@ async function processReviewReminders(): Promise<number> {
 
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const bookings = await prisma.booking.findMany({
-    where: {
-      status: 'completed',
-      completedAt: {
-        lte: twentyFourHoursAgo,
-        not: null,
+  // Process in batches to handle any number of completed bookings
+  let cursor: string | undefined;
+  while (true) {
+    const bookings = await prisma.booking.findMany({
+      where: {
+        status: 'completed',
+        completedAt: {
+          lte: twentyFourHoursAgo,
+          not: null,
+        },
       },
-    },
-    include: {
-      item: { select: { ownerId: true, title: true } },
-      renter: { select: { id: true } },
-      reviews: { select: { type: true, userId: true } },
-    },
-  });
+      include: {
+        item: { select: { ownerId: true, title: true } },
+        renter: { select: { id: true } },
+        reviews: { select: { type: true, userId: true } },
+      },
+      take: BATCH_SIZE,
+      orderBy: { id: 'asc' },
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    });
 
-  for (const booking of bookings) {
-    const hasRenterReview = booking.reviews.some(
-      (r) => r.type === 'renter_review'
-    );
-    const hasOwnerReview = booking.reviews.some(
-      (r) => r.type === 'owner_review'
-    );
+    if (bookings.length === 0) break;
+    cursor = bookings[bookings.length - 1].id;
 
-    // Remind renter if no renter_review
-    if (!hasRenterReview) {
-      const shouldSend = await claimNotificationSlot(
-        'booking',
-        booking.id,
-        'review_reminder',
-        booking.renterId
+    for (const booking of bookings) {
+      const hasRenterReview = booking.reviews.some(
+        (r) => r.type === 'renter_review'
       );
-      if (shouldSend) {
-        await notifyReviewReminder(booking.renterId, {
-          bookingId: booking.id,
-          itemTitle: booking.item.title,
-        }).catch(console.error);
-        sent++;
+      const hasOwnerReview = booking.reviews.some(
+        (r) => r.type === 'owner_review'
+      );
+
+      // Remind renter if no renter_review
+      if (!hasRenterReview) {
+        const shouldSend = await claimNotificationSlot(
+          'booking',
+          booking.id,
+          'review_reminder',
+          booking.renterId
+        );
+        if (shouldSend) {
+          await notifyReviewReminder(booking.renterId, {
+            bookingId: booking.id,
+            itemTitle: booking.item.title,
+          }).catch(console.error);
+          sent++;
+        }
       }
-    }
 
-    // Remind owner if no owner_review
-    if (!hasOwnerReview) {
-      const shouldSend = await claimNotificationSlot(
-        'booking',
-        booking.id,
-        'review_reminder',
-        booking.item.ownerId
-      );
-      if (shouldSend) {
-        await notifyReviewReminder(booking.item.ownerId, {
-          bookingId: booking.id,
-          itemTitle: booking.item.title,
-        }).catch(console.error);
-        sent++;
+      // Remind owner if no owner_review
+      if (!hasOwnerReview) {
+        const shouldSend = await claimNotificationSlot(
+          'booking',
+          booking.id,
+          'review_reminder',
+          booking.item.ownerId
+        );
+        if (shouldSend) {
+          await notifyReviewReminder(booking.item.ownerId, {
+            bookingId: booking.id,
+            itemTitle: booking.item.title,
+          }).catch(console.error);
+          sent++;
+        }
       }
     }
   }

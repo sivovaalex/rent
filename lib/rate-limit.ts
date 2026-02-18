@@ -71,6 +71,11 @@ export const authRateLimiter = rateLimit({
   maxRequests: 10, // 10 requests per minute for auth
 });
 
+export const smsRateLimiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  maxRequests: 3, // 3 SMS per minute per phone number
+});
+
 export const apiRateLimiter = rateLimit({
   interval: 60 * 1000, // 1 minute
   maxRequests: 100, // 100 requests per minute for general API

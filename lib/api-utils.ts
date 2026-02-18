@@ -9,14 +9,17 @@ import type { User as ClientUser, Item as ClientItem, Booking as ClientBooking }
 
 /** Generate 6-digit SMS code */
 export function generateSMSCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 /** Encrypt document data with AES-256-CBC */
 export function encryptDocument(data: string): string {
   const algorithm = 'aes-256-cbc';
+  if (!process.env.ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
   const key = crypto.scryptSync(
-    process.env.ENCRYPTION_KEY || 'default-secret-key-change-me',
+    process.env.ENCRYPTION_KEY,
     crypto.randomBytes(16).toString('hex'),
     32
   );
@@ -41,14 +44,13 @@ export function successResponse<T>(data: T, status: number = 200) {
 
 // ==================== AUTH HELPERS ====================
 
-/** Get user ID from JWT token or fallback to x-user-id header */
+/** Get user ID from JWT token */
 export async function getUserIdFromToken(request: Request): Promise<string | null> {
   const authHeader = request.headers.get('authorization');
   const token = extractTokenFromHeader(authHeader);
 
   if (!token) {
-    // Fallback to x-user-id for backward compatibility during migration
-    return request.headers.get('x-user-id');
+    return null;
   }
 
   const payload = await verifyToken(token);
@@ -181,6 +183,12 @@ export function safeUser(user: User): ClientUser {
   };
 }
 
+/** Convert Prisma Decimal to plain number */
+function toNumber(val: unknown): number {
+  if (val == null) return 0;
+  return Number(val);
+}
+
 interface ItemWithOwner extends Item {
   owner?: PartialOwner | null;
 }
@@ -193,7 +201,7 @@ export function transformItem(item: ItemWithOwner): ClientItem {
     subcategory: item.subcategory ?? undefined,
     title: item.title,
     description: item.description,
-    deposit: item.deposit,
+    deposit: toNumber(item.deposit),
     address: item.address,
     latitude: item.latitude ?? undefined,
     longitude: item.longitude ?? undefined,
@@ -212,15 +220,15 @@ export function transformItem(item: ItemWithOwner): ClientItem {
     ownerPhone: item.owner?.phone,
     ownerTrustBadges: item.owner?.trustBadges,
     ownerTrustScore: item.owner?.trustScore,
-    pricePerDay: item.pricePerDay,
-    pricePerMonth: item.pricePerMonth,
+    pricePerDay: toNumber(item.pricePerDay),
+    pricePerMonth: toNumber(item.pricePerMonth),
     // snake_case (legacy, deprecated)
     owner_id: item.ownerId,
     owner_name: item.owner?.name,
     owner_rating: item.owner?.rating,
     owner_phone: item.owner?.phone,
-    price_per_day: item.pricePerDay,
-    price_per_month: item.pricePerMonth,
+    price_per_day: toNumber(item.pricePerDay),
+    price_per_month: toNumber(item.pricePerMonth),
   };
 }
 
@@ -261,10 +269,10 @@ export function transformBooking(booking: BookingWithRelations): ClientBooking {
 
   return {
     _id: booking.id,
-    deposit: booking.deposit,
-    commission: booking.commission,
-    insurance: booking.insurance,
-    prepayment: booking.prepayment,
+    deposit: toNumber(booking.deposit),
+    commission: toNumber(booking.commission),
+    insurance: toNumber(booking.insurance),
+    prepayment: toNumber(booking.prepayment),
     status: booking.status,
     createdAt: booking.createdAt,
     paidAt: booking.paidAt ?? undefined,
@@ -274,8 +282,8 @@ export function transformBooking(booking: BookingWithRelations): ClientBooking {
     startDate: booking.startDate.toISOString(),
     endDate: booking.endDate.toISOString(),
     rentalType: booking.rentalType,
-    rentalPrice: booking.rentalPrice,
-    totalPrice: booking.totalPrice,
+    rentalPrice: toNumber(booking.rentalPrice),
+    totalPrice: toNumber(booking.totalPrice),
     isInsured: booking.isInsured,
     depositStatus: booking.depositStatus ?? undefined,
     handoverPhotos: booking.handoverPhotos,
@@ -309,8 +317,8 @@ export function transformBooking(booking: BookingWithRelations): ClientBooking {
     start_date: booking.startDate.toISOString(),
     end_date: booking.endDate.toISOString(),
     rental_type: booking.rentalType,
-    rental_price: booking.rentalPrice,
-    total_price: booking.totalPrice,
+    rental_price: toNumber(booking.rentalPrice),
+    total_price: toNumber(booking.totalPrice),
     is_insured: booking.isInsured,
     deposit_status: booking.depositStatus ?? undefined,
     handover_photos: booking.handoverPhotos,
