@@ -212,6 +212,7 @@ const CatalogFilters = React.memo(function CatalogFilters({
           <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
             <Input
               type="date"
+              placeholder="Свободно с"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="w-full sm:w-[130px] text-xs sm:text-sm"
@@ -221,6 +222,7 @@ const CatalogFilters = React.memo(function CatalogFilters({
             <span className="text-gray-400 text-xs">–</span>
             <Input
               type="date"
+              placeholder="до"
               value={availableTo}
               onChange={(e) => setAvailableTo(e.target.value)}
               className="w-full sm:w-[130px] text-xs sm:text-sm"
