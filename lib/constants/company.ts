@@ -33,7 +33,7 @@ export const COMPANY_INFO = {
 
   // Данные платформы
   platformName: 'Арендол',
-  platformUrl: 'https://arendapro.ru',
+  platformUrl: 'https://arendol.ru',
   commissionRate: 0.15, // 15% комиссия платформы
   commissionRatePercent: '15%',
 

@@ -106,8 +106,11 @@ export default function Footer() {
               Все документы
             </Link>
           </div>
-          <p className="text-center text-gray-500 text-xs sm:text-sm">
+          {/*<p className="text-center text-gray-500 text-xs sm:text-sm">
             © {currentYear} {COMPANY_INFO.shortName}. Все права защищены.
+          </p>*/}
+          <p className="text-center text-gray-500 text-xs sm:text-sm">
+            © {currentYear} ИНН 246609008720. Все права защищены.
           </p>
         </div>
       </div>
