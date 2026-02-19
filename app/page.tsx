@@ -18,13 +18,31 @@ import { useAlert, useAuth, useItems, useBookings, useAdmin, useChat, useFavorit
 export default function App() {
   const VALID_TABS = ['catalog', 'bookings', 'chat', 'analytics', 'profile', 'admin'];
 
+  // Parse hash like "admin-verification-history" → { tab: "admin", subHash: "verification-history" }
+  const parseHash = (rawHash: string): { tab: string; subHash: string } => {
+    const hash = rawHash.replace('#', '');
+    const sep = hash.indexOf('-');
+    const tab = sep >= 0 ? hash.slice(0, sep) : hash;
+    const subHash = sep >= 0 ? hash.slice(sep + 1) : '';
+    return { tab: VALID_TABS.includes(tab) ? tab : 'catalog', subHash };
+  };
+
   const [currentTab, setCurrentTabState] = useState(() => {
     if (typeof window !== 'undefined') {
-      const hash = window.location.hash.replace('#', '');
-      if (VALID_TABS.includes(hash)) return hash;
+      return parseHash(window.location.hash).tab;
     }
     return 'catalog';
   });
+
+  // Sub-hash state for admin tab
+  const [adminSubHash, setAdminSubHashState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const { tab, subHash } = parseHash(window.location.hash);
+      return tab === 'admin' ? subHash : '';
+    }
+    return '';
+  });
+
   const [currentPage, setCurrentPage] = useState<'home' | 'app'>('home');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -32,10 +50,25 @@ export default function App() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
 
-  // Sync tab ↔ hash
+  // Update hash with optional sub-part
+  const updateHash = (tab: string, subHash?: string) => {
+    window.location.hash = subHash ? `${tab}-${subHash}` : tab;
+  };
+
+  // Sync tab ↔ hash (preserves sub-hash for admin/catalog)
   const setCurrentTab = (tab: string) => {
     setCurrentTabState(tab);
-    window.location.hash = tab;
+    if (tab === 'admin') {
+      updateHash(tab, adminSubHash || undefined);
+    } else {
+      updateHash(tab);
+    }
+  };
+
+  // Called by AdminTab when its sub-tab changes
+  const handleAdminSubHashChange = (subHash: string) => {
+    setAdminSubHashState(subHash);
+    updateHash('admin', subHash || undefined);
   };
 
   // Custom hooks
@@ -128,18 +161,32 @@ export default function App() {
     setCityName(city.name);
   }, [city.name, setCityName]);
 
-  // Sync tab ↔ hash
+  // Sync tab ↔ hash (handles sub-hashes like #admin-verification-history, #catalog-mine)
   useEffect(() => {
     const onHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (VALID_TABS.includes(hash)) {
-        setCurrentTabState(hash);
-        if (currentPage === 'home' && currentUser) setCurrentPage('app');
+      const { tab, subHash } = parseHash(window.location.hash);
+      setCurrentTabState(tab);
+      if (tab === 'admin') {
+        setAdminSubHashState(subHash);
+      } else if (tab === 'catalog') {
+        setCatalogView(subHash === 'mine' ? 'mine' : 'all');
       }
+      if (currentPage === 'home' && currentUser) setCurrentPage('app');
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, [currentPage, currentUser]);
+  }, [currentPage, currentUser, setCatalogView]);
+
+  // Sync catalogView from initial hash on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const { tab, subHash } = parseHash(window.location.hash);
+      if (tab === 'catalog' && subHash === 'mine') {
+        setCatalogView('mine');
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Загрузка непрочитанных при входе
   useEffect(() => {
@@ -294,7 +341,10 @@ export default function App() {
                 sortBy={sortBy}
                 setSortBy={setSortBy}
                 catalogView={catalogView}
-                setCatalogView={setCatalogView}
+                setCatalogView={(view: string) => {
+                  setCatalogView(view);
+                  updateHash('catalog', view === 'mine' ? 'mine' : undefined);
+                }}
                 showAllStatuses={showAllStatuses}
                 setShowAllStatuses={setShowAllStatuses}
                 loadItems={loadItems}
@@ -412,6 +462,8 @@ export default function App() {
                   isLoading={adminLoading}
                   isLoadingMore={adminLoadingMore}
                   loadMoreUsers={loadMoreUsers}
+                  initialSubHash={adminSubHash}
+                  onSubHashChange={handleAdminSubHashChange}
                 />
               </TabsContent>
             )}

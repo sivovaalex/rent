@@ -50,15 +50,45 @@ interface AdminTabProps {
   isLoading?: boolean;
   isLoadingMore?: boolean;
   loadMoreUsers: () => Promise<void>;
+  // Sub-tab URL routing
+  initialSubHash?: string;
+  onSubHashChange?: (subHash: string) => void;
 }
 
-export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, allUsersTotal, isLoading, isLoadingMore, loadMoreUsers }: AdminTabProps) {
-  const [adminSubTab, setAdminSubTab] = useState('stats');
+// Parse "stats" | "verification" | "verification-history" | "users" → { adminSubTab, verificationSubTab }
+export function parseAdminSubHash(subHash: string): { adminSubTab: string; verificationSubTab: string } {
+  if (subHash === 'users') return { adminSubTab: 'users', verificationSubTab: 'pending' };
+  if (subHash === 'verification-history') return { adminSubTab: 'verification', verificationSubTab: 'history' };
+  if (subHash === 'verification') return { adminSubTab: 'verification', verificationSubTab: 'pending' };
+  return { adminSubTab: 'stats', verificationSubTab: 'pending' };
+}
+
+export default function AdminTab({ currentUser, showAlert, loadAdminData, pendingUsers, pendingItems, stats, allUsers, allUsersTotal, isLoading, isLoadingMore, loadMoreUsers, initialSubHash, onSubHashChange }: AdminTabProps) {
+  const initial = parseAdminSubHash(initialSubHash || '');
+  const [adminSubTab, setAdminSubTab] = useState(initial.adminSubTab);
   const [showAdminUserModal, setShowAdminUserModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
   const [moderatingItemId, setModeratingItemId] = useState<string | null>(null);
-  const [verificationSubTab, setVerificationSubTab] = useState('pending');
+  const [verificationSubTab, setVerificationSubTab] = useState(initial.verificationSubTab);
+
+  // Sync state when navigating with browser back/forward
+  useEffect(() => {
+    const parsed = parseAdminSubHash(initialSubHash || '');
+    setAdminSubTab(parsed.adminSubTab);
+    setVerificationSubTab(parsed.verificationSubTab);
+  }, [initialSubHash]);
+
+  // Wrapped setters that also update the URL hash
+  const changeAdminSubTab = (tab: string) => {
+    setAdminSubTab(tab);
+    onSubHashChange?.(tab === 'stats' ? 'stats' : tab);
+  };
+
+  const changeVerificationSubTab = (subTab: string) => {
+    setVerificationSubTab(subTab);
+    onSubHashChange?.(subTab === 'history' ? 'verification-history' : 'verification');
+  };
   const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
@@ -239,7 +269,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
 
   return (
     <div className="space-y-6">
-      <Tabs value={adminSubTab} onValueChange={setAdminSubTab}>
+      <Tabs value={adminSubTab} onValueChange={changeAdminSubTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="stats">
             <BarChart className="w-4 h-4 mr-2" />
@@ -306,7 +336,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
             {currentUser?.role === 'admin' && (
               <div className="flex gap-2 border-b pb-2">
                 <button
-                  onClick={() => setVerificationSubTab('pending')}
+                  onClick={() => changeVerificationSubTab('pending')}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                     verificationSubTab === 'pending'
                       ? 'bg-indigo-100 text-indigo-700'
@@ -320,7 +350,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                   )}
                 </button>
                 <button
-                  onClick={() => { setVerificationSubTab('history'); loadVerificationHistory(); }}
+                  onClick={() => { changeVerificationSubTab('history'); loadVerificationHistory(); }}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                     verificationSubTab === 'history'
                       ? 'bg-indigo-100 text-indigo-700'
