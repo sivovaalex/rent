@@ -133,8 +133,11 @@ export default function LegalLayout({ children }: LegalLayoutProps) {
           {/* Нижняя часть футера */}
           <div className="border-t border-gray-800 mt-12 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-gray-500 text-sm">
+              {/*<p className="text-gray-500 text-sm">
                 &copy; {new Date().getFullYear()} {COMPANY_INFO.shortName}. Все права защищены.
+              </p>*/}
+              <p className="text-gray-500 text-sm">
+                &copy; {new Date().getFullYear()} ИНН 246609008720. Все права защищены.
               </p>
               <div className="flex gap-6 text-sm text-gray-500">
                 <Link href="/legal/privacy" className="hover:text-white transition-colors">
