@@ -43,6 +43,15 @@ export default function App() {
     return '';
   });
 
+  // Sub-hash state for chat tab: '' = чат, 'support' = поддержка
+  const [chatSubHash, setChatSubHashState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const { tab, subHash } = parseHash(window.location.hash);
+      return tab === 'chat' ? subHash : '';
+    }
+    return '';
+  });
+
   const [currentPage, setCurrentPage] = useState<'home' | 'app'>('home');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -55,11 +64,13 @@ export default function App() {
     window.location.hash = subHash ? `${tab}-${subHash}` : tab;
   };
 
-  // Sync tab ↔ hash (preserves sub-hash for admin/catalog)
+  // Sync tab ↔ hash (preserves sub-hash for admin/catalog/chat)
   const setCurrentTab = (tab: string) => {
     setCurrentTabState(tab);
     if (tab === 'admin') {
       updateHash(tab, adminSubHash || undefined);
+    } else if (tab === 'chat') {
+      updateHash(tab, chatSubHash || undefined);
     } else {
       updateHash(tab);
     }
@@ -69,6 +80,12 @@ export default function App() {
   const handleAdminSubHashChange = (subHash: string) => {
     setAdminSubHashState(subHash);
     updateHash('admin', subHash || undefined);
+  };
+
+  // Called by ChatTab when its sub-tab changes
+  const handleChatSubHashChange = (subHash: string) => {
+    setChatSubHashState(subHash);
+    updateHash('chat', subHash || undefined);
   };
 
   // Custom hooks
@@ -186,6 +203,8 @@ export default function App() {
         setAdminSubHashState(subHash);
       } else if (tab === 'catalog') {
         setCatalogView(subHash === 'mine' ? 'mine' : 'all');
+      } else if (tab === 'chat') {
+        setChatSubHashState(subHash);
       }
       if (currentPage === 'home' && currentUser) setCurrentPage('app');
     };
@@ -432,6 +451,8 @@ export default function App() {
                   loadConversations={loadConversations}
                   initialBookingId={chatInitialBookingId}
                   supportUnread={supportUnread}
+                  chatSubHash={chatSubHash}
+                  onChatSubHashChange={handleChatSubHashChange}
                 />
               ) : (
                 <div className="text-center py-12">

@@ -25,6 +25,8 @@ interface ChatTabProps {
   loadConversations: () => Promise<void>;
   initialBookingId?: string | null;
   supportUnread?: number;
+  chatSubHash?: string;
+  onChatSubHashChange?: (subHash: string) => void;
 }
 
 export default function ChatTab({
@@ -42,11 +44,15 @@ export default function ChatTab({
   loadConversations,
   initialBookingId,
   supportUnread = 0,
+  chatSubHash,
+  onChatSubHashChange,
 }: ChatTabProps) {
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [chatSearch, setChatSearch] = useState('');
-  const [chatSubTab, setChatSubTab] = useState<'chat' | 'support'>('chat');
+  // Controlled by parent via URL hash: '' or undefined → 'chat', 'support' → 'support'
+  const chatSubTab: 'chat' | 'support' = chatSubHash === 'support' ? 'support' : 'chat';
+  const setChatSubTab = (v: 'chat' | 'support') => onChatSubHashChange?.(v === 'chat' ? '' : v);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredConversations = useMemo(() => {
@@ -206,7 +212,7 @@ export default function ChatTab({
         {/* ── Служба поддержки ── */}
         <TabsContent value="support" className="mt-0">
           <SupportSection
-            mode="user"
+            mode={currentUser.role === 'admin' || currentUser.role === 'moderator' ? 'admin' : 'user'}
             currentUser={currentUser}
             showAlert={showAlert}
           />
