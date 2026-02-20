@@ -75,6 +75,17 @@ enum OwnerType {
   legal_entity
 }
 
+enum SupportCategory {
+  technical
+  other
+}
+
+enum SupportStatus {
+  open
+  in_progress
+  closed
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -153,6 +164,8 @@ model User {
   verificationHistory VerificationHistory[] @relation("VerificationUser")
   verificationActions VerificationHistory[] @relation("VerificationAdmin")
   paymentLogs         PaymentLog[]
+  supportTickets      SupportTicket[]
+  supportMessages     SupportMessage[]      @relation("SupportMessageSender")
 
   @@index([isBlocked])
   @@index([verificationStatus])
@@ -453,4 +466,40 @@ model NotificationLog {
   @@index([entityType, eventType])
   @@index([sentAt])
   @@map("notification_log")
+}
+
+model SupportTicket {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  category      SupportCategory
+  subject       String
+  status        SupportStatus   @default(open)
+  unreadByAdmin Boolean         @default(true) @map("unread_by_admin")
+  unreadByUser  Boolean         @default(false) @map("unread_by_user")
+  closedAt      DateTime?       @map("closed_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id        String        @id @default(uuid())
+  ticketId  String        @map("ticket_id")
+  userId    String?       @map("user_id")
+  text      String
+  isAdmin   Boolean       @default(false) @map("is_admin")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?         @relation("SupportMessageSender", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
 }

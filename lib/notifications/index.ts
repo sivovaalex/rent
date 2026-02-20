@@ -28,7 +28,7 @@ interface NotificationResult {
 /** Маппинг типа события на категорию push */
 function getPushCategory(type: NotificationEventType): PushCategory {
   if (type === 'review_received' || type === 'review_reminder') return 'reviews';
-  if (type === 'chat_unread') return 'chat';
+  if (type === 'chat_unread' || type === 'support_ticket_reply') return 'chat';
   if (type === 'rental_return_reminder') return 'reminders';
   if (type.startsWith('moderation_pending_')) return 'moderation';
   if (type.startsWith('booking_')) return 'bookings';
@@ -40,7 +40,7 @@ function getPushCategory(type: NotificationEventType): PushCategory {
 /** URL для перехода по клику на push */
 function getPushUrl(event: NotificationEvent): string {
   const data = event.data as Record<string, string>;
-  if (event.type === 'chat_unread') return '/#chat';
+  if (event.type === 'chat_unread' || event.type === 'support_ticket_reply') return '/#chat';
   if (event.type.startsWith('moderation_pending_')) return '/#admin';
   if (event.type === 'rental_return_reminder' || event.type === 'review_reminder') return '/#bookings';
   if (data.itemId) return `/#catalog`;
@@ -439,5 +439,18 @@ export async function notifyReviewReminder(
   return sendNotification(userId, {
     type: 'review_reminder',
     data,
+  });
+}
+
+/**
+ * Helper: notify user that support replied to their ticket
+ */
+export async function notifySupportTicketReply(
+  userId: string,
+  subject: string,
+): Promise<NotificationResult> {
+  return sendNotification(userId, {
+    type: 'support_ticket_reply',
+    data: { subject },
   });
 }

@@ -64,6 +64,17 @@ export const prismaMock = {
     create: vi.fn(),
     findMany: vi.fn(),
   },
+  supportTicket: {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    count: vi.fn(),
+  },
+  supportMessage: {
+    findMany: vi.fn(),
+    create: vi.fn(),
+  },
   emailVerificationToken: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -78,7 +89,7 @@ export const prismaMock = {
     deleteMany: vi.fn(),
   },
   $transaction: vi.fn((callback) => {
-    if (Array.isArray(callback)) return Promise.resolve(callback);
+    if (Array.isArray(callback)) return Promise.all(callback);
     return callback(prismaMock);
   }),
 };

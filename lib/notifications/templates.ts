@@ -22,7 +22,8 @@ export type NotificationEventType =
   | 'moderation_pending_item'
   | 'moderation_pending_user'
   | 'rental_return_reminder'
-  | 'review_reminder';
+  | 'review_reminder'
+  | 'support_ticket_reply';
 
 export interface NotificationEvent {
   type: NotificationEventType;
@@ -323,6 +324,19 @@ export const templates: Record<NotificationEventType, Template> = {
       <h2>Оцените аренду</h2>
       <p>Оцените аренду <strong>«${data.itemTitle}»</strong>. Ваш отзыв поможет другим пользователям!</p>
       <p><a href="${BASE_URL}/#bookings" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Оставить отзыв</a></p>
+    `,
+  },
+
+  // Support ticket reply
+  support_ticket_reply: {
+    subject: 'Ответ службы поддержки',
+    text: (data) =>
+      `Служба поддержки ответила на ваше обращение «${data.subject}».\n\n` +
+      `Перейти: ${BASE_URL}/#chat`,
+    html: (data) => `
+      <h2>Новый ответ от поддержки</h2>
+      <p>Служба поддержки ответила на ваше обращение <strong>«${data.subject}»</strong>.</p>
+      <p><a href="${BASE_URL}/#chat" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Открыть обращение</a></p>
     `,
   },
 };

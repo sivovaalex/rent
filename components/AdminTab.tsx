@@ -8,9 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search, Building2 } from 'lucide-react';
+import { BarChart, ThumbsUp, Users, Plus, Star, UserCheck, UserX, Package, AlertTriangle, Loader2, Clock, History, Eye, FileText, Search, Building2, LifeBuoy } from 'lucide-react';
 import { SkeletonTable, Loader } from '@/components/ui/spinner';
 import { getAuthHeaders } from '@/hooks/use-auth';
+import SupportSection from '@/components/SupportSection';
 import type { User, Item, UserRole, AlertType } from '@/types';
 
 interface AdminStats {
@@ -55,11 +56,12 @@ interface AdminTabProps {
   onSubHashChange?: (subHash: string) => void;
 }
 
-// Parse "stats" | "verification" | "verification-history" | "users" → { adminSubTab, verificationSubTab }
+// Parse "stats" | "verification" | "verification-history" | "users" | "support" → { adminSubTab, verificationSubTab }
 export function parseAdminSubHash(subHash: string): { adminSubTab: string; verificationSubTab: string } {
   if (subHash === 'users') return { adminSubTab: 'users', verificationSubTab: 'pending' };
   if (subHash === 'verification-history') return { adminSubTab: 'verification', verificationSubTab: 'history' };
   if (subHash === 'verification') return { adminSubTab: 'verification', verificationSubTab: 'pending' };
+  if (subHash === 'support') return { adminSubTab: 'support', verificationSubTab: 'pending' };
   return { adminSubTab: 'stats', verificationSubTab: 'pending' };
 }
 
@@ -270,7 +272,7 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   return (
     <div className="space-y-6">
       <Tabs value={adminSubTab} onValueChange={changeAdminSubTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${currentUser?.role === 'admin' ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="stats">
             <BarChart className="w-4 h-4 mr-2" />
             Статистика
@@ -285,6 +287,10 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
               Пользователи
             </TabsTrigger>
           )}
+          <TabsTrigger value="support">
+            <LifeBuoy className="w-4 h-4 mr-2" />
+            Поддержка
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="stats">
@@ -836,6 +842,14 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
             )}
           </TabsContent>
         )}
+
+        <TabsContent value="support">
+          <SupportSection
+            mode="admin"
+            currentUser={currentUser!}
+            showAlert={showAlert}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );

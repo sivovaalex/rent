@@ -11,6 +11,7 @@ import {
   Star,
   Settings,
   Shield,
+  LifeBuoy,
   ChevronRight,
   Mail,
   Phone,
@@ -37,6 +38,7 @@ const sections = [
   { id: 'reviews', label: 'Отзывы и рейтинг', icon: Star },
   { id: 'profile', label: 'Профиль и настройки', icon: Settings },
   { id: 'admin', label: 'Админ-панель', icon: Shield },
+  { id: 'support', label: 'Служба поддержки', icon: LifeBuoy },
 ];
 
 // --- FAQ data ---
@@ -68,7 +70,7 @@ const faqItems = [
   },
   {
     q: 'Как связаться с поддержкой?',
-    a: `Вы можете написать на ${COMPANY_INFO.email} или позвонить по номеру ${COMPANY_INFO.phone}. Время работы поддержки: ${COMPANY_INFO.supportHours}.`,
+    a: 'Напишите в службу поддержки прямо из приложения: откройте раздел «Чат» и нажмите кнопку «Служба поддержки». Выберите категорию и опишите вашу проблему — мы ответим в ближайшее время.',
   },
 ];
 
@@ -459,6 +461,35 @@ export default function GuidePage() {
                 </Step>
                 <Step number={3} title="Управление пользователями">
                   Администраторы могут изменять роли пользователей, блокировать нарушителей и просматривать статистику платформы.
+                </Step>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* ===== Support ===== */}
+          <section
+            id="support"
+            ref={(el) => { sectionRefs.current['support'] = el; }}
+            className="scroll-mt-20"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <LifeBuoy className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  Служба поддержки
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <Step number={1} title="Как создать обращение">
+                  Откройте раздел «Чат» и нажмите кнопку <strong>«Служба поддержки»</strong> вверху страницы. Нажмите «Новое обращение», выберите категорию и опишите вашу проблему — мы ответим в ближайшее время.
+                </Step>
+                <Step number={2} title="Категории обращений">
+                  Доступны две категории: <strong>«Технические проблемы»</strong> (ошибки, сбои, проблемы с интерфейсом) и <strong>«Другое»</strong> (общие вопросы, предложения, жалобы).
+                </Step>
+                <Step number={3} title="Статусы и ответы">
+                  После создания обращение получает статус <strong>«Открыто»</strong>. Когда специалист начинает работу — статус меняется на <strong>«В работе»</strong>. После решения — <strong>«Закрыто»</strong>. Ответ поддержки придёт в виде уведомления; диалог хранится в разделе обращений.
                 </Step>
               </CardContent>
             </Card>

@@ -255,6 +255,37 @@ export interface AlertState {
   type: AlertType;
 }
 
+// ==================== SUPPORT TYPES ====================
+
+export type SupportCategory = 'technical' | 'other';
+export type SupportStatus = 'open' | 'in_progress' | 'closed';
+
+export interface SupportMessage {
+  _id: string;
+  ticketId: string;
+  userId: string | null;
+  isAdmin: boolean;
+  text: string;
+  createdAt: Date | string;
+  user?: { _id: string; name: string; photo?: string } | null;
+}
+
+export interface SupportTicket {
+  _id: string;
+  userId: string;
+  category: SupportCategory;
+  subject: string;
+  status: SupportStatus;
+  unreadByAdmin: boolean;
+  unreadByUser: boolean;
+  closedAt?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  messages?: SupportMessage[];
+  user?: { _id: string; name: string; photo?: string } | null;
+  messageCount?: number;
+}
+
 // ==================== ADMIN TYPES ====================
 
 export interface AdminStats {

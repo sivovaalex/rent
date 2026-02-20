@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, MessageCircle, User as UserIcon, Search } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, User as UserIcon, Search, LifeBuoy } from 'lucide-react';
 import { SkeletonList } from '@/components/ui/spinner';
+import SupportSection from '@/components/SupportSection';
 import type { User, AlertType, ChatMessage, ChatConversation } from '@/types';
 
 interface ChatTabProps {
@@ -22,10 +23,12 @@ interface ChatTabProps {
   onSendMessage: (text: string) => Promise<void>;
   loadConversations: () => Promise<void>;
   initialBookingId?: string | null;
+  supportUnread?: number;
 }
 
 export default function ChatTab({
   currentUser,
+  showAlert,
   conversations,
   messages,
   activeBookingId,
@@ -37,10 +40,12 @@ export default function ChatTab({
   onSendMessage,
   loadConversations,
   initialBookingId,
+  supportUnread = 0,
 }: ChatTabProps) {
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [chatSearch, setChatSearch] = useState('');
+  const [supportView, setSupportView] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredConversations = useMemo(() => {
@@ -99,8 +104,34 @@ export default function ChatTab({
 
   // --- Список диалогов ---
   if (!activeBookingId) {
+    // Support view replaces the chat list
+    if (supportView) {
+      return (
+        <SupportSection
+          mode="user"
+          currentUser={currentUser}
+          showAlert={showAlert}
+          onClose={() => setSupportView(false)}
+        />
+      );
+    }
+
     return (
       <div className="space-y-4">
+        {/* Служба поддержки */}
+        <Button
+          variant="outline"
+          className="w-full flex items-center justify-start gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+          onClick={() => setSupportView(true)}
+          aria-label="Открыть службу поддержки"
+        >
+          <LifeBuoy className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1 text-left">Служба поддержки</span>
+          {supportUnread > 0 && (
+            <Badge className="bg-red-500 text-white">{supportUnread}</Badge>
+          )}
+        </Button>
+
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <MessageCircle className="w-5 h-5" />
           Сообщения

@@ -363,4 +363,84 @@ export async function setupMockApi(page: Page, currentUser: MockUser = mockUsers
       body: JSON.stringify({ users: [], items: [], stats: {} }),
     });
   });
+
+  // === SUPPORT ===
+  const mockSupportTickets = [
+    {
+      _id: 'ticket-1',
+      userId: currentUser._id,
+      category: 'technical',
+      subject: 'Не работает оплата',
+      status: 'open',
+      unreadByAdmin: true,
+      unreadByUser: false,
+      closedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messageCount: 1,
+    },
+  ];
+
+  await page.route(/\/api\/support\/[^/]+\/messages/, (route) => {
+    route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: {
+          _id: 'msg-new',
+          ticketId: 'ticket-1',
+          userId: currentUser._id,
+          isAdmin: false,
+          text: 'Новое сообщение',
+          createdAt: new Date().toISOString(),
+          user: { _id: currentUser._id, name: currentUser.name },
+        },
+      }),
+    });
+  });
+
+  await page.route(/\/api\/support\/[^/]+$/, (route) => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ticket: mockSupportTickets[0],
+          messages: [
+            {
+              _id: 'msg-1',
+              ticketId: 'ticket-1',
+              userId: currentUser._id,
+              isAdmin: false,
+              text: 'Не могу оплатить',
+              createdAt: new Date().toISOString(),
+              user: { _id: currentUser._id, name: currentUser.name },
+            },
+          ],
+        }),
+      });
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ticket: { ...mockSupportTickets[0], status: 'closed' } }),
+      });
+    }
+  });
+
+  await page.route(/\/api\/support(\?.*)?$/, (route) => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ ticket: mockSupportTickets[0] }),
+      });
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ tickets: mockSupportTickets, total: mockSupportTickets.length }),
+      });
+    }
+  });
 }

@@ -156,6 +156,22 @@ export default function App() {
 
   const { favoriteIds, isFavorite, toggleFavorite } = useFavorites({ currentUserId: currentUser?._id });
 
+  const [supportUnread, setSupportUnread] = useState(0);
+
+  // Load support unread count when user is authenticated
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/support', { headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('auth_token') : ''}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.tickets) {
+          const count = data.tickets.filter((t: { unreadByUser?: boolean }) => t.unreadByUser).length;
+          setSupportUnread(count);
+        }
+      })
+      .catch(() => {});
+  }, [currentUser]);
+
   // Sync city → items filter
   useEffect(() => {
     setCityName(city.name);
@@ -415,6 +431,7 @@ export default function App() {
                   onSendMessage={sendMessage}
                   loadConversations={loadConversations}
                   initialBookingId={chatInitialBookingId}
+                  supportUnread={supportUnread}
                 />
               ) : (
                 <div className="text-center py-12">
