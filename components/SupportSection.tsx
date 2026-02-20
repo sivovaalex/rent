@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Send, Plus, LifeBuoy, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Plus, LifeBuoy, Clock, CheckCircle, AlertCircle, Loader2, Lock, Search } from 'lucide-react';
 import { getAuthHeaders } from '@/hooks/use-auth';
 import type { User, AlertType, SupportTicket, SupportMessage, SupportCategory, SupportStatus } from '@/types';
 
@@ -44,6 +44,8 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
   const [replyText, setReplyText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('open');
   const [showNewForm, setShowNewForm] = useState(false);
+
+  const [search, setSearch] = useState('');
 
   // New ticket form state
   const [newSubject, setNewSubject] = useState('');
@@ -147,19 +149,15 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim() }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Ошибка');
+      }
       const data = await res.json();
       setMessages(prev => [...prev, data.message]);
-      // Update ticket status if reopened
-      if (!mode.startsWith('admin') && activeTicket.status === 'closed') {
-        setActiveTicket(t => t ? { ...t, status: 'open' } : t);
-        setTickets(prev =>
-          prev.map(t => t._id === activeTicket._id ? { ...t, status: 'open' } : t),
-        );
-      }
-    } catch {
+    } catch (e: unknown) {
       setReplyText(text);
-      showAlert('Не удалось отправить сообщение', 'error');
+      showAlert(e instanceof Error ? e.message : 'Не удалось отправить сообщение', 'error');
     } finally {
       setIsSending(false);
     }
@@ -363,32 +361,46 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Reply input */}
-        <Card className="rounded-t-none">
-          <CardContent className="p-3">
-            <div className="flex gap-2">
-              <Textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Введите сообщение..."
-                disabled={isSending}
-                className="flex-1 resize-none min-h-[40px] max-h-[120px]"
-                rows={1}
-                maxLength={5000}
-              />
-              <Button
-                onClick={handleSendReply}
-                disabled={!replyText.trim() || isSending}
-                size="icon"
-                className="bg-indigo-600 hover:bg-indigo-700 self-end"
-                aria-label="Отправить"
-              >
-                {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Reply input or closed notice */}
+        {activeTicket.status === 'closed' ? (
+          <Card className="rounded-t-none">
+            <CardContent className="p-3 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+              <Lock className="w-4 h-4 flex-shrink-0" />
+              <span>
+                Обращение закрыто.
+                {isAdmin
+                  ? ' Нажмите «Открыть», чтобы продолжить переписку.'
+                  : ' Создайте новое обращение, если проблема не решена.'}
+              </span>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="rounded-t-none">
+            <CardContent className="p-3">
+              <div className="flex gap-2">
+                <Textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Введите сообщение..."
+                  disabled={isSending}
+                  className="flex-1 resize-none min-h-[40px] max-h-[120px]"
+                  rows={1}
+                  maxLength={5000}
+                />
+                <Button
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim() || isSending}
+                  size="icon"
+                  className="bg-indigo-600 hover:bg-indigo-700 self-end"
+                  aria-label="Отправить"
+                >
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -440,6 +452,17 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
         </div>
       )}
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={mode === 'admin' ? 'Поиск по теме или пользователю...' : 'Поиск по теме...'}
+          className="pl-9"
+        />
+      </div>
+
       {/* Tickets list */}
       {isLoading ? (
         <div className="py-12 text-center">
@@ -465,7 +488,12 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
         </Card>
       ) : (
         <div className="space-y-2">
-          {tickets.map((ticket) => {
+          {tickets.filter(t => {
+            if (!search.trim()) return true;
+            const q = search.toLowerCase();
+            return t.subject.toLowerCase().includes(q) ||
+              (mode === 'admin' && t.user?.name?.toLowerCase().includes(q));
+          }).map((ticket) => {
             const hasUnread = mode === 'admin' ? ticket.unreadByAdmin : ticket.unreadByUser;
             return (
               <Card

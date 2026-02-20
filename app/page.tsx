@@ -279,7 +279,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={onLogout}
         onOpenAuth={openAuth}
-        unreadMessages={unreadTotal}
+        unreadMessages={unreadTotal + supportUnread}
         onOpenChat={() => { setCurrentPage('app'); setCurrentTab('chat'); }}
         cityName={city.name}
       />
@@ -314,9 +314,9 @@ export default function App() {
               <TabsTrigger value="chat" className="relative text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
                 <MessageCircle className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Чат</span>
-                {unreadTotal > 0 && (
+                {(unreadTotal + supportUnread) > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                    {(unreadTotal + supportUnread) > 99 ? '99+' : (unreadTotal + supportUnread)}
                   </span>
                 )}
               </TabsTrigger>

@@ -371,21 +371,14 @@ describe('POST /api/support/[id]/messages', () => {
     expect(notifySupportTicketReply).toHaveBeenCalledWith('user-1', 'Проблема с оплатой');
   });
 
-  test('user отвечает в закрытый тикет — тикет переоткрывается', async () => {
+  test('409 если тикет закрыт — ни пользователь, ни админ не может написать', async () => {
     prismaMock.supportTicket.findUnique.mockResolvedValue({ ...mockTicket, status: 'closed' });
-    prismaMock.supportMessage.create.mockResolvedValue(mockMessage);
-    prismaMock.supportTicket.update.mockResolvedValue({ ...mockTicket, status: 'open' });
 
-    await postMessage(
+    const res = await postMessage(
       makeRequest('POST', 'http://localhost:3000/api/support/ticket-1/messages', { text: 'Проблема вернулась' }) as any,
       makeParams('ticket-1'),
     );
-
-    expect(prismaMock.supportTicket.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'open' }),
-      }),
-    );
+    expect(res.status).toBe(409);
   });
 
   test('400 если сообщение пустое', async () => {

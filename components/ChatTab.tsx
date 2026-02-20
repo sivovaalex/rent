@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Send, MessageCircle, User as UserIcon, Search, LifeBuoy } from 'lucide-react';
 import { SkeletonList } from '@/components/ui/spinner';
 import SupportSection from '@/components/SupportSection';
@@ -45,7 +46,7 @@ export default function ChatTab({
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [chatSearch, setChatSearch] = useState('');
-  const [supportView, setSupportView] = useState(false);
+  const [chatSubTab, setChatSubTab] = useState<'chat' | 'support'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredConversations = useMemo(() => {
@@ -102,56 +103,52 @@ export default function ChatTab({
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // --- Список диалогов ---
+  const chatUnread = useMemo(
+    () => conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0),
+    [conversations],
+  );
+
+  // --- Список диалогов / Служба поддержки (tabs) ---
   if (!activeBookingId) {
-    // Support view replaces the chat list
-    if (supportView) {
-      return (
-        <SupportSection
-          mode="user"
-          currentUser={currentUser}
-          showAlert={showAlert}
-          onClose={() => setSupportView(false)}
-        />
-      );
-    }
-
     return (
-      <div className="space-y-4">
-        {/* Служба поддержки */}
-        <Button
-          variant="outline"
-          className="w-full flex items-center justify-start gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-          onClick={() => setSupportView(true)}
-          aria-label="Открыть службу поддержки"
-        >
-          <LifeBuoy className="w-4 h-4 flex-shrink-0" />
-          <span className="flex-1 text-left">Служба поддержки</span>
-          {supportUnread > 0 && (
-            <Badge className="bg-red-500 text-white">{supportUnread}</Badge>
-          )}
-        </Button>
+      <Tabs value={chatSubTab} onValueChange={(v) => setChatSubTab(v as 'chat' | 'support')}>
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="chat" className="flex-1 relative">
+            <MessageCircle className="w-4 h-4 mr-1.5" />
+            Чат
+            {chatUnread > 0 && (
+              <span className="ml-1.5 bg-indigo-600 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
+                {chatUnread > 99 ? '99+' : chatUnread}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="support" className="flex-1 relative">
+            <LifeBuoy className="w-4 h-4 mr-1.5" />
+            Поддержка
+            {supportUnread > 0 && (
+              <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
+                {supportUnread > 99 ? '99+' : supportUnread}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" />
-          Сообщения
-        </h2>
-
-        {isLoadingConversations ? (
-          <SkeletonList count={4} />
-        ) : conversations.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <MessageCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500">Нет сообщений</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Чат появится после создания бронирования
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {conversations.length > 0 && (
+        {/* ── Чат ── */}
+        <TabsContent value="chat" className="space-y-4 mt-0">
+          {isLoadingConversations ? (
+            <SkeletonList count={4} />
+          ) : conversations.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <MessageCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">Нет сообщений</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Чат появится после создания бронирования
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
@@ -161,56 +158,60 @@ export default function ChatTab({
                   className="pl-9"
                 />
               </div>
-            )}
-            {filteredConversations.map((conv) => (
-              <Card
-                key={conv.bookingId}
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => onOpenChat(conv.bookingId)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    {/* Аватар */}
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                      {conv.otherUser.photo ? (
-                        <img src={conv.otherUser.photo} alt={conv.otherUser.name} className="w-12 h-12 rounded-full object-cover" />
-                      ) : (
-                        <UserIcon className="w-6 h-6 text-indigo-600" />
-                      )}
-                    </div>
-
-                    {/* Контент */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium truncate">{conv.otherUser.name}</p>
-                        {conv.lastMessage && (
-                          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                            {formatTime(conv.lastMessage.createdAt)}
-                          </span>
+              {filteredConversations.map((conv) => (
+                <Card
+                  key={conv.bookingId}
+                  className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => onOpenChat(conv.bookingId)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        {conv.otherUser.photo ? (
+                          <img src={conv.otherUser.photo} alt={conv.otherUser.name} className="w-12 h-12 rounded-full object-cover" />
+                        ) : (
+                          <UserIcon className="w-6 h-6 text-indigo-600" />
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 truncate">{conv.itemTitle}</p>
-                      {conv.lastMessage && (
-                        <p className="text-sm text-gray-600 truncate mt-0.5">
-                          {conv.lastMessage.senderId === currentUser._id ? 'Вы: ' : ''}
-                          {conv.lastMessage.text}
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium truncate">{conv.otherUser.name}</p>
+                          {conv.lastMessage && (
+                            <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                              {formatTime(conv.lastMessage.createdAt)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{conv.itemTitle}</p>
+                        {conv.lastMessage && (
+                          <p className="text-sm text-gray-600 truncate mt-0.5">
+                            {conv.lastMessage.senderId === currentUser._id ? 'Вы: ' : ''}
+                            {conv.lastMessage.text}
+                          </p>
+                        )}
+                      </div>
+                      {conv.unreadCount > 0 && (
+                        <Badge className="bg-indigo-600 text-white flex-shrink-0" aria-label={conv.unreadCount + ' непрочитанных'}>
+                          {conv.unreadCount}
+                        </Badge>
                       )}
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
-                    {/* Непрочитанные */}
-                    {conv.unreadCount > 0 && (
-                      <Badge className="bg-indigo-600 text-white flex-shrink-0" aria-label={conv.unreadCount + " непрочитанных"}>
-                        {conv.unreadCount}
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+        {/* ── Служба поддержки ── */}
+        <TabsContent value="support" className="mt-0">
+          <SupportSection
+            mode="user"
+            currentUser={currentUser}
+            showAlert={showAlert}
+          />
+        </TabsContent>
+      </Tabs>
     );
   }
 

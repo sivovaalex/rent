@@ -24,6 +24,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return errorResponse('Нет доступа', 403);
   }
 
+  if (ticket.status === 'closed') {
+    return errorResponse('Обращение закрыто. Откройте его, чтобы продолжить переписку.', 409);
+  }
+
   let body: { text?: unknown };
   try {
     body = await request.json();
@@ -38,9 +42,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (text.trim().length > 5000) {
     return errorResponse('Сообщение слишком длинное', 400);
   }
-
-  // If user replies to a closed ticket — reopen it
-  const newStatus = !isAdmin && ticket.status === 'closed' ? 'open' : ticket.status;
 
   const [message] = await prisma.$transaction([
     prisma.supportMessage.create({
@@ -57,10 +58,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     prisma.supportTicket.update({
       where: { id },
       data: {
-        status: newStatus,
         unreadByAdmin: !isAdmin,
         unreadByUser: isAdmin,
-        ...(newStatus !== ticket.status && { closedAt: null }),
       },
     }),
   ]);
