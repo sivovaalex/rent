@@ -175,18 +175,22 @@ export default function App() {
 
   const [supportUnread, setSupportUnread] = useState(0);
 
-  // Load support unread count when user is authenticated
+  // Poll support unread count every 60 seconds
   useEffect(() => {
     if (!currentUser) return;
-    fetch('/api/support', { headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('auth_token') : ''}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.tickets) {
-          const count = data.tickets.filter((t: { unreadByUser?: boolean }) => t.unreadByUser).length;
-          setSupportUnread(count);
-        }
-      })
-      .catch(() => {});
+    const fetchSupportUnread = () => {
+      fetch('/api/support', { headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.tickets) {
+            setSupportUnread(data.tickets.filter((t: { unreadByUser?: boolean }) => t.unreadByUser).length);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchSupportUnread();
+    const interval = setInterval(fetchSupportUnread, 60000);
+    return () => clearInterval(interval);
   }, [currentUser]);
 
   // Sync city → items filter
@@ -248,6 +252,13 @@ export default function App() {
     }
   }, [currentUser, authLoading]);
 
+  // Pre-load admin pending counts for badge visibility before entering admin tab
+  useEffect(() => {
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator') && currentPage === 'app') {
+      loadAdminData();
+    }
+  }, [currentUser, currentPage, loadAdminData]);
+
   // Load data based on current tab
   useEffect(() => {
     if (currentUser && currentPage === 'app') {
@@ -265,6 +276,8 @@ export default function App() {
     const success = await handleLogin(email, password);
     if (success) {
       setCurrentPage('app');
+      setCurrentTab('catalog');
+      setCatalogView('all');
     }
     return success;
   };
@@ -273,6 +286,8 @@ export default function App() {
     const success = await handleRegister(userData);
     if (success) {
       setCurrentPage('app');
+      setCurrentTab('catalog');
+      setCatalogView('all');
     }
     return success;
   };

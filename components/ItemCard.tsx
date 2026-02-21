@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, Eye, EyeOff, Heart, Link2, MapPin } from 'lucide-react';
+import { Star, Eye, EyeOff, Heart, Link2, MapPin, AlertCircle } from 'lucide-react';
 import type { Item, User, ItemStatus, Category } from '@/types';
 import type { ReactNode } from 'react';
 import { withCommission, formatPrice } from '@/lib/constants';
@@ -108,6 +108,17 @@ export default function ItemCard({
         </div>
 
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
+
+        {/* Причина отклонения (только для владельца) */}
+        {isOwner && item.status === 'rejected' && item.rejectionReason && (
+          <div className="flex items-start gap-2 mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-medium text-red-700">Причина отклонения</p>
+              <p className="text-xs text-red-600 mt-0.5">{item.rejectionReason}</p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           {item.price_per_day && (

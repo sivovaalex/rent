@@ -269,6 +269,24 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
                   <CheckCircle className="w-5 h-5 mr-2" />
                   Верифицирован
                 </Badge>
+              ) : currentUser?.verification_status === 'rejected' ? (
+                <div className="space-y-2">
+                  <Badge variant="outline" className="text-lg px-3 py-1 border-red-300 text-red-700 bg-red-50">
+                    <AlertCircle className="w-5 h-5 mr-2 text-red-500" />
+                    Заявка отклонена
+                  </Badge>
+                  {currentUser?.rejectionReason && (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertDescription className="text-red-700 text-sm">
+                        <span className="font-medium">Причина: </span>{currentUser.rejectionReason}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <Button onClick={onVerifyRequest} className="w-full sm:w-auto">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Подать заявку повторно
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   <Badge variant="outline" className="text-lg px-3 py-1">
@@ -359,6 +377,19 @@ export default function Profile({ currentUser, showAlert, onRoleChange, onVerify
               <p className="text-sm text-yellow-700">
                 Ваша заявка на верификацию на рассмотрении. После одобрения вы сможете стать арендодателем.
               </p>
+            </div>
+          ) : currentUser?.verification_status === 'rejected' ? (
+            <div className="space-y-2">
+              <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                <p className="text-sm text-red-700 font-medium">Заявка на верификацию отклонена</p>
+                {currentUser?.rejectionReason && (
+                  <p className="text-xs text-red-600 mt-1">{currentUser.rejectionReason}</p>
+                )}
+              </div>
+              <Button onClick={onVerifyRequest} className="w-full" variant="outline">
+                <Shield className="w-4 h-4 mr-2" />
+                Подать заявку повторно
+              </Button>
             </div>
           ) : (
             <Button

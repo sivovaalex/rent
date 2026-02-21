@@ -172,6 +172,8 @@ export function safeUser(user: User): ClientUser {
     // Owner type
     ownerType: user.ownerType,
     companyName: user.companyName,
+    // Verification rejection reason
+    rejectionReason: user.rejectionReason ?? undefined,
     // snake_case (legacy, deprecated)
     is_verified: user.isVerified,
     verification_status: user.verificationStatus,
@@ -208,6 +210,7 @@ export function transformItem(item: ItemWithOwner): ClientItem {
     photos: item.photos,
     attributes: item.attributes as Record<string, string | number | boolean> | undefined,
     status: item.status,
+    rejectionReason: item.rejectionReason ?? undefined,
     rating: item.rating ?? undefined,
     approvalMode: item.approvalMode ?? undefined,
     approvalThreshold: item.approvalThreshold ?? undefined,

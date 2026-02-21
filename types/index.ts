@@ -66,6 +66,8 @@ export interface User {
   companyName?: string | null;
   inn?: string | null;
   ogrn?: string | null;
+  // Verification rejection
+  rejectionReason?: string | null;
   // Legacy snake_case aliases (deprecated, use camelCase)
   is_verified?: boolean;
   verification_status?: VerificationStatus;
@@ -102,6 +104,8 @@ export interface Item {
   status: ItemStatus;
   rating?: number;
   reviews?: Review[];
+  // Moderation
+  rejectionReason?: string | null;
   // Approval settings (per-item override)
   approvalMode?: ApprovalMode;
   approvalThreshold?: number;

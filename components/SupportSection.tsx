@@ -34,11 +34,16 @@ const STATUS_COLORS: Record<SupportStatus, string> = {
   closed: 'bg-gray-100 text-gray-600',
 };
 
+const PAGE_SIZE = 20;
+
 export default function SupportSection({ mode, currentUser, showAlert, onClose }: SupportSectionProps) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loadOffset, setLoadOffset] = useState(0);
   const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -55,18 +60,29 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const loadTickets = async () => {
-    setIsLoading(true);
+  const loadTickets = async (offset = 0, append = false) => {
+    if (append) setIsLoadingMore(true);
+    else setIsLoading(true);
     try {
-      const params = mode === 'admin' ? `?status=${statusFilter}` : '';
+      const params = mode === 'admin'
+        ? `?status=${statusFilter}&limit=${PAGE_SIZE}&offset=${offset}`
+        : '';
       const res = await fetch('/api/support' + params, { headers: getAuthHeaders() });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setTickets(data.tickets || []);
+      const newTickets: SupportTicket[] = data.tickets || [];
+      if (append) {
+        setTickets(prev => [...prev, ...newTickets]);
+      } else {
+        setTickets(newTickets);
+      }
+      setTotal(data.total ?? newTickets.length);
+      setLoadOffset(offset + newTickets.length);
     } catch {
       showAlert('Не удалось загрузить обращения', 'error');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -95,7 +111,9 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
   };
 
   useEffect(() => {
-    loadTickets();
+    setTickets([]);
+    setLoadOffset(0);
+    loadTickets(0, false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
@@ -544,6 +562,20 @@ export default function SupportSection({ mode, currentUser, showAlert, onClose }
               </Card>
             );
           })}
+
+          {/* Load more (admin pagination) */}
+          {mode === 'admin' && !search.trim() && tickets.length < total && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => loadTickets(loadOffset, true)}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : `Загрузить ещё (${total - tickets.length})`}
+            </Button>
+          )}
         </div>
       )}
     </div>

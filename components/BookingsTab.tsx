@@ -7,12 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Calendar, Star, MessageCircle, Clock, CheckCircle, XCircle, AlertTriangle, CreditCard, Loader2, Filter, ArrowUpDown, RefreshCw, Search } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import BookingModal from './BookingModal';
 import { SkeletonList } from '@/components/ui/spinner';
 import type { User, Booking, Item, BookingForm, AlertType, ReviewType } from '@/types';
 import { getAuthHeaders } from '@/hooks/use-auth';
+import { CATEGORY_SUBCATEGORIES, type CategoryKey } from '@/lib/constants';
 
 interface BookingsTabProps {
   currentUser: User | null;
@@ -37,6 +38,9 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [subcategoryFilter, setSubcategoryFilter] = useState<string>('all');
+  const [titleSearch, setTitleSearch] = useState('');
 
   // Rent again state
   const [showRentAgainModal, setShowRentAgainModal] = useState(false);
@@ -90,13 +94,23 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
     if (statusFilter !== 'all') {
       result = result.filter(b => b.status === statusFilter);
     }
+    if (categoryFilter !== 'all') {
+      result = result.filter(b => b.item?.category === categoryFilter);
+    }
+    if (subcategoryFilter !== 'all') {
+      result = result.filter(b => b.item?.subcategory === subcategoryFilter);
+    }
+    if (titleSearch.trim()) {
+      const q = titleSearch.toLowerCase();
+      result = result.filter(b => b.item?.title?.toLowerCase().includes(q));
+    }
     result.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
     return result;
-  }, [bookings, statusFilter, sortOrder]);
+  }, [bookings, statusFilter, sortOrder, categoryFilter, subcategoryFilter, titleSearch]);
 
   const cancelBooking = async (bookingId: string) => {
     if (!confirm('Вы уверены, что хотите отменить бронирование?')) return;
@@ -337,32 +351,83 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
   return (
     <div className="space-y-6">
       {/* Фильтры и сортировка */}
-      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Статус" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem value="pending_approval">Ожидает одобрения</SelectItem>
-            <SelectItem value="pending_payment">Ожидает оплаты</SelectItem>
-            <SelectItem value="paid">Оплачено</SelectItem>
-            <SelectItem value="active">Активно</SelectItem>
-            <SelectItem value="completed">Завершено</SelectItem>
-            <SelectItem value="cancelled">Отменено</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
-          <SelectTrigger className="w-full sm:w-[160px]">
-            <ArrowUpDown className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Сортировка" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Сначала новые</SelectItem>
-            <SelectItem value="oldest">Сначала старые</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap gap-2 items-end">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">Статус</label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[170px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Статус" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все статусы</SelectItem>
+              <SelectItem value="pending_approval">Ожидает одобрения</SelectItem>
+              <SelectItem value="pending_payment">Ожидает оплаты</SelectItem>
+              <SelectItem value="paid">Оплачено</SelectItem>
+              <SelectItem value="active">Активно</SelectItem>
+              <SelectItem value="completed">Завершено</SelectItem>
+              <SelectItem value="cancelled">Отменено</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">Категория</label>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setSubcategoryFilter('all'); }}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Категория" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все категории</SelectItem>
+              <SelectItem value="stream">Стрим-оборудование</SelectItem>
+              <SelectItem value="electronics">Электроника</SelectItem>
+              <SelectItem value="clothes">Одежда</SelectItem>
+              <SelectItem value="sports">Спорт</SelectItem>
+              <SelectItem value="tools">Инструменты</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {categoryFilter !== 'all' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">Подкатегория</label>
+            <Select value={subcategoryFilter} onValueChange={setSubcategoryFilter}>
+              <SelectTrigger className="w-[170px]">
+                <SelectValue placeholder="Подкатегория" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все подкатегории</SelectItem>
+                {CATEGORY_SUBCATEGORIES[categoryFilter as CategoryKey]?.map((sub) => (
+                  <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+          <label className="text-xs font-medium text-gray-600">Поиск по названию</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={titleSearch}
+              onChange={(e) => setTitleSearch(e.target.value)}
+              placeholder="Название лота..."
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pl-9"
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">Сортировка</label>
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
+            <SelectTrigger className="w-[160px]">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Сортировка" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Сначала новые</SelectItem>
+              <SelectItem value="oldest">Сначала старые</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -629,7 +694,7 @@ export default function BookingsTab({ currentUser, showAlert, loadBookings, book
         <div className="text-center py-12">
           <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500">
-            {statusFilter !== 'all' ? 'Нет бронирований с выбранным статусом' : 'У вас пока нет бронирований'}
+            {(statusFilter !== 'all' || categoryFilter !== 'all' || titleSearch.trim()) ? 'Нет бронирований по выбранным фильтрам' : 'У вас пока нет бронирований'}
           </p>
         </div>
       )}
