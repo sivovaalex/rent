@@ -93,6 +93,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
   const [historyLoading, setHistoryLoading] = useState(false);
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectingItemId, setRejectingItemId] = useState<string | null>(null);
+  const [itemRejectionReason, setItemRejectionReason] = useState('');
   const [verificationSearch, setVerificationSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [historyActionFilter, setHistoryActionFilter] = useState<string>('all');
@@ -209,9 +211,12 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
       });
       if (res.ok) {
         showAlert(`Лот ${status === 'approved' ? 'одобрен' : 'отклонён'}`);
+        setRejectingItemId(null);
+        setItemRejectionReason('');
         loadAdminData();
       } else {
-        showAlert('Ошибка модерации', 'error');
+        const data = await res.json().catch(() => ({}));
+        showAlert(data.error || 'Ошибка модерации', 'error');
       }
     } catch {
       showAlert('Ошибка модерации', 'error');
@@ -531,13 +536,18 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
 
                       {/* Rejection reason input */}
                       {rejectingUserId === user._id && (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-700">
+                            Причина отклонения <span className="text-red-500">*</span>
+                          </label>
                           <Textarea
-                            placeholder="Причина отклонения (необязательно)"
+                            placeholder="Опишите причину отклонения верификации..."
                             value={rejectionReason}
                             onChange={(e) => setRejectionReason(e.target.value)}
                             rows={2}
+                            maxLength={500}
                           />
+                          <p className="text-xs text-gray-400 text-right">{rejectionReason.length}/500</p>
                         </div>
                       )}
 
@@ -559,8 +569,8 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => verifyUser(user._id, 'reject', rejectionReason || undefined)}
-                              disabled={verifyingUserId === user._id}
+                              onClick={() => verifyUser(user._id, 'reject', rejectionReason.trim())}
+                              disabled={verifyingUserId === user._id || rejectionReason.trim().length < 3}
                             >
                               {verifyingUserId === user._id ? (
                                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -618,32 +628,70 @@ export default function AdminTab({ currentUser, showAlert, loadAdminData, pendin
                           <span>Залог: {item.deposit} ₽</span>
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          size="sm"
-                          onClick={() => moderateItem(item._id, 'approved')}
-                          disabled={moderatingItemId === item._id}
-                        >
-                          {moderatingItemId === item._id ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      <div className="ml-4 space-y-2">
+                        {rejectingItemId === item._id && (
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Причина отклонения <span className="text-red-500">*</span>
+                            </label>
+                            <Textarea
+                              placeholder="Опишите причину отклонения лота..."
+                              value={itemRejectionReason}
+                              onChange={(e) => setItemRejectionReason(e.target.value)}
+                              rows={2}
+                              maxLength={500}
+                            />
+                            <p className="text-xs text-gray-400 text-right">{itemRejectionReason.length}/500</p>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => moderateItem(item._id, 'approved')}
+                            disabled={moderatingItemId === item._id}
+                          >
+                            {moderatingItemId === item._id ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Package className="w-4 h-4 mr-1" />
+                            )}
+                            Одобрить
+                          </Button>
+                          {rejectingItemId === item._id ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => moderateItem(item._id, 'rejected', itemRejectionReason.trim())}
+                                disabled={moderatingItemId === item._id || itemRejectionReason.trim().length < 3}
+                              >
+                                {moderatingItemId === item._id ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <AlertTriangle className="w-4 h-4 mr-1" />
+                                )}
+                                Подтвердить отклонение
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => { setRejectingItemId(null); setItemRejectionReason(''); }}
+                              >
+                                Отмена
+                              </Button>
+                            </>
                           ) : (
-                            <Package className="w-4 h-4 mr-1" />
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setRejectingItemId(item._id)}
+                              disabled={moderatingItemId === item._id}
+                            >
+                              <AlertTriangle className="w-4 h-4 mr-1" />
+                              Отклонить
+                            </Button>
                           )}
-                          Одобрить
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => moderateItem(item._id, 'rejected')}
-                          disabled={moderatingItemId === item._id}
-                        >
-                          {moderatingItemId === item._id ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 mr-1" />
-                          )}
-                          Отклонить
-                        </Button>
+                        </div>
                       </div>
                     </div>
                   ))}

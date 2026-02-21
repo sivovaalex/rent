@@ -14,7 +14,10 @@ interface RouteContext {
 const verifyUserSchema = z.object({
   action: z.enum(['approve', 'reject']),
   reason: z.string().optional(),
-});
+}).refine(
+  (data) => data.action !== 'reject' || (data.reason && data.reason.trim().length >= 3),
+  { message: 'Укажите причину отклонения (минимум 3 символа)', path: ['reason'] },
+);
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id: targetUserId } = await context.params;

@@ -75,6 +75,10 @@ export const prismaMock = {
     findMany: vi.fn(),
     create: vi.fn(),
   },
+  verificationHistory: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+  },
   emailVerificationToken: {
     findUnique: vi.fn(),
     create: vi.fn(),

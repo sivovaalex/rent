@@ -87,7 +87,10 @@ export const itemsQuerySchema = z.object({
 export const moderateItemSchema = z.object({
   status: z.enum(['approved', 'rejected']),
   rejection_reason: z.string().optional(),
-});
+}).refine(
+  (data) => data.status !== 'rejected' || (data.rejection_reason && data.rejection_reason.trim().length >= 3),
+  { message: 'Укажите причину отклонения (минимум 3 символа)', path: ['rejection_reason'] },
+);
 
 // Types
 export type CreateItemInput = z.infer<typeof createItemSchema>;
